@@ -3,6 +3,7 @@
 
 use cairo::Context;
 
+use crate::Alpha;
 use crate::Color;
 
 impl Color<f64> {
@@ -12,8 +13,8 @@ impl Color<f64> {
     }
 
     /// Sets this color as the cairo source, overriding the alpha.
-    pub fn apply_alpha(&self, ctx: &Context, alpha: f64) {
-        ctx.set_source_rgba(self.r, self.g, self.b, alpha);
+    pub fn apply_alpha(&self, ctx: &Context, alpha: impl Into<Alpha>) {
+        ctx.set_source_rgba(self.r, self.g, self.b, alpha.into().as_f64());
     }
 }
 
@@ -24,8 +25,8 @@ impl Color<f32> {
     }
 
     /// Sets this color as the cairo source, overriding the alpha.
-    pub fn apply_alpha(&self, ctx: &Context, alpha: f32) {
-        ctx.set_source_rgba(self.r as f64, self.g as f64, self.b as f64, alpha as f64);
+    pub fn apply_alpha(&self, ctx: &Context, alpha: impl Into<Alpha>) {
+        ctx.set_source_rgba(self.r as f64, self.g as f64, self.b as f64, alpha.into().as_f64());
     }
 }
 
@@ -36,8 +37,8 @@ impl Color<u8> {
     }
 
     /// Sets this color as the cairo source, overriding the alpha.
-    pub fn apply_alpha(&self, ctx: &Context, alpha: u8) {
-        Color::<f64>::from(*self).apply_alpha(ctx, f64::from(alpha) / 255.0);
+    pub fn apply_alpha(&self, ctx: &Context, alpha: impl Into<Alpha>) {
+        Color::<f64>::from(*self).apply_alpha(ctx, alpha);
     }
 }
 
@@ -58,7 +59,7 @@ mod tests {
     fn apply_alpha_sets_rgba_source() {
         let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 1, 1).unwrap();
         let ctx = Context::new(&surface).unwrap();
-        Color::<u8>::new(255, 0, 0).apply_alpha(&ctx, 128);
+        Color::<u8>::new(255, 0, 0).apply_alpha(&ctx, 128u8);
         ctx.paint().unwrap();
     }
 }

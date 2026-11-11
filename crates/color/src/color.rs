@@ -1,3 +1,5 @@
+use crate::Luminance;
+use crate::LuminanceWeights;
 use crate::ParseColorError;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -102,14 +104,19 @@ impl Color<f64> {
     /// White.
     pub const WHITE: Self = Self::new(1.0, 1.0, 1.0);
 
+    /// The perceived luminance with custom `weights` (0.0-1.0).
+    pub fn luminance(&self, weights: LuminanceWeights) -> Luminance {
+        Luminance::new(self.r * weights.r + self.g * weights.g + self.b * weights.b)
+    }
+
     /// The perceived luminance with ITU-R BT.709 weights (0.0-1.0).
-    pub fn luminance_709(&self) -> f64 {
-        self.r * 0.2126 + self.g * 0.7152 + self.b * 0.0722
+    pub fn luminance_709(&self) -> Luminance {
+        self.luminance(LuminanceWeights::REC_709)
     }
 
     /// The perceived luminance with ITU-R BT.601 weights (0.0-1.0).
-    pub fn luminance_601(&self) -> f64 {
-        self.r * 0.299 + self.g * 0.587 + self.b * 0.114
+    pub fn luminance_601(&self) -> Luminance {
+        self.luminance(LuminanceWeights::REC_601)
     }
 
     /// Linear blend toward `other` by `t` (0 = self, 1 = other).
@@ -139,12 +146,13 @@ impl Color<f64> {
     /// The color lifted to at least `min` luminance (BT.709) by
     /// blending toward white - dark colors stay readable on dark
     /// backgrounds. Alpha is preserved.
-    pub fn with_min_luminance(&self, min: f64) -> Self {
+    pub fn with_min_luminance(&self, min: impl Into<Luminance>) -> Self {
+        let min = min.into();
         let luminance = self.luminance_709();
         if luminance >= min {
             return *self;
         }
-        self.lighten((min - luminance) / (1.0 - luminance))
+        self.lighten((min - luminance) / (Luminance::MAX - luminance))
     }
 
     /// Clamps all four channels to `[0.0, 1.0]`.
@@ -179,14 +187,19 @@ impl Color<f32> {
     /// White.
     pub const WHITE: Self = Self::new(1.0, 1.0, 1.0);
 
+    /// The perceived luminance with custom `weights` (0.0-1.0).
+    pub fn luminance(&self, weights: LuminanceWeights) -> Luminance {
+        Luminance::new(f64::from(self.r) * weights.r + f64::from(self.g) * weights.g + f64::from(self.b) * weights.b)
+    }
+
     /// The perceived luminance with ITU-R BT.709 weights (0.0-1.0).
-    pub fn luminance_709(&self) -> f32 {
-        self.r * 0.2126 + self.g * 0.7152 + self.b * 0.0722
+    pub fn luminance_709(&self) -> Luminance {
+        self.luminance(LuminanceWeights::REC_709)
     }
 
     /// The perceived luminance with ITU-R BT.601 weights (0.0-1.0).
-    pub fn luminance_601(&self) -> f32 {
-        self.r * 0.299 + self.g * 0.587 + self.b * 0.114
+    pub fn luminance_601(&self) -> Luminance {
+        self.luminance(LuminanceWeights::REC_601)
     }
 
     /// Linear blend toward `other` by `t` (0 = self, 1 = other).
@@ -216,12 +229,13 @@ impl Color<f32> {
     /// The color lifted to at least `min` luminance (BT.709) by
     /// blending toward white - dark colors stay readable on dark
     /// backgrounds. Alpha is preserved.
-    pub fn with_min_luminance(&self, min: f32) -> Self {
+    pub fn with_min_luminance(&self, min: impl Into<Luminance>) -> Self {
+        let min = min.into();
         let luminance = self.luminance_709();
         if luminance >= min {
             return *self;
         }
-        self.lighten((min - luminance) / (1.0 - luminance))
+        self.lighten(((min - luminance) / (Luminance::MAX - luminance)) as f32)
     }
 
     /// Clamps all four channels to `[0.0, 1.0]`.
@@ -554,15 +568,15 @@ mod tests {
 
     #[test]
     fn luminance_709_black_and_white() {
-        assert_eq!(Color::<f64>::BLACK.luminance_709(), 0.0);
-        assert!((Color::<f64>::WHITE.luminance_709() - 1.0).abs() < 1e-9);
+        assert_eq!(Color::<f64>::BLACK.luminance_709(), Luminance::new(0.0));
+        assert!((Color::<f64>::WHITE.luminance_709().as_f64() - 1.0).abs() < 1e-9);
     }
 
     #[test]
     fn luminance_601_weights() {
         let color = Color::<f64>::new(1.0, 0.0, 0.0);
-        assert!((color.luminance_601() - 0.299).abs() < 1e-9);
-        assert!((Color::<f64>::WHITE.luminance_601() - 1.0).abs() < 1e-9);
+        assert!((color.luminance_601().as_f64() - 0.299).abs() < 1e-9);
+        assert!((Color::<f64>::WHITE.luminance_601().as_f64() - 1.0).abs() < 1e-9);
     }
 
     #[test]
@@ -588,7 +602,7 @@ mod tests {
     #[test]
     fn with_min_luminance_lifts_dark_color() {
         let lifted = Color::<f64>::BLACK.with_min_luminance(0.5);
-        assert!(lifted.luminance_709() >= 0.5);
+        assert!(lifted.luminance_709() >= Luminance::new(0.5));
     }
 
     #[test]
@@ -601,7 +615,7 @@ mod tests {
     fn f32_lerp_and_luminance() {
         let half = Color::<f32>::BLACK.lerp(&Color::<f32>::WHITE, 0.5);
         assert!((half.r - 0.5).abs() < 1e-6);
-        assert!((Color::<f32>::WHITE.luminance_709() - 1.0).abs() < 1e-6);
+        assert!((Color::<f32>::WHITE.luminance_709().as_f64() - 1.0).abs() < 1e-6);
     }
 
     #[test]
