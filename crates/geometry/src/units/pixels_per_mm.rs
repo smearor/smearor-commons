@@ -1,5 +1,6 @@
 use crate::Millimeters;
 use crate::Pixels;
+use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
@@ -11,9 +12,6 @@ use std::fmt::Display;
 /// side. Wrapping the bare `f64` keeps the two factors unconfusable -
 /// a `PixelsPerMm` is never a resolution and never an axis bound.
 /// Serializes as a bare number.
-///
-/// The `Vec2` variants (`scale_vec`/`unscale_vec`) land together with
-/// `Vec2<U>` in phase 2.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PixelsPerMm(pub f64);
@@ -34,10 +32,20 @@ impl PixelsPerMm {
         Pixels::new(mm.as_f64() * self.0)
     }
 
+    /// Maps a millimeter vector onto pixels, component-wise.
+    pub fn scale_vec(&self, vector: Vec2<Millimeters>) -> Vec2<Pixels> {
+        Vec2::<Pixels>::new(self.scale(Millimeters::new(vector.x)).as_f64(), self.scale(Millimeters::new(vector.y)).as_f64())
+    }
+
     /// Maps a pixel length back onto millimeters - the hit-testing
     /// direction (widget geometry → surface coordinates).
     pub fn unscale(&self, px: Pixels) -> Millimeters {
         Millimeters::new(px.as_f64() / self.0)
+    }
+
+    /// Maps a pixel vector back onto millimeters, component-wise.
+    pub fn unscale_vec(&self, vector: Vec2<Pixels>) -> Vec2<Millimeters> {
+        Vec2::<Millimeters>::new(self.unscale(Pixels::new(vector.x)).as_f64(), self.unscale(Pixels::new(vector.y)).as_f64())
     }
 }
 

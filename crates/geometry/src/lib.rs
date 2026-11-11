@@ -10,10 +10,18 @@
 //! [`SquareMillimeters`], [`PixelsPerMm`], [`UnitsPerMm`]) keep raw
 //! `f64` values unconfusable and double as the `Vec2<U>` unit markers.
 
+mod rotation_rad;
+mod smoothing_alpha;
 mod units;
+mod vec2;
 
+pub use rotation_rad::RotationRad;
+pub use smoothing_alpha::SmoothingAlpha;
 pub use units::Millimeters;
 pub use units::Pixels;
 pub use units::PixelsPerMm;
 pub use units::SquareMillimeters;
 pub use units::UnitsPerMm;
+pub use vec2::Vec2;
+pub use vec2::serde_pair;
+pub use vec2::serde_points;

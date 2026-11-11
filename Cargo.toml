@@ -17,6 +17,7 @@ smearor-commons-geometry = { path = "crates/geometry" }
 smearor-commons-color = { path = "crates/color" }
 # core
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 thiserror = "2.0"
 # transport / schema (optional, feature-gated)
 async-graphql = "7"
