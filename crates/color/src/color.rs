@@ -271,6 +271,27 @@ impl Color<u8> {
     pub const WHITE: Self = Self::new(255, 255, 255);
 }
 
+impl Default for Color<f64> {
+    /// Fully transparent black.
+    fn default() -> Self {
+        Self::new_rgba(0.0, 0.0, 0.0, 0.0)
+    }
+}
+
+impl Default for Color<f32> {
+    /// Fully transparent black.
+    fn default() -> Self {
+        Self::new_rgba(0.0, 0.0, 0.0, 0.0)
+    }
+}
+
+impl Default for Color<u8> {
+    /// Fully transparent black.
+    fn default() -> Self {
+        Self::new_rgba(0, 0, 0, 0)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Parsing / formatting trait implementations
 // ---------------------------------------------------------------------------

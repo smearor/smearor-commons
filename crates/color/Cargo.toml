@@ -12,10 +12,11 @@ description = "Generic color types for the Smearor ecosystem: channel-generic `C
 [features]
 # ui / backend
 cairo = ["dep:cairo-rs"]
-# gtk4 = ["dep:gtk4"]
+gtk4 = ["dep:gtk4"]
 
 [dependencies]
 cairo-rs = { workspace = true, optional = true }
+gtk4 = { workspace = true, optional = true }
 serde.workspace = true
 thiserror.workspace = true
 

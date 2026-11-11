@@ -11,6 +11,8 @@ mod alpha;
 #[cfg(feature = "cairo")]
 mod cairo;
 mod color;
+#[cfg(feature = "gtk4")]
+mod gtk4;
 mod luminance;
 mod luminance_weights;
 mod parse_color_error;
