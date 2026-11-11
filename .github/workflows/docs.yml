@@ -1,0 +1,27 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  rustdoc:
+    name: rustdoc to GitHub Pages
+    runs-on: ubuntu-26.04
+    steps:
+      - name: VCS Checkout
+        uses: actions/checkout@v7
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: Build docs
+        run: cargo doc --workspace --all-features --no-deps
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
