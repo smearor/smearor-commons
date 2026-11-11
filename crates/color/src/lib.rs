@@ -8,6 +8,8 @@
 //! stay in consumer crates as thin newtype wrappers around [`Color<T>`].
 
 mod color;
+#[cfg(feature = "cairo")]
+mod cairo;
 mod parse_color_error;
 
 pub use color::Color;

@@ -10,11 +10,12 @@ homepage.workspace = true
 description = "Generic color types for the Smearor ecosystem: channel-generic `Color<T>`, hex parsing and color operations."
 
 [features]
-# ui / backend (added with the ported code in later phases)
-# cairo = ["dep:cairo-rs"]
+# ui / backend
+cairo = ["dep:cairo-rs"]
 # gtk4 = ["dep:gtk4"]
 
 [dependencies]
+cairo-rs = { workspace = true, optional = true }
 serde.workspace = true
 thiserror.workspace = true
 
