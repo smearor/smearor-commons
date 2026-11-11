@@ -46,6 +46,13 @@ impl<U> Vec2<U> {
         Self { x, y, unit: PhantomData }
     }
 
+    /// Creates a vector from polar coordinates: `radius` in the unit `U`
+    /// at `angle` (counter-clockwise from the positive x-axis).
+    pub fn from_polar(radius: f64, angle: RotationRad) -> Self {
+        let (sin, cos) = angle.sin_cos();
+        Vec2::new(radius * cos, radius * sin)
+    }
+
     /// Euclidean distance to another point in the same unit.
     pub fn distance(&self, other: &Vec2<U>) -> U
     where
@@ -96,7 +103,8 @@ impl<U> Vec2<U> {
         Vec2::new(self.x / magnitude, self.y / magnitude)
     }
 
-    /// The direction the vector points, as a `RotationRad` angle.
+    /// The direction the vector points, as a `RotationRad` angle -
+    /// the inverse of [`Vec2::from_polar`].
     pub fn direction(&self) -> RotationRad {
         RotationRad::new(self.y.atan2(self.x))
     }
@@ -414,6 +422,15 @@ mod tests {
         let arr: [f64; 2] = v.into();
         assert_eq!(arr, [1.5, -2.25]);
         assert_eq!(Vec2::<Millimeters>::from(arr), v);
+    }
+
+    #[test]
+    fn polar_roundtrip() {
+        let v = Vec2::<Pixels>::from_polar(10.0, RotationRad::from_degrees(90.0));
+        assert!((v.x).abs() < 1e-10 && (v.y - 10.0).abs() < 1e-10);
+        assert!((v.direction().as_f64() - std::f64::consts::FRAC_PI_2).abs() < 1e-10);
+        let roundtrip = Vec2::<Pixels>::from_polar(10.0, v.direction());
+        assert!((roundtrip.x - v.x).abs() < 1e-10 && (roundtrip.y - v.y).abs() < 1e-10);
     }
 
     #[test]

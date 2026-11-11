@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
 use std::ops::Mul;
+use std::time::Duration;
 
 /// Exponential-moving-average weight of the newest sample
 /// (`pos = alpha*raw + (1-alpha)*prev`).
@@ -35,6 +36,19 @@ impl SmoothingAlpha {
     /// share of an EMA blend (`pos * alpha + prev * alpha.complement()`).
     pub fn complement(self) -> Self {
         Self(1.0 - self.0)
+    }
+
+    /// Frame-rate independent smoothing factor for one rendered frame.
+    ///
+    /// Computes `alpha = 1 - exp(-frame_time / tau)` so the same `tau`
+    /// time constant closes the same fraction of the remaining gap per
+    /// second at any frame rate. A zero `tau` yields `alpha = 1.0`
+    /// (instant tracking).
+    pub fn from_frame_time(frame_time: Duration, tau: Duration) -> Self {
+        if tau.is_zero() {
+            return Self(1.0);
+        }
+        Self(1.0 - (-frame_time.as_secs_f64() / tau.as_secs_f64()).exp())
     }
 }
 
@@ -72,3 +86,20 @@ impl zvariant::Type for SmoothingAlpha {
 
 #[cfg(feature = "async-graphql")]
 async_graphql::scalar!(SmoothingAlpha);
+
+#[cfg(test)]
+mod tests {
+    use super::SmoothingAlpha;
+    use std::time::Duration;
+
+    #[test]
+    fn frame_time_scales_with_tau() {
+        // One 16 ms frame at tau = 80 ms closes ~18% of the gap.
+        let alpha = SmoothingAlpha::from_frame_time(Duration::from_millis(16), Duration::from_millis(80));
+        assert!((alpha.as_f64() - 0.181).abs() < 0.001);
+        // Zero frame time blends nothing.
+        assert_eq!(SmoothingAlpha::from_frame_time(Duration::ZERO, Duration::from_millis(80)).as_f64(), 0.0);
+        // Zero tau tracks instantly.
+        assert_eq!(SmoothingAlpha::from_frame_time(Duration::from_millis(16), Duration::ZERO).as_f64(), 1.0);
+    }
+}
