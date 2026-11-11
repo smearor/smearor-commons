@@ -15,10 +15,12 @@ mod color;
 mod gtk4;
 mod luminance;
 mod luminance_weights;
+mod named_color;
 mod parse_color_error;
 
 pub use alpha::Alpha;
 pub use color::Color;
 pub use luminance::Luminance;
 pub use luminance_weights::LuminanceWeights;
+pub use named_color::NamedColor;
 pub use parse_color_error::ParseColorError;
