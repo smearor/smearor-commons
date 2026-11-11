@@ -10,16 +10,18 @@ homepage.workspace = true
 description = "Generic 2D geometry primitives for the Smearor ecosystem: unit-tagged vectors, rotations, rectangles and shapes."
 
 [features]
-# transport / schema (added with the ported code in later phases)
-# async-graphql = ["dep:async-graphql"]
+# transport / schema
+async-graphql = ["dep:async-graphql"]
+schemars = ["dep:schemars"]
 # evdev = ["dep:evdev"]
-# schemars = ["dep:schemars"]
 # zbus = ["dep:zvariant"]
-# ui / backend
+# ui / backend (added with the ported code in later phases)
 # cairo = ["dep:cairo-rs"]
 # gtk4 = ["dep:gtk4"]
 # smithay = ["dep:smithay"]
 
 [dependencies]
+async-graphql = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
 serde.workspace = true
 thiserror.workspace = true
