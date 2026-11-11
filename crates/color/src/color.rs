@@ -269,6 +269,28 @@ impl Color<u8> {
 
     /// White.
     pub const WHITE: Self = Self::new(255, 255, 255);
+
+    /// Creates an opaque color from a packed `0xRRGGBB` value -
+    /// `const`-usable, e.g. in `static_palette!` definitions.
+    pub const fn from_rgb_u32(value: u32) -> Self {
+        Self {
+            r: ((value >> 16) & 0xFF) as u8,
+            g: ((value >> 8) & 0xFF) as u8,
+            b: (value & 0xFF) as u8,
+            a: 255,
+        }
+    }
+
+    /// Creates a color from a packed `0xRRGGBBAA` value -
+    /// `const`-usable, e.g. in `static_palette!` definitions.
+    pub const fn from_rgba_u32(value: u32) -> Self {
+        Self {
+            r: ((value >> 24) & 0xFF) as u8,
+            g: ((value >> 16) & 0xFF) as u8,
+            b: ((value >> 8) & 0xFF) as u8,
+            a: (value & 0xFF) as u8,
+        }
+    }
 }
 
 impl Default for Color<f64> {
@@ -646,5 +668,22 @@ mod tests {
         assert_eq!(json, "\"#FF0000\"");
         let parsed: Color<f64> = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, color);
+    }
+
+    #[test]
+    fn from_rgb_u32_unpacks_channels() {
+        assert_eq!(Color::<u8>::from_rgb_u32(0xEDD49E), Color::<u8>::new(0xED, 0xD4, 0x9E));
+        assert_eq!(Color::<u8>::from_rgb_u32(0x000000), Color::<u8>::BLACK);
+    }
+
+    #[test]
+    fn from_rgba_u32_unpacks_channels() {
+        assert_eq!(Color::<u8>::from_rgba_u32(0xEDD49E80), Color::<u8>::new_rgba(0xED, 0xD4, 0x9E, 0x80));
+    }
+
+    #[test]
+    fn from_rgb_u32_is_const_usable() {
+        const COLOR: Color<u8> = Color::<u8>::from_rgb_u32(0xEDD49E);
+        assert_eq!(COLOR, Color::<u8>::new(0xED, 0xD4, 0x9E));
     }
 }
