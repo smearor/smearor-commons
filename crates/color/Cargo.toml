@@ -17,3 +17,6 @@ description = "Generic color types for the Smearor ecosystem: channel-generic `C
 [dependencies]
 serde.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+serde_json = "1.0"
