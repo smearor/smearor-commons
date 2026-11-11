@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.98.0"
+version = "0.1.0"
+license = "MIT"
+authors = ["Andreas Schaeffer <hanack@nooblounge.net>"]
+repository = "https://github.com/smearor/smearor-commons"
+homepage = "https://smearor.io/"
+
+[workspace.dependencies]
+# workspace crates
+smearor-commons-geometry = { path = "crates/geometry" }
+smearor-commons-color = { path = "crates/color" }
+# core
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
+# transport / schema (optional, feature-gated)
+async-graphql = "7"
+evdev = "0.13"
+schemars = "1"
+zvariant = "5"
+# ui / backend (optional, feature-gated)
+cairo-rs = "0.22"
+gtk4 = { version = "0.11", features = ["v4_20"] }
+smithay = { version = "0.7", default-features = false }

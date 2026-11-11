@@ -1,0 +1,25 @@
+[package]
+name = "smearor-commons-geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Generic 2D geometry primitives for the Smearor ecosystem: unit-tagged vectors, rotations, rectangles and shapes."
+
+[features]
+# transport / schema (added with the ported code in later phases)
+# async-graphql = ["dep:async-graphql"]
+# evdev = ["dep:evdev"]
+# schemars = ["dep:schemars"]
+# zbus = ["dep:zvariant"]
+# ui / backend
+# cairo = ["dep:cairo-rs"]
+# gtk4 = ["dep:gtk4"]
+# smithay = ["dep:smithay"]
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true

@@ -1,0 +1,19 @@
+[package]
+name = "smearor-commons-color"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Generic color types for the Smearor ecosystem: channel-generic `Color<T>`, hex parsing and color operations."
+
+[features]
+# ui / backend (added with the ported code in later phases)
+# cairo = ["dep:cairo-rs"]
+# gtk4 = ["dep:gtk4"]
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
