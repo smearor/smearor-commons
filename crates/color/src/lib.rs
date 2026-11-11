@@ -7,9 +7,9 @@
 //! Semantic color types (`FigureColor`, `LineColor`, `PawnColor`, ...)
 //! stay in consumer crates as thin newtype wrappers around [`Color<T>`].
 
-mod color;
 #[cfg(feature = "cairo")]
 mod cairo;
+mod color;
 mod parse_color_error;
 
 pub use color::Color;
