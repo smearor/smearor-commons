@@ -101,6 +101,61 @@ impl Color<f64> {
 
     /// White.
     pub const WHITE: Self = Self::new(1.0, 1.0, 1.0);
+
+    /// The perceived luminance with ITU-R BT.709 weights (0.0-1.0).
+    pub fn luminance_709(&self) -> f64 {
+        self.r * 0.2126 + self.g * 0.7152 + self.b * 0.0722
+    }
+
+    /// The perceived luminance with ITU-R BT.601 weights (0.0-1.0).
+    pub fn luminance_601(&self) -> f64 {
+        self.r * 0.299 + self.g * 0.587 + self.b * 0.114
+    }
+
+    /// Linear blend toward `other` by `t` (0 = self, 1 = other).
+    /// All four channels are interpolated; `t` is clamped to `[0, 1]`.
+    pub fn lerp(&self, other: &Self, t: f64) -> Self {
+        let t = t.clamp(0.0, 1.0);
+        Self {
+            r: self.r + (other.r - self.r) * t,
+            g: self.g + (other.g - self.g) * t,
+            b: self.b + (other.b - self.b) * t,
+            a: self.a + (other.a - self.a) * t,
+        }
+    }
+
+    /// Lightens the color by blending each channel toward white by
+    /// `factor` (0 = unchanged, 1 = white). Alpha is preserved.
+    pub fn lighten(&self, factor: f64) -> Self {
+        let factor = factor.clamp(0.0, 1.0);
+        Self {
+            r: self.r + (1.0 - self.r) * factor,
+            g: self.g + (1.0 - self.g) * factor,
+            b: self.b + (1.0 - self.b) * factor,
+            a: self.a,
+        }
+    }
+
+    /// The color lifted to at least `min` luminance (BT.709) by
+    /// blending toward white - dark colors stay readable on dark
+    /// backgrounds. Alpha is preserved.
+    pub fn with_min_luminance(&self, min: f64) -> Self {
+        let luminance = self.luminance_709();
+        if luminance >= min {
+            return *self;
+        }
+        self.lighten((min - luminance) / (1.0 - luminance))
+    }
+
+    /// Clamps all four channels to `[0.0, 1.0]`.
+    pub fn clamp(&self) -> Self {
+        Self {
+            r: self.r.clamp(0.0, 1.0),
+            g: self.g.clamp(0.0, 1.0),
+            b: self.b.clamp(0.0, 1.0),
+            a: self.a.clamp(0.0, 1.0),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +178,61 @@ impl Color<f32> {
 
     /// White.
     pub const WHITE: Self = Self::new(1.0, 1.0, 1.0);
+
+    /// The perceived luminance with ITU-R BT.709 weights (0.0-1.0).
+    pub fn luminance_709(&self) -> f32 {
+        self.r * 0.2126 + self.g * 0.7152 + self.b * 0.0722
+    }
+
+    /// The perceived luminance with ITU-R BT.601 weights (0.0-1.0).
+    pub fn luminance_601(&self) -> f32 {
+        self.r * 0.299 + self.g * 0.587 + self.b * 0.114
+    }
+
+    /// Linear blend toward `other` by `t` (0 = self, 1 = other).
+    /// All four channels are interpolated; `t` is clamped to `[0, 1]`.
+    pub fn lerp(&self, other: &Self, t: f32) -> Self {
+        let t = t.clamp(0.0, 1.0);
+        Self {
+            r: self.r + (other.r - self.r) * t,
+            g: self.g + (other.g - self.g) * t,
+            b: self.b + (other.b - self.b) * t,
+            a: self.a + (other.a - self.a) * t,
+        }
+    }
+
+    /// Lightens the color by blending each channel toward white by
+    /// `factor` (0 = unchanged, 1 = white). Alpha is preserved.
+    pub fn lighten(&self, factor: f32) -> Self {
+        let factor = factor.clamp(0.0, 1.0);
+        Self {
+            r: self.r + (1.0 - self.r) * factor,
+            g: self.g + (1.0 - self.g) * factor,
+            b: self.b + (1.0 - self.b) * factor,
+            a: self.a,
+        }
+    }
+
+    /// The color lifted to at least `min` luminance (BT.709) by
+    /// blending toward white - dark colors stay readable on dark
+    /// backgrounds. Alpha is preserved.
+    pub fn with_min_luminance(&self, min: f32) -> Self {
+        let luminance = self.luminance_709();
+        if luminance >= min {
+            return *self;
+        }
+        self.lighten((min - luminance) / (1.0 - luminance))
+    }
+
+    /// Clamps all four channels to `[0.0, 1.0]`.
+    pub fn clamp(&self) -> Self {
+        Self {
+            r: self.r.clamp(0.0, 1.0),
+            g: self.g.clamp(0.0, 1.0),
+            b: self.b.clamp(0.0, 1.0),
+            a: self.a.clamp(0.0, 1.0),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +550,58 @@ mod tests {
         let original = Color::<f64>::new_rgba(0x12 as f64 / 255.0, 0x34 as f64 / 255.0, 0x56 as f64 / 255.0, 0x78 as f64 / 255.0);
         let parsed: Color<f64> = original.to_string().parse().unwrap();
         assert_eq!(original, parsed);
+    }
+
+    #[test]
+    fn luminance_709_black_and_white() {
+        assert_eq!(Color::<f64>::BLACK.luminance_709(), 0.0);
+        assert!((Color::<f64>::WHITE.luminance_709() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn luminance_601_weights() {
+        let color = Color::<f64>::new(1.0, 0.0, 0.0);
+        assert!((color.luminance_601() - 0.299).abs() < 1e-9);
+        assert!((Color::<f64>::WHITE.luminance_601() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn lerp_midpoint() {
+        let half = Color::<f64>::BLACK.lerp(&Color::<f64>::WHITE, 0.5);
+        assert!((half.r - 0.5).abs() < 1e-9);
+        assert!((half.a - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn lerp_clamps_t() {
+        assert_eq!(Color::<f64>::BLACK.lerp(&Color::<f64>::WHITE, 2.0), Color::<f64>::WHITE);
+        assert_eq!(Color::<f64>::BLACK.lerp(&Color::<f64>::WHITE, -1.0), Color::<f64>::BLACK);
+    }
+
+    #[test]
+    fn lighten_preserves_alpha() {
+        let color = Color::<f64>::new_rgba(0.0, 0.0, 0.0, 0.5).lighten(0.5);
+        assert!((color.r - 0.5).abs() < 1e-9);
+        assert_eq!(color.a, 0.5);
+    }
+
+    #[test]
+    fn with_min_luminance_lifts_dark_color() {
+        let lifted = Color::<f64>::BLACK.with_min_luminance(0.5);
+        assert!(lifted.luminance_709() >= 0.5);
+    }
+
+    #[test]
+    fn with_min_luminance_keeps_bright_color() {
+        let bright = Color::<f64>::new(0.9, 0.9, 0.9);
+        assert_eq!(bright.with_min_luminance(0.5), bright);
+    }
+
+    #[test]
+    fn f32_lerp_and_luminance() {
+        let half = Color::<f32>::BLACK.lerp(&Color::<f32>::WHITE, 0.5);
+        assert!((half.r - 0.5).abs() < 1e-6);
+        assert!((Color::<f32>::WHITE.luminance_709() - 1.0).abs() < 1e-6);
     }
 
     #[test]
