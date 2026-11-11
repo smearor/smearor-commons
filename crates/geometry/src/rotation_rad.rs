@@ -25,6 +25,11 @@ impl RotationRad {
         Self(radians)
     }
 
+    /// Creates a rotation from degrees.
+    pub fn from_degrees(degrees: f64) -> Self {
+        Self(degrees.to_radians())
+    }
+
     /// The angle in radians.
     pub const fn as_f64(self) -> f64 {
         self.0
