@@ -2,6 +2,7 @@ use crate::SmoothingAlpha;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
+use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::PI;
 use std::f64::consts::TAU;
 use std::ops::Add;
@@ -94,7 +95,7 @@ impl RotationRad {
     /// direction) share an axis, so heading-ambiguous footprints
     /// like two-pin dumbbells fold onto one stable value.
     pub fn axis(&self) -> RotationRad {
-        RotationRad(self.0.rem_euclid(PI) - PI / 2.0)
+        RotationRad(self.0.rem_euclid(PI) - FRAC_PI_2)
     }
 
     /// The shortest signed turn between two undirected axes, in
@@ -103,7 +104,7 @@ impl RotationRad {
     /// nearly-parallel lines on opposite sides of the `+-pi/2`
     /// fold keep a small delta instead of a nearly-pi swing.
     pub fn axis_delta_to(self, to: RotationRad) -> RotationRad {
-        RotationRad((to.0 - self.0 + PI / 2.0).rem_euclid(PI) - PI / 2.0)
+        RotationRad((to.0 - self.0 + FRAC_PI_2).rem_euclid(PI) - FRAC_PI_2)
     }
 
     /// Axis-space [`Self::ema`]: wraps the blend along the `pi`
@@ -170,6 +171,7 @@ async_graphql::scalar!(RotationRad);
 mod tests {
     use super::RotationRad;
     use crate::SmoothingAlpha;
+    use std::f64::consts::FRAC_PI_2;
     use std::f64::consts::PI;
     use std::f64::consts::TAU;
 
@@ -231,7 +233,7 @@ mod tests {
     #[test]
     fn interior_angle_of_a_right_turn() {
         let angle = RotationRad::interior(crate::Vec2::<crate::Millimeters>::new(1.0, 0.0), crate::Vec2::new(0.0, 1.0));
-        assert!((angle.as_f64() - std::f64::consts::FRAC_PI_2).abs() < 1e-9);
+        assert!((angle.as_f64() - FRAC_PI_2).abs() < 1e-9);
     }
 
     /// `axis` folds `a` and `a + pi` onto the same undirected angle.
@@ -239,16 +241,16 @@ mod tests {
     fn axis_ignores_direction() {
         let (a, b) = (RotationRad::new(0.3), RotationRad::new(0.3 + PI));
         assert!((a.axis().as_f64() - b.axis().as_f64()).abs() < 1e-9);
-        assert!((a.axis().as_f64() - (0.3 - PI / 2.0)).abs() < 1e-9);
+        assert!((a.axis().as_f64() - (0.3 - FRAC_PI_2)).abs() < 1e-9);
     }
 
     /// `axis` keeps every direction inside `[-pi/2, pi/2)`, even for
     /// non-normalized inputs - `rem_euclid` wraps full turns first.
     #[test]
     fn axis_stays_in_half_turn_range() {
-        for angle in [0.0, 1.0, -1.0, PI / 2.0, -PI / 2.0, PI, -PI, 4.0, -4.0, 42.0] {
+        for angle in [0.0, 1.0, -1.0, FRAC_PI_2, -FRAC_PI_2, PI, -PI, 4.0, -4.0, 42.0] {
             let axis = RotationRad::new(angle).axis().as_f64();
-            assert!((-PI / 2.0..PI / 2.0).contains(&axis), "axis({angle}) = {axis} outside [-pi/2, pi/2)");
+            assert!((-FRAC_PI_2..FRAC_PI_2).contains(&axis), "axis({angle}) = {axis} outside [-pi/2, pi/2)");
         }
     }
 
@@ -256,10 +258,10 @@ mod tests {
     /// (horizontal) fold to `-pi/2`, `+-pi/2` (vertical) folds to `0`.
     #[test]
     fn axis_boundary_values() {
-        assert!((RotationRad::new(0.0).axis().as_f64() + PI / 2.0).abs() < 1e-9);
-        assert!(RotationRad::new(PI / 2.0).axis().as_f64().abs() < 1e-9);
-        assert!(RotationRad::new(-PI / 2.0).axis().as_f64().abs() < 1e-9);
-        assert!((RotationRad::new(PI).axis().as_f64() + PI / 2.0).abs() < 1e-9);
+        assert!((RotationRad::new(0.0).axis().as_f64() + FRAC_PI_2).abs() < 1e-9);
+        assert!(RotationRad::new(FRAC_PI_2).axis().as_f64().abs() < 1e-9);
+        assert!(RotationRad::new(-FRAC_PI_2).axis().as_f64().abs() < 1e-9);
+        assert!((RotationRad::new(PI).axis().as_f64() + FRAC_PI_2).abs() < 1e-9);
     }
 
     /// Ordinary axis deltas pass through unchanged; an antipodal
@@ -301,6 +303,6 @@ mod tests {
     #[test]
     fn ema_axis_blends_across_the_fold() {
         let blended = RotationRad::ema_axis(RotationRad::new(-1.5), RotationRad::new(1.5), SmoothingAlpha::new(0.5));
-        assert!((blended.as_f64() + PI / 2.0).abs() < 1e-9);
+        assert!((blended.as_f64() + FRAC_PI_2).abs() < 1e-9);
     }
 }
