@@ -89,6 +89,17 @@ impl<U> Vec2<U> {
         Self::new(self.x * other.x, self.y * other.y)
     }
 
+    /// Both components set to the same value - `Vec2::splat(margin)` is
+    /// the vector `(margin, margin)` (e.g. a uniform margin around a
+    /// rectangle).
+    pub fn splat(value: U) -> Self
+    where
+        U: Into<f64>,
+    {
+        let v = value.into();
+        Self::new(v, v)
+    }
+
     /// Creates a vector from polar coordinates: `radius` in the unit `U`
     /// at `angle` (counter-clockwise from the positive x-axis).
     pub fn from_polar(radius: f64, angle: RotationRad) -> Self {
@@ -313,6 +324,13 @@ mod tests {
         assert_eq!(v.map(|c| c.max(0.0)).y, 4.0);
         let w = Vec2::<Pixels>::new(2.0, 0.5).component_mul(&v);
         assert_eq!((w.x, w.y), (-6.0, 2.0));
+    }
+
+    /// `splat` fills both components from one unit value.
+    #[test]
+    fn splat_fills_both_axes() {
+        let v = Vec2::<Pixels>::splat(Pixels::new(7.5));
+        assert_eq!((v.x, v.y), (7.5, 7.5));
     }
 
     /// `x()`/`y()` wrap the raw components in the unit type.
