@@ -75,6 +75,20 @@ impl<U> Vec2<U> {
         U::from(self.y)
     }
 
+    /// Applies `f` to each component - component-wise transforms like
+    /// clamping or rounding (`v.map(f64::max)` is not directly possible;
+    /// use `v.map(|c| c.max(0.0))`).
+    pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
+        Self::new(f(self.x), f(self.y))
+    }
+
+    /// Component-wise product (Hadamard product): each axis scaled by the
+    /// other vector's matching component - per-axis weights, not a dot
+    /// product.
+    pub fn component_mul(&self, other: &Vec2<U>) -> Self {
+        Self::new(self.x * other.x, self.y * other.y)
+    }
+
     /// Creates a vector from polar coordinates: `radius` in the unit `U`
     /// at `angle` (counter-clockwise from the positive x-axis).
     pub fn from_polar(radius: f64, angle: RotationRad) -> Self {
@@ -291,6 +305,16 @@ pub mod serde_points {
 
 #[cfg(test)]
 mod tests {
+    /// `map` transforms each component; `component_mul` scales per axis.
+    #[test]
+    fn map_and_component_mul() {
+        let v = Vec2::<Pixels>::new(-3.0, 4.0);
+        assert_eq!(v.map(|c| c.max(0.0)).x, 0.0);
+        assert_eq!(v.map(|c| c.max(0.0)).y, 4.0);
+        let w = Vec2::<Pixels>::new(2.0, 0.5).component_mul(&v);
+        assert_eq!((w.x, w.y), (-6.0, 2.0));
+    }
+
     /// `x()`/`y()` wrap the raw components in the unit type.
     #[test]
     fn components_as_units() {
