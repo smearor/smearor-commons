@@ -19,7 +19,7 @@ use std::ops::Sub;
 /// Serializes as a flat `{"x": .., "y": ..}` map; the unit marker is skipped.
 /// With the `async-graphql` feature, `Vec2<Millimeters>` is exposed as the
 /// GraphQL object type `Point`.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "async-graphql", derive(async_graphql::SimpleObject))]
 #[cfg_attr(feature = "async-graphql", graphql(concrete(name = "Point", params(crate::Millimeters))))]
 pub struct Vec2<U> {
@@ -33,6 +33,16 @@ pub struct Vec2<U> {
     unit: PhantomData<U>,
 }
 
+// Manual impls: `PhantomData<U>` is always `Copy`, so `Vec2<U>` is too -
+// the derive would otherwise impose a `U: Copy` bound.
+impl<U> Copy for Vec2<U> {}
+
+impl<U> Clone for Vec2<U> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 impl<U> Vec2<U> {
     /// The origin `(0, 0)` in the unit `U`.
     pub const ZERO: Self = Self {
@@ -42,7 +52,7 @@ impl<U> Vec2<U> {
     };
 
     /// Creates a new 2D point in the unit `U`.
-    pub fn new(x: f64, y: f64) -> Self {
+    pub const fn new(x: f64, y: f64) -> Self {
         Self { x, y, unit: PhantomData }
     }
 
@@ -124,6 +134,13 @@ impl<U> Vec2<U> {
             return Vec2::new(0.0, 0.0);
         }
         Vec2::new(points.iter().map(|p| p.x).sum::<f64>() / n, points.iter().map(|p| p.y).sum::<f64>() / n)
+    }
+}
+
+impl<U> Default for Vec2<U> {
+    /// The origin `(0, 0)` — same as [`Vec2::ZERO`].
+    fn default() -> Self {
+        Self::ZERO
     }
 }
 
