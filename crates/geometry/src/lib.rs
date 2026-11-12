@@ -11,7 +11,9 @@
 //! `f64` values unconfusable and double as the `Vec2<U>` unit markers.
 
 mod corners;
+mod quarter_turn;
 mod rect;
+mod rotation;
 mod rotation_rad;
 mod scale_factor;
 mod scanline;
@@ -20,7 +22,9 @@ mod units;
 mod vec2;
 
 pub use corners::Corners;
+pub use quarter_turn::QuarterTurn;
 pub use rect::Rect;
+pub use rotation::Rotation;
 pub use rotation_rad::RotationRad;
 pub use scale_factor::ScaleFactor;
 pub use scanline::Scanline;
