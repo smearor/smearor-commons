@@ -386,8 +386,8 @@ mod tests {
     fn serde_round_trip_named_colors() {
         // Colors that survive the `#rrggbb` wire format exactly.
         let mut palette = Palette::<NamedColor, f64>::new();
-        palette.insert("light", "#EDD49E".parse::<Color<f64>>().unwrap());
-        palette.insert("dark", "#734D2E".parse::<Color<f64>>().unwrap());
+        palette.insert("light", "#edd49e".parse::<Color<f64>>().unwrap());
+        palette.insert("dark", "#734d2e".parse::<Color<f64>>().unwrap());
         let json = serde_json::to_string(&palette).unwrap();
         let parsed: Palette<NamedColor, f64> = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, palette);
@@ -417,9 +417,9 @@ mod tests {
     fn serde_round_trip_enum_keys() {
         // Enum keys serialize as their variant name.
         let mut palette = Palette::<BoardSlot, f64>::new();
-        palette.insert(BoardSlot::Light, "#EDD49E".parse::<Color<f64>>().unwrap());
+        palette.insert(BoardSlot::Light, "#edd49e".parse::<Color<f64>>().unwrap());
         let json = serde_json::to_string(&palette).unwrap();
-        assert_eq!(json, "{\"Light\":\"#EDD49E\"}");
+        assert_eq!(json, "{\"Light\":\"#edd49e\"}");
         let parsed: Palette<BoardSlot, f64> = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, palette);
     }

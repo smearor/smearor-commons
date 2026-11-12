@@ -274,6 +274,6 @@ mod tests {
     #[test]
     fn serialize_matches_palette_wire_format() {
         let json = serde_json::to_string(&BOARD).unwrap();
-        assert_eq!(json, "{\"Light\":\"#EDD49E\",\"Dark\":\"#734D2E\"}");
+        assert_eq!(json, "{\"Light\":\"#edd49e\",\"Dark\":\"#734d2e\"}");
     }
 }
