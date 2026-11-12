@@ -56,6 +56,25 @@ impl<U> Vec2<U> {
         Self { x, y, unit: PhantomData }
     }
 
+    /// The x-component as a scalar in the unit `U` - the typed
+    /// counterpart of the raw `x` field for boundaries that need the
+    /// unit attached (`v.x` is `f64`, `v.x_unit()` is `U`).
+    pub fn x_unit(&self) -> U
+    where
+        U: From<f64>,
+    {
+        U::from(self.x)
+    }
+
+    /// The y-component as a scalar in the unit `U` - see
+    /// [`Self::x_unit`].
+    pub fn y_unit(&self) -> U
+    where
+        U: From<f64>,
+    {
+        U::from(self.y)
+    }
+
     /// Creates a vector from polar coordinates: `radius` in the unit `U`
     /// at `angle` (counter-clockwise from the positive x-axis).
     pub fn from_polar(radius: f64, angle: RotationRad) -> Self {
@@ -272,6 +291,14 @@ pub mod serde_points {
 
 #[cfg(test)]
 mod tests {
+    /// `x()`/`y()` wrap the raw components in the unit type.
+    #[test]
+    fn components_as_units() {
+        let v = Vec2::<Pixels>::new(3.0, 4.0);
+        assert_eq!(v.x_unit(), Pixels::new(3.0));
+        assert_eq!(v.y_unit(), Pixels::new(4.0));
+    }
+
     use super::Vec2;
     use crate::Millimeters;
     use crate::Pixels;
