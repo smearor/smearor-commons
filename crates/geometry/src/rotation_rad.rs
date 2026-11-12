@@ -3,6 +3,7 @@ use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 use std::f64::consts::PI;
+use std::f64::consts::TAU;
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Neg;
@@ -58,6 +59,14 @@ impl RotationRad {
         Self(PI - previous.cross::<f64>(&next).atan2(previous.dot::<f64>(&next)))
     }
 
+    /// The angle normalized to `[0, 2*PI)` - the canonical
+    /// representative of the same direction. The full-turn
+    /// counterpart of [`Self::axis`], which folds onto a
+    /// half-turn axis instead.
+    pub fn normalized(self) -> RotationRad {
+        RotationRad(self.0.rem_euclid(TAU))
+    }
+
     /// The shortest signed arc from `self` to `to`, in [-π, π].
     ///
     /// The ±PI wrap is crossed instead of going the long way around;
@@ -65,10 +74,10 @@ impl RotationRad {
     pub fn signed_delta_to(self, to: RotationRad) -> RotationRad {
         let mut delta = to.0 - self.0;
         while delta > PI {
-            delta -= 2.0 * PI;
+            delta -= TAU;
         }
         while delta < -PI {
-            delta += 2.0 * PI;
+            delta += TAU;
         }
         RotationRad(delta)
     }
@@ -162,6 +171,17 @@ mod tests {
     use super::RotationRad;
     use crate::SmoothingAlpha;
     use std::f64::consts::PI;
+    use std::f64::consts::TAU;
+
+    /// `normalized` wraps any angle into `[0, 2*PI)` without
+    /// changing the direction it points to.
+    #[test]
+    fn normalized_wraps_into_full_turn() {
+        assert_eq!(RotationRad::new(0.5).normalized().as_f64(), 0.5);
+        assert!((RotationRad::new(-0.5).normalized().as_f64() - (TAU - 0.5)).abs() < 1e-9);
+        assert!((RotationRad::new(3.0 * PI).normalized().as_f64() - PI).abs() < 1e-9);
+        assert!(RotationRad::new(TAU).normalized().as_f64().abs() < 1e-9);
+    }
 
     /// `alpha = 1` makes the blend pure `new` - history has no weight.
     #[test]
@@ -198,14 +218,14 @@ mod tests {
     #[test]
     fn signed_delta_wraps_shortest_way() {
         let delta = RotationRad::new(3.0).signed_delta_to(RotationRad::new(-3.0));
-        assert!((delta.as_f64() - (2.0 * PI - 6.0)).abs() < 1e-9);
+        assert!((delta.as_f64() - (TAU - 6.0)).abs() < 1e-9);
     }
 
     /// The mirrored crossing reports the negative direction.
     #[test]
     fn signed_delta_wraps_negative_side() {
         let delta = RotationRad::new(-3.0).signed_delta_to(RotationRad::new(3.0));
-        assert!((delta.as_f64() - (6.0 - 2.0 * PI)).abs() < 1e-9);
+        assert!((delta.as_f64() - (6.0 - TAU)).abs() < 1e-9);
     }
 
     #[test]
