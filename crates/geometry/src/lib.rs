@@ -13,6 +13,7 @@
 mod corners;
 mod rect;
 mod rotation_rad;
+mod scale_factor;
 mod scanline;
 mod smoothing_alpha;
 mod units;
@@ -21,6 +22,7 @@ mod vec2;
 pub use corners::Corners;
 pub use rect::Rect;
 pub use rotation_rad::RotationRad;
+pub use scale_factor::ScaleFactor;
 pub use scanline::Scanline;
 pub use smoothing_alpha::SmoothingAlpha;
 pub use units::Millimeters;
