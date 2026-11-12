@@ -77,9 +77,9 @@ fn parse_hex_components(hex: &str) -> Result<[u8; 4], ParseColorError> {
 /// Formats byte components as `#RRGGBB` when opaque, `#RRGGBBAA` otherwise.
 fn format_hex_components(r: u8, g: u8, b: u8, a: u8) -> String {
     if a == 255 {
-        format!("#{r:02X}{g:02X}{b:02X}")
+        format!("#{r:02x}{g:02x}{b:02x}")
     } else {
-        format!("#{r:02X}{g:02X}{b:02X}{a:02X}")
+        format!("#{r:02x}{g:02x}{b:02x}{a:02X}")
     }
 }
 
@@ -589,17 +589,17 @@ mod tests {
 
     #[test]
     fn display_opaque() {
-        assert_eq!(Color::<f64>::new(1.0, 0.0, 1.0).to_string(), "#FF00FF");
+        assert_eq!(Color::<f64>::new(1.0, 0.0, 1.0).to_string(), "#ff00ff");
     }
 
     #[test]
     fn display_with_alpha() {
-        assert_eq!(Color::<f64>::new_rgba(1.0, 0.0, 1.0, 0.5).to_string(), "#FF00FF80");
+        assert_eq!(Color::<f64>::new_rgba(1.0, 0.0, 1.0, 0.5).to_string(), "#ff00ff80");
     }
 
     #[test]
     fn display_u8() {
-        assert_eq!(Color::<u8>::new_rgba(255, 0, 255, 128).to_string(), "#FF00FF80");
+        assert_eq!(Color::<u8>::new_rgba(255, 0, 255, 128).to_string(), "#ff00ff80");
     }
 
     #[test]
@@ -665,7 +665,7 @@ mod tests {
     fn serde_hex_round_trip() {
         let color = Color::<f64>::new(1.0, 0.0, 0.0);
         let json = serde_json::to_string(&color).unwrap();
-        assert_eq!(json, "\"#FF0000\"");
+        assert_eq!(json, "\"#ff0000\"");
         let parsed: Color<f64> = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, color);
     }
