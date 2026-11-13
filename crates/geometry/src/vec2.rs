@@ -288,7 +288,16 @@ impl<U> Vec2<U, f64> {
     where
         U: From<f64>,
     {
-        U::from(((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt())
+        U::from(self.distance_f64(other))
+    }
+
+    /// Euclidean distance to another point, as a plain `f64`.
+    ///
+    /// Unlike [`Vec2::distance`] this needs no unit-carrying result
+    /// type, so it also works on the unit-erased `Vec2<()>` where the
+    /// distance itself has no meaningful unit.
+    pub fn distance_f64(&self, other: &Vec2<U>) -> f64 {
+        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt()
     }
 
     /// Dot product `x·x + y·y` of two vectors in the same unit.
@@ -315,6 +324,12 @@ impl<U> Vec2<U, f64> {
         U: From<f64>,
     {
         self.distance(&Vec2::ZERO)
+    }
+
+    /// Euclidean magnitude of the vector, as a plain `f64` - the
+    /// unit-erased counterpart of [`Vec2::magnitude`] for `Vec2<()>`.
+    pub fn magnitude_f64(&self) -> f64 {
+        self.distance_f64(&Vec2::ZERO)
     }
 
     /// The unit vector pointing the same way; a vector shorter
@@ -621,6 +636,16 @@ mod tests {
         let a = Vec2::<Millimeters>::new(0.0, 0.0);
         let b = Vec2::<Millimeters>::new(3.0, 4.0);
         assert!((a.distance(&b).as_f64() - 5.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn distance_f64_on_unit_erased_vectors() {
+        let a = Vec2::<()>::new(1.0, 0.0);
+        let b = Vec2::<()>::new(0.0, 1.0);
+        assert!((a.distance_f64(&b) - 2.0f64.sqrt()).abs() < 1e-9);
+        assert!((a.distance_f64(&a)).abs() < 1e-9);
+        assert!((a.magnitude_f64() - 1.0).abs() < 1e-9);
+        assert!((b.magnitude_f64() - 1.0).abs() < 1e-9);
     }
 
     #[test]
