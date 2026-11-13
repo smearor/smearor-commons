@@ -44,6 +44,8 @@ pub use rotation_rad::RotationRad;
 pub use scale_factor::ScaleFactor;
 pub use scanline::Scanline;
 pub use size::Size;
+#[cfg(feature = "gtk4")]
+pub use size::WidgetSizeExt;
 pub use smoothing_alpha::SmoothingAlpha;
 pub use units::Millimeters;
 pub use units::Pixels;

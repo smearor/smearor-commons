@@ -26,6 +26,27 @@ impl From<&gtk4::gdk::Texture> for Size<i32> {
     }
 }
 
+/// Convenience geometry accessors for `gtk4::Widget`s.
+///
+/// Import this trait to call [`WidgetSizeExt::allocated_size`] on any
+/// widget. Named after `gtk_widget_get_allocated_*` rather than `size`,
+/// which collides with `gtk4::prelude::WidgetExt::size`.
+#[cfg(feature = "gtk4")]
+pub trait WidgetSizeExt {
+    /// The widget's allocated pixel extent.
+    fn allocated_size(&self) -> Size<i32>;
+}
+
+#[cfg(feature = "gtk4")]
+impl<W: gtk4::prelude::IsA<gtk4::Widget>> WidgetSizeExt for W {
+    fn allocated_size(&self) -> Size<i32> {
+        use gtk4::prelude::Cast;
+        use gtk4::prelude::WidgetExt;
+        let widget = self.upcast_ref::<gtk4::Widget>();
+        Size::new(widget.width(), widget.height())
+    }
+}
+
 // ---------------------------------------------------------------------------
 // smithay gate — utils::Size conversions
 //
