@@ -1,3 +1,4 @@
+use crate::AspectRatio;
 use crate::Millimeters;
 use crate::Pixels;
 use crate::RotationRad;
@@ -405,13 +406,11 @@ impl<U> Vec2<U, f64> {
     /// angle keeps such an inscribed solution bounded. At `aspect == 1`
     /// it degenerates to the square fit `min(w, h) / (|cos| + |sin|)`.
     ///
-    /// A non-positive `aspect` has no geometric meaning and yields
-    /// [`Vec2::ZERO`]; negative components of `self` are clamped the
-    /// same way.
-    pub fn unrotated_fit(&self, aspect: f64, rotation: RotationRad) -> Self {
-        if aspect <= 0.0 {
-            return Vec2::ZERO;
-        }
+    /// `aspect` is strictly positive by construction
+    /// ([`AspectRatio`]); negative components of `self` are clamped to
+    /// [`Vec2::ZERO`].
+    pub fn unrotated_fit(&self, aspect: AspectRatio, rotation: RotationRad) -> Self {
+        let aspect = aspect.as_f64();
         let (sin, cos) = rotation.sin_cos();
         let (abs_sin, abs_cos) = (sin.abs(), cos.abs());
         let height = (self.x / (aspect * abs_cos + abs_sin)).min(self.y / (aspect * abs_sin + abs_cos)).max(0.0);
@@ -423,6 +422,14 @@ impl<U> Vec2<U, f64> {
     /// center offset.
     pub fn half(&self) -> Self {
         self.map(|v| v / 2.0)
+    }
+
+    /// The aspect ratio `x / y` - `width / height` for a
+    /// [`crate::Size`] extent. Returns `None` when either component is
+    /// non-positive or the ratio degenerates (`0` or non-finite): a
+    /// degenerate extent has no meaningful aspect.
+    pub fn aspect(&self) -> Option<AspectRatio> {
+        (self.x > 0.0 && self.y > 0.0).then(|| self.x / self.y).and_then(AspectRatio::new)
     }
 
     /// Geometric centroid of a non-empty point set.
@@ -676,6 +683,7 @@ mod tests {
     }
 
     use super::Vec2;
+    use crate::AspectRatio;
     use crate::Millimeters;
     use crate::Pixels;
     use crate::Position;
@@ -895,7 +903,7 @@ mod tests {
     /// the tighter axis constraint wins.
     #[test]
     fn unrotated_fit_at_zero_rotation_is_aspect_fit() {
-        let fit = Vec2::<Pixels>::new(100.0, 30.0).unrotated_fit(2.0, RotationRad::ZERO);
+        let fit = Vec2::<Pixels>::new(100.0, 30.0).unrotated_fit(AspectRatio::new(2.0).unwrap(), RotationRad::ZERO);
         assert!((fit.x - 60.0).abs() < 1e-9 && (fit.y - 30.0).abs() < 1e-9);
     }
 
@@ -903,7 +911,7 @@ mod tests {
     /// positive size - for a square aspect it is the square fit.
     #[test]
     fn unrotated_fit_stays_bounded_at_singularity() {
-        let fit = Vec2::<Pixels>::new(10.0, 6.0).unrotated_fit(1.0, RotationRad::from_degrees(45.0));
+        let fit = Vec2::<Pixels>::new(10.0, 6.0).unrotated_fit(AspectRatio::ONE, RotationRad::from_degrees(45.0));
         let expected = 6.0 / (2.0_f64.sqrt());
         assert!((fit.x - expected).abs() < 1e-9 && (fit.y - expected).abs() < 1e-9);
     }
@@ -915,19 +923,13 @@ mod tests {
         let target = Vec2::<Pixels>::new(100.0, 30.0);
         for &degrees in &[12.3, 30.0, 45.0, 77.2, 90.0, 150.0] {
             for &aspect in &[0.5, 1.0, 2.0, 4.0] {
+                let aspect = AspectRatio::new(aspect).unwrap();
                 let rotation = RotationRad::from_degrees(degrees);
                 let bounds = target.unrotated_fit(aspect, rotation).rotated_bounds(rotation);
                 assert!(bounds.x <= target.x + 1e-9 && bounds.y <= target.y + 1e-9, "deg {degrees} aspect {aspect}: {bounds:?}");
                 assert!(bounds.x >= 0.0 && bounds.y >= 0.0);
             }
         }
-    }
-
-    /// A non-positive aspect has no geometric meaning.
-    #[test]
-    fn unrotated_fit_rejects_non_positive_aspect() {
-        assert_eq!(Vec2::<Pixels>::new(10.0, 6.0).unrotated_fit(0.0, RotationRad::ZERO), Vec2::ZERO);
-        assert_eq!(Vec2::<Pixels>::new(10.0, 6.0).unrotated_fit(-2.0, RotationRad::ZERO), Vec2::ZERO);
     }
 
     /// `direction` reads the atan2 angle of each axis and quadrant.
