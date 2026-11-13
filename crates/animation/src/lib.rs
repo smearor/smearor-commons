@@ -24,13 +24,13 @@ pub use easing::EasingFunction;
 #[cfg(feature = "gtk4")]
 pub use frame_driver::drive;
 pub use interpolate::Interpolate;
+use smearor_commons_geometry::RotationRad;
+use smearor_commons_geometry::ScaleFactor;
+use smearor_commons_geometry::Vec2;
 pub use span::Span;
 pub use three_phase_span::ThreePhaseSpan;
 pub use timed_animation::TimedAnimation;
 pub use trajectory::Trajectory;
-use smearor_commons_geometry::RotationRad;
-use smearor_commons_geometry::ScaleFactor;
-use smearor_commons_geometry::Vec2;
 
 /// An eased, timed rotation animation - the shortest-arc lerp
 /// between two [`RotationRad`] values.
