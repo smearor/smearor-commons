@@ -29,6 +29,11 @@ impl ScaleFactor {
         self.0
     }
 
+    /// The factor as `f32` for `f32`-based framework APIs (e.g. GTK4).
+    pub fn as_f32(self) -> f32 {
+        self.0 as f32
+    }
+
     /// Whether the factor is `1.0` - scaling by it changes nothing.
     pub fn is_identity(self) -> bool {
         self.0 == 1.0
