@@ -25,7 +25,12 @@ impl Rotation {
     /// Creates a rotation from a degree value, snapping to
     /// [`QuarterTurn`] when the value is exactly `0`, `90`, `180`
     /// or `270` and falling back to [`Rotation::Free`] otherwise.
-    pub fn from_degrees(degrees: f64) -> Self {
+    ///
+    /// Accepts any scalar that widens losslessly to `f64` (`f32`, `i32`,
+    /// `u32`, ...); narrower-than-`f64` sources like `usize` still
+    /// require an explicit cast.
+    pub fn from_degrees(degrees: impl Into<f64>) -> Self {
+        let degrees = degrees.into();
         match QuarterTurn::from_degrees(degrees) {
             Some(turn) => Self::QuarterTurn(turn),
             None => Self::Free(RotationRad::from_degrees(degrees)),

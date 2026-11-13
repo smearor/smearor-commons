@@ -28,8 +28,12 @@ impl RotationRad {
     }
 
     /// Creates a rotation from degrees.
-    pub fn from_degrees(degrees: f64) -> Self {
-        Self(degrees.to_radians())
+    ///
+    /// Accepts any scalar that widens losslessly to `f64` (`f32`, `i32`,
+    /// `u32`, ...); narrower-than-`f64` sources like `usize` still
+    /// require an explicit cast.
+    pub fn from_degrees(degrees: impl Into<f64>) -> Self {
+        Self(degrees.into().to_radians())
     }
 
     /// The angle in radians.
