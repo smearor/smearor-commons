@@ -20,9 +20,12 @@
 //! [`Rectangle`] are readable aliases for these erased forms -
 //! the same type, not parallel representations.
 
+mod annulus;
+mod arc;
 mod aspect_ratio;
 #[cfg(feature = "gtk4")]
 mod centered_transform;
+mod circle;
 mod corners;
 mod position;
 mod quarter_turn;
@@ -37,9 +40,12 @@ mod smoothing_alpha;
 mod units;
 mod vec2;
 
+pub use annulus::Annulus;
+pub use arc::Arc;
 pub use aspect_ratio::AspectRatio;
 #[cfg(feature = "gtk4")]
 pub use centered_transform::CenteredTransform;
+pub use circle::Circle;
 pub use corners::Corners;
 pub use position::Position;
 pub use quarter_turn::QuarterTurn;
