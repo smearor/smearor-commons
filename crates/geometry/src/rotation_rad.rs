@@ -46,6 +46,12 @@ impl RotationRad {
         self.0 == 0.0
     }
 
+    /// The absolute magnitude of the angle - the unsigned arc length,
+    /// e.g. of a [`signed_delta_to`](Self::signed_delta_to) result.
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
+
     /// The angle converted to degrees.
     pub fn to_degrees(self) -> f64 {
         self.0.to_degrees()
