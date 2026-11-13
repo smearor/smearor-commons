@@ -35,6 +35,11 @@ impl From<&gtk4::gdk::Texture> for Size<i32> {
 pub trait WidgetSizeExt {
     /// The widget's allocated pixel extent.
     fn allocated_size(&self) -> Size<i32>;
+
+    /// The widget's measured minimum and natural pixel extents as
+    /// `(minimum, natural)`, measured unconstrained (`for_size = -1`)
+    /// in both orientations.
+    fn measure_size(&self) -> (Size<i32>, Size<i32>);
 }
 
 #[cfg(feature = "gtk4")]
@@ -44,6 +49,15 @@ impl<W: gtk4::prelude::IsA<gtk4::Widget>> WidgetSizeExt for W {
         use gtk4::prelude::WidgetExt;
         let widget = self.upcast_ref::<gtk4::Widget>();
         Size::new(widget.width(), widget.height())
+    }
+
+    fn measure_size(&self) -> (Size<i32>, Size<i32>) {
+        use gtk4::prelude::Cast;
+        use gtk4::prelude::WidgetExt;
+        let widget = self.upcast_ref::<gtk4::Widget>();
+        let (min_w, nat_w, _, _) = widget.measure(gtk4::Orientation::Horizontal, -1);
+        let (min_h, nat_h, _, _) = widget.measure(gtk4::Orientation::Vertical, -1);
+        (Size::new(min_w, min_h), Size::new(nat_w, nat_h))
     }
 }
 
