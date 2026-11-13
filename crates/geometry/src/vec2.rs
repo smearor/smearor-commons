@@ -223,6 +223,13 @@ impl<U> Vec2<U, f32> {
     pub fn to_f64(&self) -> Vec2<U, f64> {
         Vec2::new(self.x as f64, self.y as f64)
     }
+
+    /// Half of this vector component-wise - the midpoint between the
+    /// origin and `self`. For a [`crate::Size`] extent this is its
+    /// center offset.
+    pub fn half(&self) -> Self {
+        self.map(|v| v / 2.0)
+    }
 }
 
 impl<U> Vec2<U, f64> {
