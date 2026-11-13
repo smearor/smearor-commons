@@ -92,6 +92,18 @@ impl<U, T> Vec2<U, T> {
         Self { x, y, unit: PhantomData }
     }
 
+    /// Reinterprets this vector in the unit `V` - the inverse of the
+    /// unit-erased boundary forms ([`crate::Size`], [`crate::Position`]).
+    /// The components are unchanged; use this when a framework boundary
+    /// knows the coordinate space that the erased `()` tag does not
+    /// express.
+    pub fn with_unit<V>(&self) -> Vec2<V, T>
+    where
+        T: Copy,
+    {
+        Vec2::new(self.x, self.y)
+    }
+
     /// Applies `f` to each component - component-wise transforms like
     /// clamping, rounding or numeric conversion. The component type may
     /// change (`v.map(|c| c.round() as i32)` yields `Vec2<U, i32>`); the
