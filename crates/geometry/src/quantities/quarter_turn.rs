@@ -80,6 +80,14 @@ impl QuarterTurn {
         RotationRad::from_degrees(self.degrees())
     }
 
+    /// The snapped quarter turn when `angle` is exactly `0`, `90`,
+    /// `180` or `270` degrees - `None` for every other direction.
+    /// The [`RotationRad`]-typed counterpart of
+    /// [`Self::from_degrees`].
+    pub fn from_rotation_rad(angle: RotationRad) -> Option<Self> {
+        Self::from_degrees(angle.to_degrees())
+    }
+
     /// The snapped quarter turn for a degree value, or `None` when
     /// `degrees` is not one of `0`, `90`, `180`, `270`.
     pub fn from_degrees(degrees: f64) -> Option<Self> {

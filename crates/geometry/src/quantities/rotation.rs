@@ -30,10 +30,18 @@ impl Rotation {
     /// `u32`, ...); narrower-than-`f64` sources like `usize` still
     /// require an explicit cast.
     pub fn from_degrees(degrees: impl Into<f64>) -> Self {
-        let degrees = degrees.into();
-        match QuarterTurn::from_degrees(degrees) {
+        Self::quantized(RotationRad::from_degrees(degrees.into()))
+    }
+
+    /// Creates a rotation from a [`RotationRad`], snapping to
+    /// [`QuarterTurn`] when the angle is exactly `0`, `90`, `180`
+    /// or `270` degrees and falling back to [`Rotation::Free`]
+    /// otherwise - the quantizing counterpart of the lossless
+    /// `From<RotationRad>` conversion.
+    pub fn quantized(angle: RotationRad) -> Self {
+        match QuarterTurn::from_rotation_rad(angle) {
             Some(turn) => Self::QuarterTurn(turn),
-            None => Self::Free(RotationRad::from_degrees(degrees)),
+            None => Self::Free(angle),
         }
     }
 
@@ -83,7 +91,8 @@ impl From<QuarterTurn> for Rotation {
 
 impl From<RotationRad> for Rotation {
     /// A free rotation - snapped values stay [`Rotation::Free`];
-    /// use [`Rotation::from_degrees`] to quantize.
+    /// use [`Rotation::quantized`] or [`Rotation::from_degrees`]
+    /// to quantize.
     fn from(angle: RotationRad) -> Self {
         Self::Free(angle)
     }
@@ -130,5 +139,13 @@ mod tests {
     fn quarter_turn_reflects_declared_variant() {
         assert_eq!(Rotation::from(RotationRad::from_degrees(90.0)).quarter_turn(), None);
         assert_eq!(Rotation::QuarterTurn(QuarterTurn::Deg90).quarter_turn(), Some(QuarterTurn::Deg90));
+    }
+
+    /// `quantized` snaps exact quarter turns and keeps every other
+    /// angle `Free` - the explicit path `From` deliberately avoids.
+    #[test]
+    fn quantized_snaps_exact_angles() {
+        assert_eq!(Rotation::quantized(RotationRad::from_degrees(90.0)), Rotation::QuarterTurn(QuarterTurn::Deg90));
+        assert_eq!(Rotation::quantized(RotationRad::from_degrees(45.0)), Rotation::Free(RotationRad::from_degrees(45.0)));
     }
 }
