@@ -294,10 +294,7 @@ impl<U> Rect<U, f64> {
     /// extent rotated by `rotation` around its center (position is
     /// irrelevant for the bounding box).
     pub fn rotated_bounds(&self, rotation: RotationRad) -> Vec2<U> {
-        let (sin, cos) = rotation.sin_cos();
-        let abs_cos = cos.abs();
-        let abs_sin = sin.abs();
-        Vec2::<U>::new(self.size.x * abs_cos + self.size.y * abs_sin, self.size.x * abs_sin + self.size.y * abs_cos)
+        self.size.rotated_bounds(rotation)
     }
 
     /// Rasterizes this rectangle's extent rotated by `rotation` around its

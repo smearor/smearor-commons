@@ -339,6 +339,33 @@ impl<U> Vec2<U, f64> {
         Vec2::new(self.x * cos - self.y * sin, self.x * sin + self.y * cos)
     }
 
+    /// The bounding-box size of an axis-aligned rectangle of this size
+    /// rotated by `rotation` around its center - the forward map
+    /// `bb(v) = A·v` with `A = [[cos, sin], [sin, cos]]` over the
+    /// absolute sine/cosine.
+    ///
+    /// [`Rect::rotated_bounds`](crate::Rect::rotated_bounds) delegates
+    /// to this method on its `size`.
+    pub fn rotated_bounds(&self, rotation: RotationRad) -> Self {
+        let (sin, cos) = rotation.sin_cos();
+        let (abs_sin, abs_cos) = (sin.abs(), cos.abs());
+        Vec2::new(self.x * abs_cos + self.y * abs_sin, self.x * abs_sin + self.y * abs_cos)
+    }
+
+    /// Inverse of [`Self::rotated_bounds`]: the axis-aligned size that,
+    /// rotated by `rotation`, yields this bounding box - the map
+    /// `A⁻¹·v` with `det(A) = cos(2θ)`.
+    ///
+    /// The determinant vanishes at `45° + k·90°` where no finite
+    /// solution exists for non-square boxes; components then hold
+    /// `±inf`/`NaN` and callers must apply their own fallback.
+    pub fn unrotated_bounds(&self, rotation: RotationRad) -> Self {
+        let (sin, cos) = rotation.sin_cos();
+        let (abs_sin, abs_cos) = (sin.abs(), cos.abs());
+        let determinant = abs_cos * abs_cos - abs_sin * abs_sin;
+        Vec2::new((self.x * abs_cos - self.y * abs_sin) / determinant, (self.y * abs_cos - self.x * abs_sin) / determinant)
+    }
+
     /// Geometric centroid of a non-empty point set.
     ///
     /// Returns [`Vec2::new(0.0, 0.0)`] for an empty slice instead of panicking.
@@ -767,6 +794,25 @@ mod tests {
         let stepwise = vector.rotated(a).rotated(b);
         let combined = vector.rotated(a + b);
         assert!(stepwise.distance(&combined).as_f64() < 1e-9);
+    }
+
+    /// `unrotated_bounds` inverts `rotated_bounds` outside the
+    /// singular angles.
+    #[test]
+    fn unrotated_bounds_inverts_rotated_bounds() {
+        let size = Vec2::<Pixels>::new(10.0, 6.0);
+        let rotation = RotationRad::from_degrees(30.0);
+        let back = size.rotated_bounds(rotation).unrotated_bounds(rotation);
+        assert!(back.x - size.x < 1e-9 && size.x - back.x < 1e-9);
+        assert!(back.y - size.y < 1e-9 && size.y - back.y < 1e-9);
+    }
+
+    /// At `45°` the determinant `cos(2θ)` vanishes and the inverse
+    /// solve diverges to ~1e16 components.
+    #[test]
+    fn unrotated_bounds_diverges_at_singularity() {
+        let solved = Vec2::<Pixels>::new(10.0, 6.0).unrotated_bounds(RotationRad::from_degrees(45.0));
+        assert!(solved.x.abs() > 1e10 || solved.y.abs() > 1e10 || solved.x.is_nan() || solved.y.is_nan());
     }
 
     /// `direction` reads the atan2 angle of each axis and quadrant.
