@@ -21,6 +21,8 @@
 //! the same type, not parallel representations.
 
 mod aspect_ratio;
+#[cfg(feature = "gtk4")]
+mod centered_transform;
 mod corners;
 mod position;
 mod quarter_turn;
@@ -36,6 +38,8 @@ mod units;
 mod vec2;
 
 pub use aspect_ratio::AspectRatio;
+#[cfg(feature = "gtk4")]
+pub use centered_transform::CenteredTransform;
 pub use corners::Corners;
 pub use position::Position;
 pub use quarter_turn::QuarterTurn;
