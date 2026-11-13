@@ -7,6 +7,7 @@ use std::f64::consts::PI;
 use std::f64::consts::TAU;
 use std::ops::Add;
 use std::ops::AddAssign;
+use std::ops::Mul;
 use std::ops::Neg;
 use std::ops::Sub;
 
@@ -171,6 +172,16 @@ impl Neg for RotationRad {
     /// The inverse rotation.
     fn neg(self) -> RotationRad {
         RotationRad(-self.0)
+    }
+}
+
+impl Mul<f64> for RotationRad {
+    type Output = RotationRad;
+
+    /// Scales the angle - fractional spans (`width * t`), sign flips
+    /// (`angle * -1.0`) and weighted blends.
+    fn mul(self, factor: f64) -> RotationRad {
+        RotationRad(self.0 * factor)
     }
 }
 

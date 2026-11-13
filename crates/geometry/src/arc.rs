@@ -53,7 +53,7 @@ impl Arc {
     /// `at(0.0)` is `start`, `at(1.0)` is [`Arc::end`]. Values outside
     /// `0..=1` extrapolate around the turn.
     pub fn at(&self, t: f64) -> RotationRad {
-        (self.start + RotationRad::new(self.width.as_f64() * t)).normalized()
+        (self.start + self.width * t).normalized()
     }
 
     /// The direction halfway along the arc.
