@@ -557,6 +557,13 @@ impl<U, T> From<[T; 2]> for Vec2<U, T> {
     }
 }
 
+impl<U, T> From<(T, T)> for Vec2<U, T> {
+    /// The `(x, y)` tuple as a `Vec2` in the unit `U`.
+    fn from((x, y): (T, T)) -> Self {
+        Self::new(x, y)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // gtk4 gate — graphene point conversions
 //
