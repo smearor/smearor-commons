@@ -71,6 +71,20 @@ impl<U> SimilarityTransform<U> {
         })
     }
 
+    /// A declared similarity around a fixed anchor - rotation and
+    /// scale about `center`. The [`Self::fit`] counterpart for
+    /// author-specified transforms where no point correspondence
+    /// exists: both centroids coincide at the anchor, so
+    /// [`Self::apply`] maps `center` onto itself.
+    pub fn about(center: Vec2<U>, rotation: RotationRad, scale: Fraction) -> Self {
+        Self {
+            rotation,
+            scale,
+            baseline_centroid: center,
+            current_centroid: center,
+        }
+    }
+
     /// Maps a baseline-space point into the current space: shifted to
     /// the baseline centroid, rotated and scaled, then re-anchored at
     /// the current centroid.
@@ -90,6 +104,18 @@ mod tests {
 
     fn assert_vec2_eq(actual: Vec2<Pixels>, expected: Vec2<Pixels>) {
         assert!((actual.x - expected.x).abs() < 1e-9 && (actual.y - expected.y).abs() < 1e-9, "{actual:?} != {expected:?}");
+    }
+
+    /// `about` anchors both centroids: the center stays fixed and
+    /// other points rotate and scale around it.
+    #[test]
+    fn about_rotates_and_scales_around_center() {
+        let center = Vec2::<Pixels>::new(5.0, 5.0);
+        let transform = SimilarityTransform::about(center, RotationRad::QUARTER_TURN, Fraction::new(2.0));
+        assert_vec2_eq(transform.apply(center), center);
+        let point = Vec2::<Pixels>::new(10.0, 5.0);
+        let mapped = transform.apply(point);
+        assert_vec2_eq(mapped, Vec2::new(5.0, 15.0));
     }
 
     #[test]

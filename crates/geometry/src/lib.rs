@@ -22,8 +22,6 @@
 
 mod annulus;
 mod arc;
-#[cfg(feature = "gtk4")]
-mod centered_transform;
 mod circle;
 mod corners;
 mod position;
@@ -31,15 +29,13 @@ mod quantities;
 mod rect;
 mod rectangle;
 mod scanline;
-mod similarity_transform;
 mod size;
+mod transforms;
 mod units;
 mod vec2;
 
 pub use annulus::Annulus;
 pub use arc::Arc;
-#[cfg(feature = "gtk4")]
-pub use centered_transform::CenteredTransform;
 pub use circle::Circle;
 pub use corners::Corners;
 pub use position::Position;
@@ -53,10 +49,12 @@ pub use quantities::SmoothingAlpha;
 pub use rect::Rect;
 pub use rectangle::Rectangle;
 pub use scanline::Scanline;
-pub use similarity_transform::SimilarityTransform;
 pub use size::Size;
 #[cfg(feature = "gtk4")]
 pub use size::WidgetSizeExt;
+#[cfg(feature = "gtk4")]
+pub use transforms::CenteredTransform;
+pub use transforms::SimilarityTransform;
 pub use units::Degrees;
 pub use units::Millimeters;
 pub use units::Pixels;
