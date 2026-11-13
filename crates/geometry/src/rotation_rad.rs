@@ -134,12 +134,6 @@ impl From<f64> for RotationRad {
     }
 }
 
-impl From<RotationRad> for f64 {
-    fn from(rotation: RotationRad) -> Self {
-        rotation.0
-    }
-}
-
 impl Add for RotationRad {
     type Output = RotationRad;
 
