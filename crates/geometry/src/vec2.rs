@@ -406,6 +406,13 @@ impl<U> Vec2<U, f64> {
         Vec2::new(aspect * height, height)
     }
 
+    /// Half of this vector component-wise - the midpoint between the
+    /// origin and `self`. For a [`crate::Size`] extent this is its
+    /// center offset.
+    pub fn half(&self) -> Self {
+        self.map(|v| v / 2.0)
+    }
+
     /// Geometric centroid of a non-empty point set.
     ///
     /// Returns [`Vec2::new(0.0, 0.0)`] for an empty slice instead of panicking.
