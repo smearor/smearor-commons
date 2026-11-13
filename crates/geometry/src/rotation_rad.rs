@@ -47,6 +47,12 @@ impl RotationRad {
         self.0.to_degrees()
     }
 
+    /// The angle in degrees as `f32` for `f32`-based framework APIs
+    /// (e.g. GTK4 transforms).
+    pub fn to_degrees_f32(self) -> f32 {
+        self.to_degrees() as f32
+    }
+
     /// `(sin, cos)` of the angle - trigonometry for transforms and
     /// geometry (the `f64::sin_cos` delegate).
     pub fn sin_cos(self) -> (f64, f64) {
