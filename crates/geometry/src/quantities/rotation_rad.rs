@@ -1,4 +1,5 @@
 use crate::Degrees;
+use crate::Fraction;
 use crate::Radians;
 use crate::SmoothingAlpha;
 use crate::Vec2;
@@ -244,6 +245,24 @@ impl Display for RotationRad {
     /// an implementation detail for humans).
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.degrees().fmt(f)
+    }
+}
+
+/// A progress fraction scales a rotation - `arc * t` is the
+/// direction at `t` along the arc.
+impl Mul<Fraction> for RotationRad {
+    type Output = RotationRad;
+
+    fn mul(self, fraction: Fraction) -> RotationRad {
+        Self(self.0 * fraction)
+    }
+}
+
+impl Mul<RotationRad> for Fraction {
+    type Output = RotationRad;
+
+    fn mul(self, rotation: RotationRad) -> Self::Output {
+        rotation * self
     }
 }
 

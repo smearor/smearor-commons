@@ -8,6 +8,7 @@
 //! never interchangeable.
 
 mod aspect_ratio;
+mod fraction;
 mod quarter_turn;
 mod rotation;
 mod rotation_rad;
@@ -15,6 +16,7 @@ mod scale_factor;
 mod smoothing_alpha;
 
 pub use aspect_ratio::AspectRatio;
+pub use fraction::Fraction;
 pub use quarter_turn::QuarterTurn;
 pub use rotation::Rotation;
 pub use rotation_rad::RotationRad;

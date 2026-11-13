@@ -43,6 +43,7 @@ pub use circle::Circle;
 pub use corners::Corners;
 pub use position::Position;
 pub use quantities::AspectRatio;
+pub use quantities::Fraction;
 pub use quantities::QuarterTurn;
 pub use quantities::Rotation;
 pub use quantities::RotationRad;

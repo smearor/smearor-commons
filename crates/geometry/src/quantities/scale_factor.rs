@@ -1,3 +1,4 @@
+use crate::Fraction;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
@@ -48,8 +49,8 @@ impl ScaleFactor {
     /// Linear interpolation `from + t * (to - from)` - plain
     /// lerp for animations; unlike [`crate::RotationRad`] there is
     /// no wrap-around to take the shortest way across.
-    pub fn lerp(from: ScaleFactor, to: ScaleFactor, t: f64) -> Self {
-        Self(from.0 + t * (to.0 - from.0))
+    pub fn lerp(from: ScaleFactor, to: ScaleFactor, t: Fraction) -> Self {
+        Self(from.0 + (to.0 - from.0) * t)
     }
 }
 
@@ -106,6 +107,7 @@ async_graphql::scalar!(ScaleFactor);
 #[cfg(test)]
 mod tests {
     use super::ScaleFactor;
+    use crate::Fraction;
     use crate::Pixels;
     use crate::Vec2;
 
@@ -135,9 +137,9 @@ mod tests {
     #[test]
     fn lerp_interpolates() {
         let (a, b) = (ScaleFactor::new(1.0), ScaleFactor::new(2.0));
-        assert_eq!(ScaleFactor::lerp(a, b, 0.0), a);
-        assert_eq!(ScaleFactor::lerp(a, b, 1.0), b);
-        assert_eq!(ScaleFactor::lerp(a, b, 0.5).as_f64(), 1.5);
+        assert_eq!(ScaleFactor::lerp(a, b, Fraction::new(0.0)), a);
+        assert_eq!(ScaleFactor::lerp(a, b, Fraction::new(1.0)), b);
+        assert_eq!(ScaleFactor::lerp(a, b, Fraction::new(0.5)).as_f64(), 1.5);
     }
 
     /// A vector scales uniformly in both components.

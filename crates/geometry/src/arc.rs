@@ -1,3 +1,4 @@
+use crate::Fraction;
 use crate::RotationRad;
 use serde::Deserialize;
 use serde::Serialize;
@@ -50,15 +51,16 @@ impl Arc {
     }
 
     /// The direction at the normalized position `t` along the arc -
-    /// `at(0.0)` is `start`, `at(1.0)` is [`Arc::end`]. Values outside
-    /// `0..=1` extrapolate around the turn.
-    pub fn at(&self, t: f64) -> RotationRad {
+    /// `at(Fraction::ZERO)` is `start`, `at(Fraction::ONE)` is
+    /// [`Arc::end`]. Values outside `0..=1` extrapolate around the
+    /// turn.
+    pub fn at(&self, t: Fraction) -> RotationRad {
         (self.start + self.width * t).normalized()
     }
 
     /// The direction halfway along the arc.
     pub fn midpoint(&self) -> RotationRad {
-        self.at(0.5)
+        self.at(Fraction::HALF)
     }
 
     /// The arcs between consecutive directions of a sorted set,
@@ -92,6 +94,7 @@ impl Arc {
 #[cfg(test)]
 mod tests {
     use super::Arc;
+    use crate::Fraction;
     use crate::RotationRad;
 
     /// `spanning` crosses the full-turn wrap without a special case.
@@ -118,8 +121,8 @@ mod tests {
     #[test]
     fn at_interpolates() {
         let arc = Arc::spanning(RotationRad::from_degrees(350.0), RotationRad::from_degrees(10.0));
-        assert!((arc.at(0.0).to_degrees() - 350.0).abs() < 1e-9);
-        assert!((arc.at(1.0).to_degrees() - 10.0).abs() < 1e-9);
+        assert!((arc.at(Fraction::new(0.0)).to_degrees() - 350.0).abs() < 1e-9);
+        assert!((arc.at(Fraction::new(1.0)).to_degrees() - 10.0).abs() < 1e-9);
         assert!((arc.midpoint().to_degrees() - 0.0).abs() < 1e-9);
     }
 

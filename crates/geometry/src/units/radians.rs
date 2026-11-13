@@ -1,4 +1,5 @@
 use crate::Degrees;
+use crate::Fraction;
 use crate::SmoothingAlpha;
 use serde::Deserialize;
 use serde::Serialize;
@@ -136,6 +137,24 @@ impl Div<Radians> for Radians {
     /// Same-unit ratio - the dimensionless scalar.
     fn div(self, rhs: Radians) -> f64 {
         self.0 / rhs.0
+    }
+}
+
+/// A progress fraction scales an angle - `arc * t` is the
+/// direction at `t` along the arc.
+impl Mul<Fraction> for Radians {
+    type Output = Radians;
+
+    fn mul(self, fraction: Fraction) -> Self {
+        self * fraction.as_f64()
+    }
+}
+
+impl Mul<Radians> for Fraction {
+    type Output = Radians;
+
+    fn mul(self, radians: Radians) -> Self::Output {
+        radians * self
     }
 }
 
