@@ -45,7 +45,7 @@ pub trait WidgetSizeExt {
     /// coordinates - the natural origin for pointer hit tests and
     /// radial layouts.
     fn center(&self) -> Vec2<crate::Pixels, f64> {
-        self.allocated_size().with_unit::<Pixels>().to_f64().half()
+        self.allocated_size().with_unit::<crate::Pixels>().to_f64().half()
     }
 }
 
