@@ -3,6 +3,7 @@ use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
+use std::ops::Div;
 use std::ops::Mul;
 
 /// A uniform scale factor (`1.0` = natural size).
@@ -57,6 +58,18 @@ impl ScaleFactor {
 impl Default for ScaleFactor {
     fn default() -> Self {
         Self::ONE
+    }
+}
+
+impl Div for ScaleFactor {
+    type Output = Fraction;
+
+    /// The dimensionless ratio of two scales (`2.0 / 0.5 = 4.0`) -
+    /// the factor units cancel, so the quotient is a [`Fraction`].
+    /// A zero divisor yields an infinite ratio like plain `f64`
+    /// division; positivity limits belong to consumer wrappers.
+    fn div(self, other: ScaleFactor) -> Fraction {
+        Fraction(self.0 / other.0)
     }
 }
 
@@ -140,6 +153,14 @@ mod tests {
         assert_eq!(ScaleFactor::lerp(a, b, Fraction::new(0.0)), a);
         assert_eq!(ScaleFactor::lerp(a, b, Fraction::new(1.0)), b);
         assert_eq!(ScaleFactor::lerp(a, b, Fraction::new(0.5)).as_f64(), 1.5);
+    }
+
+    /// Dividing two scales yields their dimensionless ratio.
+    #[test]
+    fn div_yields_ratio() {
+        let ratio = ScaleFactor::new(2.0) / ScaleFactor::new(0.5);
+        assert_eq!(ratio.as_f64(), 4.0);
+        assert_eq!(ScaleFactor::ONE / ScaleFactor::new(4.0), Fraction::new(0.25));
     }
 
     /// A vector scales uniformly in both components.
