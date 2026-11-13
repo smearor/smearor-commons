@@ -31,6 +31,7 @@ mod quantities;
 mod rect;
 mod rectangle;
 mod scanline;
+mod similarity_transform;
 mod size;
 mod units;
 mod vec2;
@@ -52,6 +53,7 @@ pub use quantities::SmoothingAlpha;
 pub use rect::Rect;
 pub use rectangle::Rectangle;
 pub use scanline::Scanline;
+pub use similarity_transform::SimilarityTransform;
 pub use size::Size;
 #[cfg(feature = "gtk4")]
 pub use size::WidgetSizeExt;
