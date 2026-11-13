@@ -22,46 +22,43 @@
 
 mod annulus;
 mod arc;
-mod aspect_ratio;
 #[cfg(feature = "gtk4")]
 mod centered_transform;
 mod circle;
 mod corners;
 mod position;
-mod quarter_turn;
+mod quantities;
 mod rect;
 mod rectangle;
-mod rotation;
-mod rotation_rad;
-mod scale_factor;
 mod scanline;
 mod size;
-mod smoothing_alpha;
 mod units;
 mod vec2;
 
 pub use annulus::Annulus;
 pub use arc::Arc;
-pub use aspect_ratio::AspectRatio;
 #[cfg(feature = "gtk4")]
 pub use centered_transform::CenteredTransform;
 pub use circle::Circle;
 pub use corners::Corners;
 pub use position::Position;
-pub use quarter_turn::QuarterTurn;
+pub use quantities::AspectRatio;
+pub use quantities::QuarterTurn;
+pub use quantities::Rotation;
+pub use quantities::RotationRad;
+pub use quantities::ScaleFactor;
+pub use quantities::SmoothingAlpha;
 pub use rect::Rect;
 pub use rectangle::Rectangle;
-pub use rotation::Rotation;
-pub use rotation_rad::RotationRad;
-pub use scale_factor::ScaleFactor;
 pub use scanline::Scanline;
 pub use size::Size;
 #[cfg(feature = "gtk4")]
 pub use size::WidgetSizeExt;
-pub use smoothing_alpha::SmoothingAlpha;
+pub use units::Degrees;
 pub use units::Millimeters;
 pub use units::Pixels;
 pub use units::PixelsPerMm;
+pub use units::Radians;
 pub use units::SquareMillimeters;
 pub use units::UnitsPerMm;
 pub use vec2::Vec2;

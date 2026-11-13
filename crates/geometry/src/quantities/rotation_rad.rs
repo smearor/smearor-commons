@@ -1,3 +1,5 @@
+use crate::Degrees;
+use crate::Radians;
 use crate::SmoothingAlpha;
 use crate::Vec2;
 use serde::Deserialize;
@@ -5,6 +7,7 @@ use serde::Serialize;
 use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::PI;
 use std::f64::consts::TAU;
+use std::fmt::Display;
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Mul;
@@ -13,18 +16,49 @@ use std::ops::Sub;
 
 /// A rotation angle in radians.
 ///
-/// Wraps the plain `f64` so angles cannot be confused with distances or
-/// other scalar values flowing through the pipeline.
+/// Wraps the [`Radians`] scalar unit with rotation semantics -
+/// wrapping, deltas, axes, trigonometry - so angles cannot be
+/// confused with distances or other scalar values flowing through
+/// the pipeline. Plain scalar uses (thresholds, wire values) use
+/// [`Radians`]/[`Degrees`] directly.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RotationRad(pub f64);
+pub struct RotationRad(pub Radians);
 
 impl RotationRad {
     /// No rotation.
-    pub const ZERO: Self = Self(0.0);
+    pub const ZERO: Self = Self(Radians::ZERO);
 
-    /// Creates a rotation from radians.
+    /// 30° - an hour mark on a clock face, 12-item radial layouts.
+    pub const TWELFTH_TURN: Self = Self(Radians::TWELFTH_TURN);
+
+    /// 45° - a compass diagonal, 8-item radial layouts.
+    pub const EIGHTH_TURN: Self = Self(Radians::EIGHTH_TURN);
+
+    /// 60° - an equilateral angle, hexagonal and 6-item radial layouts.
+    pub const SIXTH_TURN: Self = Self(Radians::SIXTH_TURN);
+
+    /// 90° - a right angle, the `QuarterTurn` increments.
+    pub const QUARTER_TURN: Self = Self(Radians::QUARTER_TURN);
+
+    /// 120° - three-way symmetric layouts.
+    pub const THIRD_TURN: Self = Self(Radians::THIRD_TURN);
+
+    /// 180° - a straight angle, the direction opposite `ZERO`.
+    pub const HALF_TURN: Self = Self(Radians::HALF_TURN);
+
+    /// 270° - the last of the `QuarterTurn` increments.
+    pub const THREE_QUARTER_TURN: Self = Self(Radians::THREE_QUARTER_TURN);
+
+    /// A full turn - every direction, an arc of `2*PI` radians.
+    pub const FULL_TURN: Self = Self(Radians::FULL_TURN);
+    /// Creates a rotation from a radians value.
     pub const fn new(radians: f64) -> Self {
+        Self(Radians::new(radians))
+    }
+
+    /// Creates a rotation from the [`Radians`] scalar unit.
+    pub const fn from_radians(radians: Radians) -> Self {
         Self(radians)
     }
 
@@ -34,17 +68,17 @@ impl RotationRad {
     /// `u32`, ...); narrower-than-`f64` sources like `usize` still
     /// require an explicit cast.
     pub fn from_degrees(degrees: impl Into<f64>) -> Self {
-        Self(degrees.into().to_radians())
+        Self(Radians::new(degrees.into().to_radians()))
     }
 
     /// The angle in radians.
     pub const fn as_f64(self) -> f64 {
-        self.0
+        self.0.as_f64()
     }
 
     /// Whether the rotation is zero (no turn).
     pub fn is_zero(self) -> bool {
-        self.0 == 0.0
+        self.0 == Radians::ZERO
     }
 
     /// The absolute magnitude of the angle - the unsigned arc length,
@@ -55,7 +89,20 @@ impl RotationRad {
 
     /// The angle converted to degrees.
     pub fn to_degrees(self) -> f64 {
+        self.0.as_f64().to_degrees()
+    }
+
+    /// The angle as the [`Degrees`] scalar unit - the unit-carrying
+    /// counterpart of [`RotationRad::to_degrees`] for typed
+    /// boundaries.
+    pub fn degrees(self) -> Degrees {
         self.0.to_degrees()
+    }
+
+    /// The angle as the [`Radians`] scalar unit - the unit-carrying
+    /// counterpart of [`RotationRad::as_f64`] for typed boundaries.
+    pub const fn radians(self) -> Radians {
+        self.0
     }
 
     /// The angle in degrees as `f32` for `f32`-based framework APIs
@@ -74,7 +121,7 @@ impl RotationRad {
     /// of a positive-area polygon: `PI - signed turn` from
     /// `previous` to `next` (sharp corners < ~PI/2).
     pub fn interior<U>(previous: Vec2<U>, next: Vec2<U>) -> Self {
-        Self(PI - previous.cross::<f64>(&next).atan2(previous.dot::<f64>(&next)))
+        Self::new(PI - previous.cross::<f64>(&next).atan2(previous.dot::<f64>(&next)))
     }
 
     /// The angle normalized to `[0, 2*PI)` - the canonical
@@ -82,7 +129,7 @@ impl RotationRad {
     /// counterpart of [`Self::axis`], which folds onto a
     /// half-turn axis instead.
     pub fn normalized(self) -> RotationRad {
-        RotationRad(self.0.rem_euclid(TAU))
+        Self(self.0.normalized())
     }
 
     /// The shortest signed arc from `self` to `to`, in [-π, π].
@@ -91,20 +138,20 @@ impl RotationRad {
     /// the sign tells the turning direction.
     pub fn signed_delta_to(self, to: RotationRad) -> RotationRad {
         let mut delta = to.0 - self.0;
-        while delta > PI {
-            delta -= TAU;
+        while delta.as_f64() > PI {
+            delta = delta - Radians::new(TAU);
         }
-        while delta < -PI {
-            delta += TAU;
+        while delta.as_f64() < -PI {
+            delta = delta + Radians::new(TAU);
         }
-        RotationRad(delta)
+        Self(delta)
     }
 
     /// Wraparound-aware EMA blend - `old + alpha * diff(new, old)`,
     /// where `diff` is the shortest signed arc between the angles
     /// (modulo 2π). `alpha` is the weight of `new`.
     pub fn ema(old: RotationRad, new: RotationRad, alpha: SmoothingAlpha) -> RotationRad {
-        Self(old.0 + alpha.as_f64() * old.signed_delta_to(new).0)
+        Self(old.0 + old.signed_delta_to(new).0 * alpha)
     }
 
     /// The direction normalized to an undirected axis in
@@ -112,7 +159,7 @@ impl RotationRad {
     /// direction) share an axis, so heading-ambiguous footprints
     /// like two-pin dumbbells fold onto one stable value.
     pub fn axis(&self) -> RotationRad {
-        RotationRad(self.0.rem_euclid(PI) - FRAC_PI_2)
+        Self::new(self.0.as_f64().rem_euclid(PI) - FRAC_PI_2)
     }
 
     /// The shortest signed turn between two undirected axes, in
@@ -121,7 +168,7 @@ impl RotationRad {
     /// nearly-parallel lines on opposite sides of the `+-pi/2`
     /// fold keep a small delta instead of a nearly-pi swing.
     pub fn axis_delta_to(self, to: RotationRad) -> RotationRad {
-        RotationRad((to.0 - self.0 + FRAC_PI_2).rem_euclid(PI) - FRAC_PI_2)
+        Self::new((to.0 - self.0 + Radians::new(FRAC_PI_2)).as_f64().rem_euclid(PI) - FRAC_PI_2)
     }
 
     /// Axis-space [`Self::ema`]: wraps the blend along the `pi`
@@ -130,14 +177,30 @@ impl RotationRad {
     /// measurement crosses `+-pi/2`. `old` and `new` are axis
     /// values; the result is folded back into `[-pi/2, pi/2)`.
     pub fn ema_axis(old: RotationRad, new: RotationRad, alpha: SmoothingAlpha) -> RotationRad {
-        let blended = RotationRad(old.0 + alpha.as_f64() * old.axis_delta_to(new).0);
+        let blended = Self(old.0 + old.axis_delta_to(new).0 * alpha);
         RotationRad::ZERO.axis_delta_to(blended)
+    }
+}
+
+/// A degrees scalar becomes a rotation - the typed counterpart of
+/// [`RotationRad::from_degrees`].
+impl From<Degrees> for RotationRad {
+    fn from(degrees: Degrees) -> Self {
+        Self::from_degrees(degrees.as_f64())
+    }
+}
+
+/// A radians scalar becomes a rotation - the typed counterpart of
+/// [`RotationRad::new`].
+impl From<Radians> for RotationRad {
+    fn from(radians: Radians) -> Self {
+        Self(radians)
     }
 }
 
 impl From<f64> for RotationRad {
     fn from(radians: f64) -> Self {
-        Self(radians)
+        Self::new(radians)
     }
 }
 
@@ -146,14 +209,14 @@ impl Add for RotationRad {
 
     /// Composes two rotations.
     fn add(self, other: RotationRad) -> RotationRad {
-        RotationRad(self.0 + other.0)
+        Self(self.0 + other.0)
     }
 }
 
 impl AddAssign for RotationRad {
     /// Adds a rotation in place.
     fn add_assign(&mut self, other: RotationRad) {
-        self.0 += other.0;
+        self.0 = self.0 + other.0;
     }
 }
 
@@ -162,7 +225,7 @@ impl Sub for RotationRad {
 
     /// The signed difference between two rotations.
     fn sub(self, other: RotationRad) -> RotationRad {
-        RotationRad(self.0 - other.0)
+        Self(self.0 - other.0)
     }
 }
 
@@ -171,7 +234,34 @@ impl Neg for RotationRad {
 
     /// The inverse rotation.
     fn neg(self) -> RotationRad {
-        RotationRad(-self.0)
+        Self(-self.0)
+    }
+}
+
+impl Display for RotationRad {
+    /// Formats via [`Degrees`] (`45°`) - the display convention
+    /// across the ecosystem's logs and UIs (the stored radians are
+    /// an implementation detail for humans).
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.degrees().fmt(f)
+    }
+}
+
+/// A blend weight scales a rotation - the EMA/lerp-weighted
+/// counterpart of `RotationRad * f64`.
+impl Mul<SmoothingAlpha> for RotationRad {
+    type Output = RotationRad;
+
+    fn mul(self, weight: SmoothingAlpha) -> RotationRad {
+        Self(self.0 * weight)
+    }
+}
+
+impl Mul<RotationRad> for SmoothingAlpha {
+    type Output = RotationRad;
+
+    fn mul(self, rotation: RotationRad) -> Self::Output {
+        rotation * self
     }
 }
 
@@ -181,7 +271,7 @@ impl Mul<f64> for RotationRad {
     /// Scales the angle - fractional spans (`width * t`), sign flips
     /// (`angle * -1.0`) and weighted blends.
     fn mul(self, factor: f64) -> RotationRad {
-        RotationRad(self.0 * factor)
+        Self(self.0 * factor)
     }
 }
 

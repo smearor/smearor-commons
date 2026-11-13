@@ -23,7 +23,7 @@ impl Arc {
     /// The full turn - an arc covering every direction.
     pub const FULL: Self = Self {
         start: RotationRad::ZERO,
-        width: RotationRad(TAU),
+        width: RotationRad::new(TAU),
     };
 
     /// Creates an arc from its start direction and span.
