@@ -41,6 +41,12 @@ pub trait WidgetSizeExt {
     /// in both orientations.
     fn measure_size(&self) -> (Size<i32>, Size<i32>);
 
+    /// The widget's measured minimum and natural extent on one axis
+    /// (`x` = minimum, `y` = natural) for a concrete `for_size`
+    /// constraint - e.g. the height a widget reports given a fixed
+    /// width, which `measure_size` cannot express.
+    fn measure_axis(&self, orientation: gtk4::Orientation, for_size: i32) -> Vec2<(), i32>;
+
     /// The center of the widget's allocated area in pixel
     /// coordinates - the natural origin for pointer hit tests and
     /// radial layouts.
@@ -65,6 +71,14 @@ impl<W: gtk4::prelude::IsA<gtk4::Widget>> WidgetSizeExt for W {
         let (min_w, nat_w, _, _) = widget.measure(gtk4::Orientation::Horizontal, -1);
         let (min_h, nat_h, _, _) = widget.measure(gtk4::Orientation::Vertical, -1);
         (Size::new(min_w, min_h), Size::new(nat_w, nat_h))
+    }
+
+    fn measure_axis(&self, orientation: gtk4::Orientation, for_size: i32) -> Vec2<(), i32> {
+        use gtk4::prelude::Cast;
+        use gtk4::prelude::WidgetExt;
+        let widget = self.upcast_ref::<gtk4::Widget>();
+        let (minimum, natural, _, _) = widget.measure(orientation, for_size);
+        Vec2::new(minimum, natural)
     }
 }
 
