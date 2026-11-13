@@ -28,7 +28,26 @@ pub use span::Span;
 pub use three_phase_span::ThreePhaseSpan;
 pub use timed_animation::TimedAnimation;
 pub use trajectory::Trajectory;
+use smearor_commons_geometry::RotationRad;
+use smearor_commons_geometry::ScaleFactor;
+use smearor_commons_geometry::Vec2;
 
 /// An eased, timed rotation animation - the shortest-arc lerp
-/// between two [`smearor_commons_geometry::RotationRad`] values.
-pub type RotationAnimation = TimedAnimation<Span<smearor_commons_geometry::RotationRad>>;
+/// between two [`RotationRad`] values.
+pub type RotationAnimation = TimedAnimation<Span<RotationRad>>;
+
+/// An eased, timed zoom animation - the plain lerp between two
+/// [`ScaleFactor`] values.
+pub type ZoomAnimation = TimedAnimation<Span<ScaleFactor>>;
+
+/// A pulse animation - zoom out, hold, zoom back in via
+/// [`ThreePhaseSpan`].
+pub type PulseAnimation = TimedAnimation<ThreePhaseSpan<ScaleFactor>>;
+
+/// An eased, timed animation of any vector value - position, size
+/// or offset, in whatever coordinate space `U` tags.
+pub type Vec2Animation<U> = TimedAnimation<Span<Vec2<U>>>;
+
+/// A rotation-zoom composite - shortest-arc rotation plus a
+/// three-phase zoom (out, hold, back in) on one clock.
+pub type RotationZoomAnimation = TimedAnimation<(Span<RotationRad>, ThreePhaseSpan<ScaleFactor>)>;
