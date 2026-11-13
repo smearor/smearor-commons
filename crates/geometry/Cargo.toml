@@ -12,16 +12,17 @@ description = "Generic 2D geometry primitives for the Smearor ecosystem: unit-ta
 [features]
 # transport / schema
 async-graphql = ["dep:async-graphql"]
+cairo = ["dep:cairo-rs"]
 gtk4 = ["dep:gtk4"]
 schemars = ["dep:schemars"]
 smithay = ["dep:smithay"]
 zbus = ["dep:zvariant"]
 # evdev = ["dep:evdev"]
 # ui / backend (added with the ported code in later phases)
-# cairo = ["dep:cairo-rs"]
 
 [dependencies]
 async-graphql = { workspace = true, optional = true }
+cairo-rs = { workspace = true, optional = true }
 gtk4 = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde.workspace = true
