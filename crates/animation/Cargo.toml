@@ -1,0 +1,25 @@
+[package]
+name = "smearor-commons-animation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Framework-agnostic timed animations for the Smearor ecosystem: easing curves, interpolations and value trajectories."
+
+[features]
+# transport / schema
+schemars = ["dep:schemars", "smearor-commons-geometry/schemars"]
+# ui / backend
+gtk4 = ["dep:gtk4"]
+
+[dependencies]
+gtk4 = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+serde.workspace = true
+smearor-commons-geometry.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
