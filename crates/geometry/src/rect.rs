@@ -4,65 +4,220 @@ use crate::Scanline;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ops::Add;
+use std::ops::AddAssign;
+use std::ops::Sub;
+use std::ops::SubAssign;
 
-/// An axis-aligned rectangle tagged with its coordinate unit `U`.
+/// An axis-aligned rectangle tagged with its coordinate unit `U` and
+/// numeric component type `T`.
 ///
 /// `min` is the top-left corner, `size` the extent (`size.x` = width,
 /// `size.y` = height); `right`/`bottom` are the max edges. The phantom
-/// unit keeps millimeter regions and pixel footprints from mixing.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Rect<U> {
+/// unit keeps millimeter regions and pixel footprints from mixing;
+/// `T` defaults to `f64` for domain math while the unit-erased
+/// `Rect<(), i32>`/`Rect<(), f32>` forms (alias [`crate::Rectangle`])
+/// serve integer and float boundaries - smithay `Rectangle<i32, K>`
+/// and graphene `Rect` alike.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Rect<U = (), T = f64> {
     /// Top-left corner in the unit `U`.
-    pub min: Vec2<U>,
+    pub min: Vec2<U, T>,
     /// Extent: width in `size.x`, height in `size.y`.
-    pub size: Vec2<U>,
+    pub size: Vec2<U, T>,
 }
 
-impl<U> Rect<U> {
+impl<U, T: Copy> Copy for Rect<U, T> {}
+
+impl<U, T: Clone> Clone for Rect<U, T> {
+    fn clone(&self) -> Self {
+        Self::new(self.min.clone(), self.size.clone())
+    }
+}
+
+impl<U, T: PartialEq> PartialEq for Rect<U, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.min == other.min && self.size == other.size
+    }
+}
+
+impl<U, T: Eq> Eq for Rect<U, T> {}
+
+impl<U, T: Hash> Hash for Rect<U, T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.min.hash(state);
+        self.size.hash(state);
+    }
+}
+
+impl<U, T> Rect<U, T> {
     /// Creates a rectangle from its top-left corner and its extent.
-    pub const fn new(min: Vec2<U>, size: Vec2<U>) -> Self {
+    pub const fn new(min: Vec2<U, T>, size: Vec2<U, T>) -> Self {
         Self { min, size }
     }
 
     /// Creates a rectangle from raw top-left coordinates and extent.
-    pub const fn from_xywh(x: f64, y: f64, width: f64, height: f64) -> Self {
+    pub const fn from_xywh(x: T, y: T, width: T, height: T) -> Self {
         Self {
             min: Vec2::new(x, y),
             size: Vec2::new(width, height),
         }
     }
+}
 
+impl<U, T: Copy> Rect<U, T> {
+    /// Width of the rectangle.
+    pub fn width(&self) -> T {
+        self.size.x
+    }
+
+    /// Height of the rectangle.
+    pub fn height(&self) -> T {
+        self.size.y
+    }
+}
+
+impl<U, T: Copy + Add<Output = T>> Rect<U, T> {
+    /// Right edge x-coordinate.
+    pub fn right(&self) -> T {
+        self.min.x + self.size.x
+    }
+
+    /// Bottom edge y-coordinate.
+    pub fn bottom(&self) -> T {
+        self.min.y + self.size.y
+    }
+
+    /// Lower-right corner (`right`, `bottom`).
+    pub fn max(&self) -> Vec2<U, T> {
+        Vec2::<U, T>::new(self.right(), self.bottom())
+    }
+
+    /// The rectangle translated by `delta`.
+    pub fn translated(&self, delta: Vec2<U, T>) -> Self {
+        Self::new(self.min + delta, self.size)
+    }
+}
+
+impl<U, T: Copy + PartialOrd + Add<Output = T>> Rect<U, T> {
+    /// Whether `point` lies inside this rectangle (bounds inclusive).
+    pub fn contains(&self, point: &Vec2<U, T>) -> bool {
+        point.x >= self.min.x && point.x <= self.right() && point.y >= self.min.y && point.y <= self.bottom()
+    }
+
+    /// Whether this rectangle overlaps `other` - two rectangles overlap
+    /// when neither lies completely beside or above the other.
+    pub fn overlaps(&self, other: &Self) -> bool {
+        self.min.x < other.right() && self.right() > other.min.x && self.min.y < other.bottom() && self.bottom() > other.min.y
+    }
+}
+
+impl<U, T: Copy + PartialOrd + Add<Output = T> + Sub<Output = T>> Rect<U, T> {
+    /// The rectangular intersection of two overlapping rectangles -
+    /// `None` when they are disjoint.
+    pub fn intersection(&self, other: &Self) -> Option<Self> {
+        self.overlaps(other).then(|| {
+            let max_of = |a: T, b: T| if a >= b { a } else { b };
+            let min_of = |a: T, b: T| if a <= b { a } else { b };
+            let min = Vec2::<U, T>::new(max_of(self.min.x, other.min.x), max_of(self.min.y, other.min.y));
+            let max = Vec2::<U, T>::new(min_of(self.right(), other.right()), min_of(self.bottom(), other.bottom()));
+            Self::new(min, Vec2::<U, T>::new(max.x - min.x, max.y - min.y))
+        })
+    }
+}
+
+impl<U, T: Default> Default for Rect<U, T> {
+    /// The empty rectangle at the origin.
+    fn default() -> Self {
+        Self::new(Vec2::default(), Vec2::default())
+    }
+}
+
+impl<U, T: Display> Display for Rect<U, T> {
+    /// The `Rectangle(min: (x,y), size: (w,h))` spelling.
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Rectangle(min: {}, size: {})", self.min, self.size)
+    }
+}
+
+impl<U, T: Copy + AddAssign> AddAssign for Rect<U, T> {
+    /// Adds another rectangle component-wise (origin and extent) - the
+    /// accumulation form used for damage unions and deltas.
+    fn add_assign(&mut self, other: Self) {
+        self.min += other.min;
+        self.size += other.size;
+    }
+}
+
+impl<U, T: Copy + Add<Output = T>> Add for Rect<U, T> {
+    type Output = Self;
+
+    /// Component-wise sum of two rectangles (origin and extent).
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.min + rhs.min, self.size + rhs.size)
+    }
+}
+
+impl<U, T: Copy + SubAssign> SubAssign for Rect<U, T> {
+    /// Subtracts another rectangle component-wise (origin and extent).
+    fn sub_assign(&mut self, other: Self) {
+        self.min -= other.min;
+        self.size -= other.size;
+    }
+}
+
+impl<U, T: Copy + Sub<Output = T>> Sub for Rect<U, T> {
+    type Output = Self;
+
+    /// Component-wise difference of two rectangles (origin and extent).
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.min - rhs.min, self.size - rhs.size)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `f32` / `i32` numeric bridges (boundary integer and float coordinates)
+// ---------------------------------------------------------------------------
+
+impl<U> Rect<U, f32> {
+    /// Rounds to the nearest integer (standard for display coordinates).
+    pub fn to_i32_round(&self) -> Rect<U, i32> {
+        Rect::new(self.min.to_i32_round(), self.size.to_i32_round())
+    }
+
+    /// Rounds down (for clipping/bounding boxes, to not exceed any pixels).
+    pub fn to_i32_floor(&self) -> Rect<U, i32> {
+        Rect::new(self.min.to_i32_floor(), self.size.to_i32_floor())
+    }
+
+    /// Rounds up (for damage tracking, to capture all affected pixels).
+    pub fn to_i32_ceil(&self) -> Rect<U, i32> {
+        Rect::new(self.min.to_i32_ceil(), self.size.to_i32_ceil())
+    }
+}
+
+impl<U> Rect<U, i32> {
+    /// The rectangle as `f32` components.
+    pub fn to_f32(&self) -> Rect<U, f32> {
+        Rect::new(self.min.to_f32(), self.size.to_f32())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `f64` domain math - only available for the default component type
+// ---------------------------------------------------------------------------
+
+impl<U> Rect<U, f64> {
     /// Creates the rectangle of the given `size` centered at `center`.
     pub fn centered(center: Vec2<U>, size: Vec2<U>) -> Self {
         Self {
             min: Vec2::<U>::new(center.x - size.x / 2.0, center.y - size.y / 2.0),
             size,
         }
-    }
-
-    /// Right edge x-coordinate.
-    pub fn right(&self) -> f64 {
-        self.min.x + self.size.x
-    }
-
-    /// Bottom edge y-coordinate.
-    pub fn bottom(&self) -> f64 {
-        self.min.y + self.size.y
-    }
-
-    /// Lower-right corner (`right`, `bottom`).
-    pub fn max(&self) -> Vec2<U> {
-        Vec2::<U>::new(self.right(), self.bottom())
-    }
-
-    /// Width of the rectangle.
-    pub fn width(&self) -> f64 {
-        self.size.x
-    }
-
-    /// Height of the rectangle.
-    pub fn height(&self) -> f64 {
-        self.size.y
     }
 
     /// Center point of the rectangle.
@@ -88,27 +243,6 @@ impl<U> Rect<U> {
         !finite || self.size.x <= 0.0 || self.size.y <= 0.0
     }
 
-    /// Whether `point` lies inside this rectangle (bounds inclusive).
-    pub fn contains(&self, point: &Vec2<U>) -> bool {
-        point.x >= self.min.x && point.x <= self.right() && point.y >= self.min.y && point.y <= self.bottom()
-    }
-
-    /// Whether this rectangle overlaps `other` - two rectangles overlap
-    /// when neither lies completely beside or above the other.
-    pub fn overlaps(&self, other: &Self) -> bool {
-        self.min.x < other.right() && self.right() > other.min.x && self.min.y < other.bottom() && self.bottom() > other.min.y
-    }
-
-    /// The rectangular intersection of two overlapping rectangles -
-    /// `None` when they are disjoint.
-    pub fn intersection(&self, other: &Self) -> Option<Self> {
-        self.overlaps(other).then(|| {
-            let min = Vec2::<U>::new(self.min.x.max(other.min.x), self.min.y.max(other.min.y));
-            let max = Vec2::<U>::new(self.right().min(other.right()), self.bottom().min(other.bottom()));
-            Self::new(min, Vec2::<U>::new(max.x - min.x, max.y - min.y))
-        })
-    }
-
     /// The rectangle shrunk by `margin` (a scalar in the unit `U`) on
     /// every side - negative or degenerate results clamp to an empty
     /// extent.
@@ -120,11 +254,6 @@ impl<U> Rect<U> {
         let min = Vec2::<U>::new(self.min.x + margin, self.min.y + margin);
         let size = Vec2::<U>::new(self.size.x - 2.0 * margin, self.size.y - 2.0 * margin);
         Self::new(min, size)
-    }
-
-    /// The rectangle translated by `delta`.
-    pub fn translated(&self, delta: Vec2<U>) -> Self {
-        Self::new(self.min + delta, self.size)
     }
 
     /// The size of the axis-aligned bounding box of this rectangle's
@@ -216,13 +345,6 @@ impl<U> Rect<U> {
     }
 }
 
-impl<U> Default for Rect<U> {
-    /// The empty rectangle at the origin.
-    fn default() -> Self {
-        Self::new(Vec2::ZERO, Vec2::ZERO)
-    }
-}
-
 /// Per-axis part of [`Rect::clamp_offset`]: clamps the rectangle's start
 /// coordinate so it keeps `min_visible` units inside the bounds, capped at
 /// half the bounds size.
@@ -246,6 +368,7 @@ fn contain_axis(rect_min: f64, rect_size: f64, bounds_min: f64, bounds_size: f64
 mod tests {
     use super::*;
     use crate::Pixels;
+    use crate::Rectangle;
 
     const EPSILON: f64 = 1e-9;
 
@@ -260,6 +383,46 @@ mod tests {
         assert_eq!(rect.center(), Vec2::new(60.0, 45.0));
         assert_eq!(rect.corners().bottom_right, Vec2::new(110.0, 70.0));
         assert!(!rect.is_degenerate());
+    }
+
+    /// Integer rectangles share the accessor API - the former
+    /// `Rectangle<i32>` boundary type is the same value.
+    #[test]
+    fn integer_rect_accessors() {
+        let rect = Rectangle::<i32>::from_xywh(10, 20, 100, 50);
+        assert_eq!(rect.min, Vec2::<(), i32>::new(10, 20));
+        assert_eq!(rect.size, Vec2::<(), i32>::new(100, 50));
+        assert_eq!(rect.width(), 100);
+        assert_eq!(rect.right(), 110);
+        assert_eq!(rect.bottom(), 70);
+        assert_eq!(rect.max(), Vec2::<(), i32>::new(110, 70));
+        assert!(rect.contains(&Vec2::new(60, 45)));
+        assert!(!rect.contains(&Vec2::new(120, 45)));
+        let b = Rectangle::<i32>::from_xywh(50, 25, 100, 50);
+        assert_eq!(rect.intersection(&b), Some(Rectangle::<i32>::from_xywh(50, 25, 60, 45)));
+        let mut acc = rect;
+        acc += Rectangle::<i32>::from_xywh(1, 2, 3, 4);
+        assert_eq!(acc, Rectangle::<i32>::from_xywh(11, 22, 103, 54));
+        acc -= Rectangle::<i32>::from_xywh(1, 2, 3, 4);
+        assert_eq!(acc, rect);
+    }
+
+    /// `f32` rectangles round to `i32` in all three modes - unit
+    /// preserved, matching the old `Rectangle<f32>` boundary API.
+    #[test]
+    fn float_rect_rounding() {
+        let rect = Rectangle::<f32>::from_xywh(10.4, 20.6, 100.5, 50.5);
+        assert_eq!(rect.to_i32_round(), Rectangle::<i32>::from_xywh(10, 21, 101, 51));
+        assert_eq!(rect.to_i32_floor(), Rectangle::<i32>::from_xywh(10, 20, 100, 50));
+        assert_eq!(rect.to_i32_ceil(), Rectangle::<i32>::from_xywh(11, 21, 101, 51));
+        assert_eq!(Rectangle::<i32>::from_xywh(10, 20, 100, 50).to_f32(), Rectangle::<f32>::from_xywh(10.0, 20.0, 100.0, 50.0));
+    }
+
+    /// `Rectangle` displays position and extent of both corners.
+    #[test]
+    fn display_format() {
+        let rect = Rectangle::<i32>::from_xywh(10, 20, 100, 200);
+        assert_eq!(format!("{}", rect), "Rectangle(min: (10,20), size: (100,200))");
     }
 
     #[test]

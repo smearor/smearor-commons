@@ -3,58 +3,214 @@ use crate::Pixels;
 use crate::RotationRad;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::marker::PhantomData;
 use std::ops::Add;
+use std::ops::AddAssign;
 use std::ops::Div;
 use std::ops::Mul;
 use std::ops::Neg;
 use std::ops::Sub;
+use std::ops::SubAssign;
 
-/// A 2D point or vector tagged with its coordinate unit `U`.
+/// A 2D point or vector tagged with its coordinate unit `U` and
+/// numeric component type `T`.
 ///
 /// The phantom unit distinguishes positions in millimeters
 /// (`Vec2<Millimeters>`), raw device units and screen pixels
-/// (`Vec2<Pixels>`) so they cannot be mixed up. Components stay plain
-/// `f64`; the unit only labels which coordinate space the point lives in.
-/// Serializes as a flat `{"x": .., "y": ..}` map; the unit marker is skipped.
-/// With the `async-graphql` feature, `Vec2<Millimeters>` is exposed as the
-/// GraphQL object type `Point`.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "async-graphql", derive(async_graphql::SimpleObject))]
-#[cfg_attr(feature = "async-graphql", graphql(concrete(name = "Point", params(crate::Millimeters))))]
-pub struct Vec2<U> {
+/// (`Vec2<Pixels>`) so they cannot be mixed up; `T` defaults to `f64`
+/// for domain math but can be any component type the boundaries need
+/// (`Vec2<(), i32>` for smithay `Point<i32, K>` and textures,
+/// `Vec2<(), f32>` for graphene). The *unit-erased* form `Vec2<(), T>`
+/// is the boundary representation - it deliberately carries no
+/// coordinate-space claim and converts into any framework space;
+/// [`crate::Position`] and [`crate::Size`] are readable aliases for it.
+/// Serializes as a flat `{"x": .., "y": ..}` map; the unit marker is
+/// skipped. With the `async-graphql` feature, `Vec2<Millimeters>` is
+/// exposed as the GraphQL object type `Point`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Vec2<U = (), T = f64> {
     /// X coordinate in the unit `U`.
-    pub x: f64,
+    pub x: T,
     /// Y coordinate in the unit `U`.
-    pub y: f64,
+    pub y: T,
     /// Phantom marker tagging the coordinate unit; not serialized.
     #[serde(skip)]
-    #[cfg_attr(feature = "async-graphql", graphql(skip))]
     unit: PhantomData<U>,
 }
 
-// Manual impls: `PhantomData<U>` is always `Copy`, so `Vec2<U>` is too -
-// the derive would otherwise impose a `U: Copy` bound.
-impl<U> Copy for Vec2<U> {}
+/// `Vec2<Millimeters>` is exposed as the GraphQL object type `Point`.
+/// A `SimpleObject` derive cannot express the doubly-generic struct
+/// (it would require `T: OutputType` on every instantiation), so the
+/// concrete object is declared as resolvers on the `f64` millimeter
+/// instantiation only.
+#[cfg(feature = "async-graphql")]
+#[async_graphql::Object(name = "Point")]
+impl Vec2<Millimeters> {
+    /// X coordinate in millimeters.
+    async fn x(&self) -> f64 {
+        self.x
+    }
 
-impl<U> Clone for Vec2<U> {
-    fn clone(&self) -> Self {
-        *self
+    /// Y coordinate in millimeters.
+    async fn y(&self) -> f64 {
+        self.y
     }
 }
 
-impl<U> Vec2<U> {
+// Manual impls: `PhantomData<U>` carries no value, so `Vec2<U>` must not
+// impose `Copy`/`Clone`/`PartialEq`/`Eq`/`Hash` bounds on `U`.
+impl<U, T: Copy> Copy for Vec2<U, T> {}
+
+impl<U, T: Clone> Clone for Vec2<U, T> {
+    fn clone(&self) -> Self {
+        Self::new(self.x.clone(), self.y.clone())
+    }
+}
+
+impl<U, T: PartialEq> PartialEq for Vec2<U, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+impl<U, T: Eq> Eq for Vec2<U, T> {}
+
+impl<U, T: Hash> Hash for Vec2<U, T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.x.hash(state);
+        self.y.hash(state);
+    }
+}
+
+impl<U, T> Vec2<U, T> {
+    /// Creates a new 2D point in the unit `U`.
+    pub const fn new(x: T, y: T) -> Self {
+        Self { x, y, unit: PhantomData }
+    }
+
+    /// Applies `f` to each component - component-wise transforms like
+    /// clamping, rounding or numeric conversion. The component type may
+    /// change (`v.map(|c| c.round() as i32)` yields `Vec2<U, i32>`); the
+    /// unit `U` is always preserved.
+    pub fn map<V>(&self, f: impl Fn(T) -> V) -> Vec2<U, V>
+    where
+        T: Copy,
+    {
+        Vec2::new(f(self.x), f(self.y))
+    }
+
+    /// Component-wise product (Hadamard product): each axis scaled by the
+    /// other vector's matching component - per-axis weights, not a dot
+    /// product.
+    pub fn component_mul(&self, other: &Vec2<U, T>) -> Self
+    where
+        T: Copy + Mul<Output = T>,
+    {
+        Self::new(self.x * other.x, self.y * other.y)
+    }
+
+    /// Component-wise maximum of two points in the same unit.
+    pub fn max(&self, other: &Self) -> Self
+    where
+        T: Copy + Ord,
+    {
+        Self::new(self.x.max(other.x), self.y.max(other.y))
+    }
+
+    /// Component-wise minimum of two points in the same unit.
+    pub fn min(&self, other: &Self) -> Self
+    where
+        T: Copy + Ord,
+    {
+        Self::new(self.x.min(other.x), self.y.min(other.y))
+    }
+
+    /// The vector rotated 90° counterclockwise: `(-y, x)` - the
+    /// perpendicular used for offset and normal computations.
+    pub fn perpendicular(&self) -> Self
+    where
+        T: Copy + Neg<Output = T>,
+    {
+        Self::new(-self.y, self.x)
+    }
+
+    /// The axis-aligned rectangle anchored at this point with the given
+    /// `size` extent.
+    pub fn rect(&self, size: Vec2<U, T>) -> crate::Rect<U, T>
+    where
+        T: Copy,
+    {
+        crate::Rect::new(*self, size)
+    }
+}
+
+impl<U, T: Default> Default for Vec2<U, T> {
+    /// The origin `(0, 0)` - both components `T::default()`.
+    fn default() -> Self {
+        Self::new(T::default(), T::default())
+    }
+}
+
+impl<U, T: Display> Display for Vec2<U, T> {
+    /// The `(x,y)` spelling of the point.
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({},{})", self.x, self.y)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `f32` / `i32` numeric bridges (boundary integer and float coordinates)
+// ---------------------------------------------------------------------------
+
+impl<U> Vec2<U, f32> {
+    /// Creates a point from `u32` components.
+    pub fn new_from_u32(x: u32, y: u32) -> Self {
+        Self::new(x as f32, y as f32)
+    }
+
+    /// Creates a point from `i32` components.
+    pub fn new_from_i32(x: i32, y: i32) -> Self {
+        Self::new(x as f32, y as f32)
+    }
+
+    /// Rounds to the nearest integer (standard for display coordinates).
+    pub fn to_i32_round(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x.round() as i32, self.y.round() as i32)
+    }
+
+    /// Rounds down (for clipping/bounding boxes, to not exceed any pixels).
+    pub fn to_i32_floor(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x.floor() as i32, self.y.floor() as i32)
+    }
+
+    /// Rounds up (for damage tracking, to capture all affected pixels).
+    pub fn to_i32_ceil(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x.ceil() as i32, self.y.ceil() as i32)
+    }
+}
+
+impl<U> Vec2<U, i32> {
+    /// The point as `f32` components.
+    pub fn to_f32(&self) -> Vec2<U, f32> {
+        Vec2::new(self.x as f32, self.y as f32)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `f64` domain math - only available for the default component type
+// ---------------------------------------------------------------------------
+
+impl<U> Vec2<U, f64> {
     /// The origin `(0, 0)` in the unit `U`.
     pub const ZERO: Self = Self {
         x: 0.0,
         y: 0.0,
         unit: PhantomData,
     };
-
-    /// Creates a new 2D point in the unit `U`.
-    pub const fn new(x: f64, y: f64) -> Self {
-        Self { x, y, unit: PhantomData }
-    }
 
     /// The x-component as a scalar in the unit `U` - the typed
     /// counterpart of the raw `x` field for boundaries that need the
@@ -73,20 +229,6 @@ impl<U> Vec2<U> {
         U: From<f64>,
     {
         U::from(self.y)
-    }
-
-    /// Applies `f` to each component - component-wise transforms like
-    /// clamping or rounding (`v.map(f64::max)` is not directly possible;
-    /// use `v.map(|c| c.max(0.0))`).
-    pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
-        Self::new(f(self.x), f(self.y))
-    }
-
-    /// Component-wise product (Hadamard product): each axis scaled by the
-    /// other vector's matching component - per-axis weights, not a dot
-    /// product.
-    pub fn component_mul(&self, other: &Vec2<U>) -> Self {
-        Self::new(self.x * other.x, self.y * other.y)
     }
 
     /// Both components set to the same value - `Vec2::splat(margin)` is
@@ -141,12 +283,6 @@ impl<U> Vec2<U> {
         self.distance(&Vec2::ZERO)
     }
 
-    /// The vector rotated 90° counterclockwise: `(-y, x)` - the
-    /// perpendicular used for offset and normal computations.
-    pub fn perpendicular(&self) -> Self {
-        Vec2::new(-self.y, self.x)
-    }
-
     /// The unit vector pointing the same way; a vector shorter
     /// than `1e-9` normalizes to itself.
     pub fn normalized(&self) -> Self {
@@ -181,13 +317,6 @@ impl<U> Vec2<U> {
     }
 }
 
-impl<U> Default for Vec2<U> {
-    /// The origin `(0, 0)` — same as [`Vec2::ZERO`].
-    fn default() -> Self {
-        Self::ZERO
-    }
-}
-
 impl Vec2<Millimeters> {
     /// Creates a point from typed millimeter components.
     pub fn from_mm(x: Millimeters, y: Millimeters) -> Self {
@@ -202,7 +331,11 @@ impl Vec2<Pixels> {
     }
 }
 
-impl<U> Add for Vec2<U> {
+// ---------------------------------------------------------------------------
+// Arithmetic and conversions (component-type generic)
+// ---------------------------------------------------------------------------
+
+impl<U, T: Add<Output = T>> Add for Vec2<U, T> {
     type Output = Self;
 
     /// Component-wise sum of two points in the same unit.
@@ -211,7 +344,14 @@ impl<U> Add for Vec2<U> {
     }
 }
 
-impl<U> Sub for Vec2<U> {
+impl<U, T: AddAssign> AddAssign for Vec2<U, T> {
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
+impl<U, T: Sub<Output = T>> Sub for Vec2<U, T> {
     type Output = Self;
 
     /// Component-wise difference of two points in the same unit.
@@ -220,7 +360,14 @@ impl<U> Sub for Vec2<U> {
     }
 }
 
-impl<U> Neg for Vec2<U> {
+impl<U, T: SubAssign> SubAssign for Vec2<U, T> {
+    fn sub_assign(&mut self, other: Self) {
+        self.x -= other.x;
+        self.y -= other.y;
+    }
+}
+
+impl<U, T: Neg<Output = T>> Neg for Vec2<U, T> {
     type Output = Self;
 
     /// The point mirrored at the origin.
@@ -229,11 +376,11 @@ impl<U> Neg for Vec2<U> {
     }
 }
 
-impl<U> Mul<f64> for Vec2<U> {
+impl<U, T: Copy + Mul<Output = T>> Mul<T> for Vec2<U, T> {
     type Output = Self;
 
     /// The vector scaled by a dimensionless factor.
-    fn mul(self, factor: f64) -> Self {
+    fn mul(self, factor: T) -> Self {
         Self::new(self.x * factor, self.y * factor)
     }
 }
@@ -247,25 +394,57 @@ impl<U> Mul<Vec2<U>> for f64 {
     }
 }
 
-impl<U> Div<f64> for Vec2<U> {
+impl<U, T: Copy + Div<Output = T>> Div<T> for Vec2<U, T> {
     type Output = Self;
 
     /// The vector divided by a dimensionless factor.
-    fn div(self, divisor: f64) -> Self {
+    fn div(self, divisor: T) -> Self {
         Self::new(self.x / divisor, self.y / divisor)
     }
 }
 
-impl<U> From<Vec2<U>> for [f64; 2] {
+// Numeric casts between component types, preserving the unit `U`.
+
+impl<U> From<Vec2<U, i32>> for Vec2<U, f32> {
+    fn from(v: Vec2<U, i32>) -> Self {
+        Self::new(v.x as f32, v.y as f32)
+    }
+}
+
+impl<U> From<Vec2<U, i32>> for Vec2<U, f64> {
+    fn from(v: Vec2<U, i32>) -> Self {
+        Self::new(v.x as f64, v.y as f64)
+    }
+}
+
+impl<U> From<Vec2<U, i32>> for Vec2<U, u32> {
+    fn from(v: Vec2<U, i32>) -> Self {
+        Self::new(v.x as u32, v.y as u32)
+    }
+}
+
+impl<U> From<Vec2<U, u32>> for Vec2<U, i32> {
+    fn from(v: Vec2<U, u32>) -> Self {
+        Self::new(v.x as i32, v.y as i32)
+    }
+}
+
+impl<U> From<Vec2<U, f64>> for Vec2<U, f32> {
+    fn from(v: Vec2<U, f64>) -> Self {
+        Self::new(v.x as f32, v.y as f32)
+    }
+}
+
+impl<U, T> From<Vec2<U, T>> for [T; 2] {
     /// The point as `[x, y]`.
-    fn from(v: Vec2<U>) -> Self {
+    fn from(v: Vec2<U, T>) -> Self {
         [v.x, v.y]
     }
 }
 
-impl<U> From<[f64; 2]> for Vec2<U> {
+impl<U, T> From<[T; 2]> for Vec2<U, T> {
     /// The pair as a `Vec2` in the unit `U`.
-    fn from([x, y]: [f64; 2]) -> Self {
+    fn from([x, y]: [T; 2]) -> Self {
         Self::new(x, y)
     }
 }
@@ -316,7 +495,8 @@ pub mod serde_points {
 
 #[cfg(test)]
 mod tests {
-    /// `map` transforms each component; `component_mul` scales per axis.
+    /// `map` transforms each component and may change the numeric type;
+    /// `component_mul` scales per axis.
     #[test]
     fn map_and_component_mul() {
         let v = Vec2::<Pixels>::new(-3.0, 4.0);
@@ -324,6 +504,8 @@ mod tests {
         assert_eq!(v.map(|c| c.max(0.0)).y, 4.0);
         let w = Vec2::<Pixels>::new(2.0, 0.5).component_mul(&v);
         assert_eq!((w.x, w.y), (-6.0, 2.0));
+        let ints = v.map(|c| c.round() as i32);
+        assert_eq!(ints, Vec2::<Pixels, i32>::new(-3, 4));
     }
 
     /// `splat` fills both components from one unit value.
@@ -344,7 +526,9 @@ mod tests {
     use super::Vec2;
     use crate::Millimeters;
     use crate::Pixels;
+    use crate::Position;
     use crate::RotationRad;
+    use crate::Size;
 
     #[test]
     fn distance_of_axis_aligned_points() {
@@ -404,6 +588,54 @@ mod tests {
         assert_eq!(a * 2.0, Vec2::new(20.0, 8.0));
         assert_eq!(2.0 * b, Vec2::new(4.0, 2.0));
         assert_eq!(a / 2.0, Vec2::new(5.0, 2.0));
+    }
+
+    /// Integer vectors share the same arithmetic.
+    #[test]
+    fn arithmetic_ops_i32() {
+        let mut a = Position::<i32>::new(10, 4);
+        let b = Size::<i32>::new(2, 1);
+        a += b;
+        assert_eq!(a, Position::new(12, 5));
+        a -= b;
+        assert_eq!(a, Position::new(10, 4));
+        assert_eq!(a + b, Position::new(12, 5));
+        assert_eq!(a - b, Position::new(8, 3));
+        assert_eq!(-b, Vec2::<(), i32>::new(-2, -1));
+        assert_eq!(a * 2, Vec2::<(), i32>::new(20, 8));
+        assert_eq!(a / 2, Vec2::<(), i32>::new(5, 2));
+    }
+
+    /// Boundary numerics: `f32` rounds to `i32` in all three modes and
+    /// `i32` widens back to `f32` - unit `()` is preserved.
+    #[test]
+    fn numeric_bridges() {
+        let v = Position::<f32>::new(10.4, 20.6);
+        assert_eq!(v.to_i32_round(), Position::new(10, 21));
+        assert_eq!(v.to_i32_floor(), Position::new(10, 20));
+        assert_eq!(v.to_i32_ceil(), Position::new(11, 21));
+        let i = Position::<i32>::new(10, 20);
+        assert_eq!(i.to_f32(), Position::new(10.0, 20.0));
+        assert_eq!(Position::<f32>::new_from_u32(3, 4), Position::new(3.0, 4.0));
+        assert_eq!(Position::<f32>::new_from_i32(-1, 2), Position::new(-1.0, 2.0));
+    }
+
+    /// `max`/`min` combine component-wise for integer coordinates.
+    #[test]
+    fn componentwise_max_min() {
+        let a = Position::<i32>::new(10, 50);
+        let b = Position::<i32>::new(30, 20);
+        assert_eq!(a.max(&b), Position::new(30, 50));
+        assert_eq!(a.min(&b), Position::new(10, 20));
+    }
+
+    /// A point anchors a rectangle of the same unit and numeric type.
+    #[test]
+    fn point_anchors_rect() {
+        let p = Position::<i32>::new(10, 20);
+        let r = p.rect(Size::new(100, 200));
+        assert_eq!(r.min, p);
+        assert_eq!(r.size.x, 100);
     }
 
     /// `magnitude` measures the vector's length; `perpendicular`
@@ -508,6 +740,8 @@ mod tests {
         let arr: [f64; 2] = v.into();
         assert_eq!(arr, [1.5, -2.25]);
         assert_eq!(Vec2::<Millimeters>::from(arr), v);
+        let ints: Position<i32> = Vec2::<(), i32>::from([3, 4]);
+        assert_eq!(ints, Position::new(3, 4));
     }
 
     #[test]
@@ -517,6 +751,23 @@ mod tests {
         assert!((v.direction().as_f64() - std::f64::consts::FRAC_PI_2).abs() < 1e-10);
         let roundtrip = Vec2::<Pixels>::from_polar(10.0, v.direction());
         assert!((roundtrip.x - v.x).abs() < 1e-10 && (roundtrip.y - v.y).abs() < 1e-10);
+    }
+
+    /// `Vec2` displays as `(x,y)` for every component type.
+    #[test]
+    fn display_format() {
+        assert_eq!(format!("{}", Position::<i32>::new(10, 20)), "(10,20)");
+        assert_eq!(format!("{}", Vec2::<Pixels>::new(1.5, -2.0)), "(1.5,-2)");
+    }
+
+    /// Unit-erased `Position`/`Size` are the same type, so a position
+    /// can be translated by an extent - mirroring `Point + Size` in
+    /// smithay.
+    #[test]
+    fn position_plus_size_translates() {
+        let p = Position::<i32>::new(10, 20);
+        let s = Size::<i32>::new(100, 200);
+        assert_eq!(p + s, Position::new(110, 220));
     }
 
     #[test]
