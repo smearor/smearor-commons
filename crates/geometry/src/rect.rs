@@ -348,6 +348,33 @@ impl<U> Rect<U, f64> {
         strips
     }
 
+    /// Rasterizes the rectangle rotated by `rotation` around its center
+    /// into a cairo [`Region`](cairo::Region) in the rectangle's own
+    /// coordinate space - one 1-px-high [`RectangleInt`](cairo::RectangleInt)
+    /// per [`rotated_region_scanlines`](Self::rotated_region_scanlines)
+    /// strip, offset by the rect's center.
+    ///
+    /// Used e.g. to describe the input region of a rotated GTK widget on
+    /// a wayland surface.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`cairo::Error`]s from `Region` construction.
+    #[cfg(feature = "cairo")]
+    pub fn rotated_region(&self, rotation: RotationRad) -> Result<cairo::Region, cairo::Error> {
+        let region = cairo::Region::create();
+        let center = self.center();
+        for strip in self.rotated_region_scanlines(rotation) {
+            region.union_rectangle(&cairo::RectangleInt::new(
+                (center.x + f64::from(strip.x_start)).round() as i32,
+                (center.y + f64::from(strip.y)).round() as i32,
+                strip.width(),
+                1,
+            ))?;
+        }
+        Ok(region)
+    }
+
     /// The minimal translation needed so that at least `min_visible`
     /// (a scalar in the unit `U`) of this rectangle overlaps `bounds`
     /// on each axis.
@@ -554,6 +581,17 @@ mod tests {
         let widest = strips.iter().map(|s| s.width()).max().unwrap_or_default();
         assert!(widest > 10);
         assert!(!strips.is_empty());
+    }
+
+    #[cfg(feature = "cairo")]
+    #[test]
+    fn rotated_region_covers_rotated_square() {
+        let region = Rect::<Pixels>::from_xywh(0.0, 0.0, 10.0, 10.0)
+            .rotated_region(RotationRad::from_degrees(45.0))
+            .unwrap_or_else(|_| cairo::Region::create());
+        assert!(!region.is_empty());
+        // The rotated square's diagonal is wider than its axis-aligned side.
+        assert!(region.num_rectangles() > 10);
     }
 
     #[test]
