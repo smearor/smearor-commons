@@ -14,26 +14,6 @@ use crate::Rect;
 pub type Rectangle<T> = Rect<(), T>;
 
 // ---------------------------------------------------------------------------
-// gtk4 gate — graphene conversions
-// ---------------------------------------------------------------------------
-
-/// The `f32` rectangle as a `graphene::Rect`.
-#[cfg(feature = "gtk4")]
-impl From<Rectangle<f32>> for gtk4::graphene::Rect {
-    fn from(rectangle: Rectangle<f32>) -> Self {
-        Self::new(rectangle.min.x, rectangle.min.y, rectangle.size.x, rectangle.size.y)
-    }
-}
-
-/// The `i32` rectangle as a `graphene::Rect`.
-#[cfg(feature = "gtk4")]
-impl From<Rectangle<i32>> for gtk4::graphene::Rect {
-    fn from(rectangle: Rectangle<i32>) -> Self {
-        Self::new(rectangle.min.x as f32, rectangle.min.y as f32, rectangle.size.x as f32, rectangle.size.y as f32)
-    }
-}
-
-// ---------------------------------------------------------------------------
 // smithay gate — utils::Rectangle conversions
 //
 // `Rectangle` is space-erased like [`crate::Position`]: it converts into

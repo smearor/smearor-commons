@@ -205,6 +205,40 @@ impl<U> Rect<U, i32> {
     pub fn to_f32(&self) -> Rect<U, f32> {
         Rect::new(self.min.to_f32(), self.size.to_f32())
     }
+
+    /// The rectangle as `f64` components.
+    pub fn to_f64(&self) -> Rect<U, f64> {
+        Rect::new(self.min.to_f64(), self.size.to_f64())
+    }
+}
+
+impl<U> Rect<U, f32> {
+    /// The rectangle as `f64` components.
+    pub fn to_f64(&self) -> Rect<U, f64> {
+        Rect::new(self.min.to_f64(), self.size.to_f64())
+    }
+}
+
+impl<U> Rect<U, f64> {
+    /// Rounds to the nearest integer (standard for display coordinates).
+    pub fn to_i32_round(&self) -> Rect<U, i32> {
+        Rect::new(self.min.to_i32_round(), self.size.to_i32_round())
+    }
+
+    /// Rounds down (for clipping/bounding boxes, to not exceed any pixels).
+    pub fn to_i32_floor(&self) -> Rect<U, i32> {
+        Rect::new(self.min.to_i32_floor(), self.size.to_i32_floor())
+    }
+
+    /// Rounds up (for damage tracking, to capture all affected pixels).
+    pub fn to_i32_ceil(&self) -> Rect<U, i32> {
+        Rect::new(self.min.to_i32_ceil(), self.size.to_i32_ceil())
+    }
+
+    /// The rectangle as `f32` components.
+    pub fn to_f32(&self) -> Rect<U, f32> {
+        Rect::new(self.min.to_f32(), self.size.to_f32())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -362,6 +396,29 @@ fn contain_axis(rect_min: f64, rect_size: f64, bounds_min: f64, bounds_size: f64
         return bounds_min + (bounds_size - rect_size) / 2.0 - rect_min;
     }
     rect_min.clamp(bounds_min, bounds_min + bounds_size - rect_size) - rect_min
+}
+
+// ---------------------------------------------------------------------------
+// gtk4 gate — graphene rect conversions
+//
+// Unit-generic like the [`Vec2`] point conversions: the boundary call
+// interprets the components in GTK's coordinate space.
+// ---------------------------------------------------------------------------
+
+/// The `f32` rectangle as a `graphene::Rect`.
+#[cfg(feature = "gtk4")]
+impl<U> From<Rect<U, f32>> for gtk4::graphene::Rect {
+    fn from(rectangle: Rect<U, f32>) -> Self {
+        Self::new(rectangle.min.x, rectangle.min.y, rectangle.size.x, rectangle.size.y)
+    }
+}
+
+/// The `i32` rectangle as a `graphene::Rect`.
+#[cfg(feature = "gtk4")]
+impl<U> From<Rect<U, i32>> for gtk4::graphene::Rect {
+    fn from(rectangle: Rect<U, i32>) -> Self {
+        Self::new(rectangle.min.x as f32, rectangle.min.y as f32, rectangle.size.x as f32, rectangle.size.y as f32)
+    }
 }
 
 #[cfg(test)]

@@ -198,6 +198,40 @@ impl<U> Vec2<U, i32> {
     pub fn to_f32(&self) -> Vec2<U, f32> {
         Vec2::new(self.x as f32, self.y as f32)
     }
+
+    /// The point as `f64` components.
+    pub fn to_f64(&self) -> Vec2<U, f64> {
+        Vec2::new(self.x as f64, self.y as f64)
+    }
+}
+
+impl<U> Vec2<U, f32> {
+    /// The point as `f64` components.
+    pub fn to_f64(&self) -> Vec2<U, f64> {
+        Vec2::new(self.x as f64, self.y as f64)
+    }
+}
+
+impl<U> Vec2<U, f64> {
+    /// Rounds to the nearest integer (standard for display coordinates).
+    pub fn to_i32_round(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x.round() as i32, self.y.round() as i32)
+    }
+
+    /// Rounds down (for clipping/bounding boxes, to not exceed any pixels).
+    pub fn to_i32_floor(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x.floor() as i32, self.y.floor() as i32)
+    }
+
+    /// Rounds up (for damage tracking, to capture all affected pixels).
+    pub fn to_i32_ceil(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x.ceil() as i32, self.y.ceil() as i32)
+    }
+
+    /// The point as `f32` components.
+    pub fn to_f32(&self) -> Vec2<U, f32> {
+        Vec2::new(self.x as f32, self.y as f32)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -449,6 +483,31 @@ impl<U, T> From<[T; 2]> for Vec2<U, T> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// gtk4 gate — graphene point conversions
+//
+// Unit-generic: the boundary call interprets the components in GTK's
+// coordinate space regardless of the source unit `U` (the caller owns
+// that reinterpretation); reading a graphene point back tags it with
+// whatever unit the caller assigns.
+// ---------------------------------------------------------------------------
+
+/// The `f32` point as a `graphene::Point`.
+#[cfg(feature = "gtk4")]
+impl<U> From<Vec2<U, f32>> for gtk4::graphene::Point {
+    fn from(position: Vec2<U, f32>) -> Self {
+        Self::new(position.x, position.y)
+    }
+}
+
+/// A `graphene::Point` as a `Vec2` in the caller-chosen unit `U`.
+#[cfg(feature = "gtk4")]
+impl<U> From<gtk4::graphene::Point> for Vec2<U, f32> {
+    fn from(point: gtk4::graphene::Point) -> Self {
+        Self::new(point.x(), point.y())
+    }
+}
+
 /// Serde adapter for `#[serde(with)]`: `Vec2<U>` as a compact
 /// `[x, y]` pair instead of the default `{"x": .., "y": ..}` map.
 ///
@@ -618,6 +677,30 @@ mod tests {
         assert_eq!(i.to_f32(), Position::new(10.0, 20.0));
         assert_eq!(Position::<f32>::new_from_u32(3, 4), Position::new(3.0, 4.0));
         assert_eq!(Position::<f32>::new_from_i32(-1, 2), Position::new(-1.0, 2.0));
+    }
+
+    /// `f64` points round to `i32` in all three modes - the unit `U`
+    /// is preserved, so `Vec2<Pixels>` stays tagged at the boundary.
+    #[test]
+    fn f64_to_i32_rounding() {
+        let v = Vec2::<Pixels>::new(10.4, 20.6);
+        assert_eq!(v.to_i32_round(), Vec2::<Pixels, i32>::new(10, 21));
+        assert_eq!(v.to_i32_floor(), Vec2::<Pixels, i32>::new(10, 20));
+        assert_eq!(v.to_i32_ceil(), Vec2::<Pixels, i32>::new(11, 21));
+        assert_eq!(v.to_i32_round().to_f64(), Vec2::<Pixels>::new(10.0, 21.0));
+        assert_eq!(v.to_f32().to_i32_round(), Vec2::<Pixels, i32>::new(10, 21));
+    }
+
+    /// Graphene points convert both ways for any unit - the caller
+    /// owns the space claim at the boundary.
+    #[cfg(feature = "gtk4")]
+    #[test]
+    fn graphene_point_conversions() {
+        let p = Vec2::<Pixels, f32>::new(10.5, 20.5);
+        let g: gtk4::graphene::Point = p.into();
+        assert_eq!((g.x(), g.y()), (10.5, 20.5));
+        let back: Vec2<Pixels, f32> = g.into();
+        assert_eq!(back, p);
     }
 
     /// `max`/`min` combine component-wise for integer coordinates.

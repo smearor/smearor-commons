@@ -71,23 +71,3 @@ impl<K> From<&smithay::utils::Point<i32, K>> for Position<i32> {
         Self::new(position.x, position.y)
     }
 }
-
-// ---------------------------------------------------------------------------
-// gtk4 gate — graphene point conversions
-// ---------------------------------------------------------------------------
-
-/// The `f32` position as a `graphene::Point`.
-#[cfg(feature = "gtk4")]
-impl From<Position<f32>> for gtk4::graphene::Point {
-    fn from(position: Position<f32>) -> Self {
-        Self::new(position.x, position.y)
-    }
-}
-
-/// A `graphene::Point` as a unit-erased [`Position`].
-#[cfg(feature = "gtk4")]
-impl From<gtk4::graphene::Point> for Position<f32> {
-    fn from(point: gtk4::graphene::Point) -> Self {
-        Self::new(point.x(), point.y())
-    }
-}
