@@ -40,6 +40,13 @@ pub trait WidgetSizeExt {
     /// `(minimum, natural)`, measured unconstrained (`for_size = -1`)
     /// in both orientations.
     fn measure_size(&self) -> (Size<i32>, Size<i32>);
+
+    /// The center of the widget's allocated area in pixel
+    /// coordinates - the natural origin for pointer hit tests and
+    /// radial layouts.
+    fn center(&self) -> Vec2<crate::Pixels, f64> {
+        self.allocated_size().with_unit::<Pixels>().to_f64().half()
+    }
 }
 
 #[cfg(feature = "gtk4")]
