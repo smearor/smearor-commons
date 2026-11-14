@@ -1,0 +1,22 @@
+[package]
+name = "smearor-commons-buffer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Pixel and graphics buffer types for the Smearor ecosystem: format-tagged owned buffers, strided views and metadata."
+
+[features]
+# ui / backend bridges (added with the ported code in later phases)
+# image = ["dep:image"]
+# cairo = ["dep:cairo-rs"]
+# gtk4 = ["dep:gtk4"]
+# smithay = ["dep:smithay"]
+
+[dependencies]
+smearor-commons-geometry.workspace = true
+serde.workspace = true
+thiserror.workspace = true

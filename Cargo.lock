@@ -1534,6 +1534,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "smearor-commons-buffer"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "smearor-commons-geometry",
+ "thiserror",
+]
+
+[[package]]
 name = "smearor-commons-color"
 version = "0.1.0"
 dependencies = [
