@@ -20,6 +20,7 @@ use crate::Vec2;
 use std::ops::Add;
 use std::ops::Div;
 use std::ops::Mul;
+use std::ops::Sub;
 
 /// A regular grid of `cols` × `rows` equal-sized cells.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -107,7 +108,7 @@ impl Grid {
     /// `rect_within(cell, Rect::new(origin, extent))`.
     pub fn rect<U, T>(&self, cell: Cell, extent: Vec2<U, T>) -> Rect<U, T>
     where
-        T: Copy + Default + Add<Output = T> + Div<Output = T> + Mul<Output = T> + From<u32>,
+        T: Copy + Default + Add<Output = T> + Sub<Output = T> + Div<Output = T> + Mul<Output = T> + From<u32>,
     {
         self.rect_within(cell, Rect::new(Vec2::default(), extent))
     }
@@ -115,12 +116,19 @@ impl Grid {
     /// The [`Rect`] of `cell` inside `frame` — like [`rect`](Self::rect),
     /// but the partition is anchored at `frame.min` (e.g. a board
     /// rectangle offset inside a surface).
+    ///
+    /// Both cell edges are anchored independently at `frame.min`
+    /// (`min + k*cell_size`), so horizontally and vertically adjacent
+    /// cells share bit-identical boundaries — relevant for consumers
+    /// that assert disjointness of a produced field set.
     pub fn rect_within<U, T>(&self, cell: Cell, frame: Rect<U, T>) -> Rect<U, T>
     where
-        T: Copy + Add<Output = T> + Div<Output = T> + Mul<Output = T> + From<u32>,
+        T: Copy + Add<Output = T> + Sub<Output = T> + Div<Output = T> + Mul<Output = T> + From<u32>,
     {
         let size = self.cell_size(frame.size);
-        Rect::new(frame.min + Vec2::new(T::from(cell.col.0) * size.x, T::from(cell.row.0) * size.y), size)
+        let min = frame.min + Vec2::new(T::from(cell.col.0) * size.x, T::from(cell.row.0) * size.y);
+        let max = frame.min + Vec2::new(T::from(cell.col.0 + 1) * size.x, T::from(cell.row.0 + 1) * size.y);
+        Rect::new(min, max - min)
     }
 }
 
@@ -193,6 +201,26 @@ mod tests {
         let frame = Rect::new(Vec2::<(), f64>::new(10.0, 20.0), Vec2::new(80.0, 80.0));
         let rect = grid.rect_within(Cell::new(Col(2), Row(1)), frame);
         assert_eq!(rect, Rect::new(Vec2::new(30.0, 30.0), Vec2::new(10.0, 10.0)));
+    }
+
+    #[test]
+    fn adjacent_cells_share_bit_identical_boundaries() {
+        // `frame.min + k*size` on both sides: neighbours must meet
+        // exactly, not merely within an ulp.
+        let grid = Grid::new(8, 8);
+        let frame = Rect::new(Vec2::<(), f64>::new(12.5, 7.25), Vec2::new(83.0, 83.0));
+        for index in 0..grid.capacity() {
+            let cell = grid.cell(index).expect("in range");
+            let rect = grid.rect_within(cell, frame);
+            if cell.col.0 + 1 < grid.cols() {
+                let east = grid.rect_within(Cell::new(Col(cell.col.0 + 1), cell.row), frame);
+                assert_eq!(rect.right(), east.min.x);
+            }
+            if cell.row.0 + 1 < grid.rows() {
+                let south = grid.rect_within(Cell::new(cell.col, Row(cell.row.0 + 1)), frame);
+                assert_eq!(rect.bottom(), south.min.y);
+            }
+        }
     }
 
     #[test]
