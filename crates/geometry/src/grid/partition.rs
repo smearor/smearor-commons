@@ -33,10 +33,10 @@ impl Grid {
     ///
     /// `0` clamps to `1`: an empty grid partitions nothing and would only
     /// surface as division by zero downstream.
-    pub fn new(cols: u32, rows: u32) -> Self {
+    pub const fn new(cols: u32, rows: u32) -> Self {
         Self {
-            cols: cols.max(1),
-            rows: rows.max(1),
+            cols: if cols == 0 { 1 } else { cols },
+            rows: if rows == 0 { 1 } else { rows },
         }
     }
 
