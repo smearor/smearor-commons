@@ -1,3 +1,4 @@
+use crate::Alpha;
 use crate::Luminance;
 use crate::LuminanceWeights;
 use crate::ParseColorError;
@@ -291,6 +292,21 @@ impl Color<u8> {
             a: (value & 0xFF) as u8,
         }
     }
+
+    /// Porter-Duff "over" compositing: `self` modulated to the effective
+    /// alpha `alpha` blended on top of `dst`. Rasterizers use `alpha` to
+    /// fold per-pixel coverage into the source color's own alpha.
+    /// Returns fully transparent when the combined alpha is negligible.
+    pub fn alpha_over(&self, dst: &Self, alpha: impl Into<Alpha>) -> Self {
+        let src_alpha = alpha.into().as_f32();
+        let dst_alpha = Alpha::from(dst.a).as_f32();
+        let out_alpha = src_alpha + dst_alpha * (1.0 - src_alpha);
+        if out_alpha < 0.001 {
+            return Self::default();
+        }
+        let blend = |s: u8, d: u8| ((s as f32 * src_alpha + d as f32 * dst_alpha * (1.0 - src_alpha)) / out_alpha).round() as u8;
+        Self::new_rgba(blend(self.r, dst.r), blend(self.g, dst.g), blend(self.b, dst.b), (out_alpha * 255.0).round() as u8)
+    }
 }
 
 impl Default for Color<f64> {
@@ -491,6 +507,19 @@ impl<'de> Deserialize<'de> for Color<u8> {
 
 #[cfg(test)]
 mod tests {
+    /// `alpha_over` composites an effective-alpha source over dst.
+    #[test]
+    fn alpha_over_full_source_wins() {
+        let red = Color::<u8>::new(255, 0, 0);
+        let dst = Color::<u8>::new_rgba(0, 0, 255, 128);
+        // Full effective alpha replaces dst entirely.
+        assert_eq!(red.alpha_over(&dst, 255u8), Color::<u8>::new_rgba(255, 0, 0, 255));
+        // Zero effective alpha keeps dst (channels unmixed, dst alpha kept).
+        assert_eq!(red.alpha_over(&dst, 0.0), dst);
+        // Zero over zero degenerates to transparent.
+        assert_eq!(red.alpha_over(&Color::<u8>::default(), Alpha::TRANSPARENT), Color::<u8>::default());
+    }
+
     use super::*;
 
     #[test]
