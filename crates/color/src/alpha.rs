@@ -45,6 +45,16 @@ impl Alpha {
         (self.0 * 255.0).round() as u8
     }
 
+    /// Creates an alpha from a percent value (`0-100`, clamped).
+    pub const fn from_percent(percent: u8) -> Self {
+        Self::new(if percent > 100 { 1.0 } else { percent as f64 / 100.0 })
+    }
+
+    /// The value in percent (`0-100`, rounded).
+    pub fn percent(self) -> u8 {
+        (self.0 * 100.0).round() as u8
+    }
+
     /// Whether the alpha is fully transparent - the rasterizer can
     /// skip the pixel entirely.
     pub fn is_transparent(self) -> bool {
@@ -142,6 +152,14 @@ mod tests {
     fn u8_round_trip() {
         assert_eq!(Alpha::from(128u8).as_u8(), 128);
         assert_eq!(u8::from(Alpha::OPAQUE), 255);
+    }
+
+    #[test]
+    fn percent_round_trip() {
+        assert_eq!(Alpha::from_percent(75).percent(), 75);
+        assert!((Alpha::from_percent(75).as_f64() - 0.75).abs() < 1e-9);
+        assert_eq!(Alpha::from_percent(255), Alpha::OPAQUE);
+        assert_eq!(Alpha::OPAQUE.percent(), 100);
     }
 
     #[test]
