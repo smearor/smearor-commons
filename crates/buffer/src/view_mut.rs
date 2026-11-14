@@ -97,6 +97,42 @@ impl<'a, F: PixelFormat> BufferViewMut<'a, F> {
     pub fn pixel_offset(&self, x: Pixels<u32>, y: Pixels<u32>) -> Option<usize> {
         self.metadata.pixel_offset(x, y, F::BYTES_PER_PIXEL)
     }
+
+    /// Fills every pixel with `pixel` (`F::BYTES_PER_PIXEL` bytes).
+    ///
+    /// Packed views write the pattern over the whole slice in one pass;
+    /// strided views repeat it per row, leaving padding untouched.
+    /// Does nothing when `pixel` is not exactly one pixel wide.
+    pub fn fill(&mut self, pixel: &[u8]) {
+        if pixel.len() != F::BYTES_PER_PIXEL {
+            return;
+        }
+        if self.is_packed() {
+            let len = self.metadata.required_len(F::BYTES_PER_PIXEL);
+            fill_pixels(&mut self.data[..len], F::BYTES_PER_PIXEL, pixel);
+        } else {
+            for y in 0..self.metadata.height.as_raw() {
+                if let Some(row) = self.row_mut(Pixels::new(y)) {
+                    fill_pixels(row, F::BYTES_PER_PIXEL, pixel);
+                }
+            }
+        }
+    }
+}
+
+/// Repeats `pixel` across `data`, which must be a whole number of
+/// `bpp`-sized pixels. The `4`-byte specialization keeps the literal
+/// width visible to codegen (word-sized stores).
+fn fill_pixels(data: &mut [u8], bpp: usize, pixel: &[u8]) {
+    if bpp == 4 {
+        if let Ok(pixel) = <&[u8; 4]>::try_from(pixel) {
+            data.as_chunks_mut::<4>().0.fill(*pixel);
+        }
+    } else {
+        for chunk in data.chunks_exact_mut(bpp) {
+            chunk.copy_from_slice(pixel);
+        }
+    }
 }
 
 impl<F> std::fmt::Debug for BufferViewMut<'_, F> {
@@ -127,6 +163,39 @@ mod tests {
         }
         assert_eq!(&data[12..20], &[7; 8]);
         assert_eq!(&data[20..24], &[0; 4]);
+    }
+
+    /// `fill` covers packed and strided views alike.
+    #[test]
+    fn fill_writes_every_pixel_and_leaves_padding() {
+        let mut packed = vec![0u8; 16];
+        {
+            let mut view = BufferViewMut::<Rgba>::from_packed(&mut packed, Size::new(2, 2)).unwrap();
+            view.fill(&[9, 8, 7, 6]);
+        }
+        assert_eq!(packed, [9, 8, 7, 6].repeat(4));
+
+        let mut strided = vec![0u8; 24];
+        {
+            let meta = BufferMetadata::new(Pixels::new(2), Pixels::new(2), Stride::new(12));
+            let mut view = BufferViewMut::<Rgba>::from_raw(&mut strided, meta).unwrap();
+            view.fill(&[1, 2, 3, 4]);
+        }
+        assert_eq!(&strided[..8], &[1, 2, 3, 4, 1, 2, 3, 4]);
+        assert_eq!(&strided[8..12], &[0; 4]);
+        assert_eq!(&strided[12..20], &[1, 2, 3, 4, 1, 2, 3, 4]);
+        assert_eq!(&strided[20..24], &[0; 4]);
+    }
+
+    /// A wrong-length pattern leaves the buffer untouched.
+    #[test]
+    fn fill_ignores_wrong_pixel_length() {
+        let mut data = vec![0u8; 16];
+        {
+            let mut view = BufferViewMut::<Rgba>::from_packed(&mut data, Size::new(2, 2)).unwrap();
+            view.fill(&[1, 2, 3]);
+        }
+        assert_eq!(data, vec![0u8; 16]);
     }
 
     /// `from_packed` is the common rendering-target construction.
