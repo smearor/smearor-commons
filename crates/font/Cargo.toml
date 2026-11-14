@@ -1,0 +1,16 @@
+[package]
+name = "smearor-commons-font"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Font metric utilities for the Smearor ecosystem: glyph scale fitting, bounds centering and text truncation on ab_glyph fonts."
+
+[dependencies]
+ab_glyph.workspace = true
+serde.workspace = true
+smearor-commons-geometry = { workspace = true, features = ["ab_glyph"] }
+thiserror.workspace = true

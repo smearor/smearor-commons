@@ -1579,6 +1579,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "smearor-commons-font"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "serde",
+ "smearor-commons-geometry",
+ "thiserror",
+]
+
+[[package]]
 name = "smearor-commons-geometry"
 version = "0.1.0"
 dependencies = [

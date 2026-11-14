@@ -14,6 +14,7 @@ homepage = "https://smearor.io/"
 [workspace.dependencies]
 # workspace crates
 smearor-commons-geometry = { path = "crates/geometry" }
+smearor-commons-font = { path = "crates/font" }
 smearor-commons-color = { path = "crates/color" }
 # core
 serde = { version = "1.0", features = ["derive"] }
