@@ -51,17 +51,17 @@ impl Grid {
     }
 
     /// Number of columns.
-    pub fn cols(&self) -> u32 {
+    pub const fn cols(&self) -> u32 {
         self.cols
     }
 
     /// Number of rows.
-    pub fn rows(&self) -> u32 {
+    pub const fn rows(&self) -> u32 {
         self.rows
     }
 
     /// Total number of cells.
-    pub fn capacity(&self) -> u32 {
+    pub const fn capacity(&self) -> u32 {
         self.cols * self.rows
     }
 
