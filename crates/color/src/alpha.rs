@@ -6,6 +6,7 @@
 /// stays `T` — `Alpha` is the standalone scalar for APIs that take
 /// or return an opacity.
 use std::ops::Div;
+use std::ops::Mul;
 use std::ops::Sub;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -37,6 +38,18 @@ impl Alpha {
     pub fn as_u8(self) -> u8 {
         (self.0 * 255.0).round() as u8
     }
+
+    /// Whether the alpha is fully transparent - the rasterizer can
+    /// skip the pixel entirely.
+    pub fn is_transparent(self) -> bool {
+        self.0 <= 0.0
+    }
+
+    /// Whether the alpha is fully opaque - blending can write the
+    /// source color directly.
+    pub fn is_opaque(self) -> bool {
+        self.0 >= 1.0
+    }
 }
 
 /// Saturating difference - a negative result clamps to [`Alpha::TRANSPARENT`].
@@ -45,6 +58,16 @@ impl Sub for Alpha {
 
     fn sub(self, rhs: Self) -> Self {
         Self::new(self.0 - rhs.0)
+    }
+}
+
+/// Scales the alpha by a plain factor (e.g. per-pixel coverage),
+/// clamped back to the unit range.
+impl Mul<f64> for Alpha {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self {
+        Self::new(self.0 * rhs)
     }
 }
 
@@ -125,6 +148,20 @@ mod tests {
         let delta = Alpha::OPAQUE - Alpha::new(0.25);
         assert!((delta.as_f64() - 0.75).abs() < 1e-9);
         assert_eq!(Alpha::new(0.25) - Alpha::OPAQUE, Alpha::TRANSPARENT);
+    }
+
+    #[test]
+    fn predicates() {
+        assert!(Alpha::TRANSPARENT.is_transparent());
+        assert!(Alpha::OPAQUE.is_opaque());
+        assert!(!Alpha::OPAQUE.is_transparent());
+        assert!(!Alpha::TRANSPARENT.is_opaque());
+    }
+
+    #[test]
+    fn mul_scales_and_clamps() {
+        assert_eq!(Alpha::OPAQUE * 0.5, Alpha::new(0.5));
+        assert_eq!(Alpha::OPAQUE * 2.0, Alpha::OPAQUE);
     }
 
     #[test]
