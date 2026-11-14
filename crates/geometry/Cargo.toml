@@ -10,6 +10,7 @@ homepage.workspace = true
 description = "Generic 2D geometry primitives for the Smearor ecosystem: unit-tagged vectors, rotations, rectangles and shapes."
 
 [features]
+ab_glyph = ["dep:ab_glyph"]
 # transport / schema
 async-graphql = ["dep:async-graphql"]
 cairo = ["dep:cairo-rs"]
@@ -21,6 +22,7 @@ zbus = ["dep:zvariant"]
 # ui / backend (added with the ported code in later phases)
 
 [dependencies]
+ab_glyph = { workspace = true, optional = true }
 async-graphql = { workspace = true, optional = true }
 cairo-rs = { workspace = true, optional = true }
 gtk4 = { workspace = true, optional = true }

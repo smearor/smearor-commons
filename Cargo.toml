@@ -25,6 +25,7 @@ evdev = "0.13"
 schemars = "1"
 zvariant = "5"
 # ui / backend (optional, feature-gated)
+ab_glyph = "0.2"
 cairo-rs = "0.22"
 gtk4 = { version = "0.11", features = ["v4_20"] }
 smithay = { version = "0.7", default-features = false }

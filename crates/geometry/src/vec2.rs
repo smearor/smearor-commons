@@ -615,6 +615,41 @@ impl<U> From<gtk4::graphene::Point> for Vec2<U, f32> {
     }
 }
 
+// ---------------------------------------------------------------------------
+
+/// The `f32` point as an `ab_glyph` point - glyph positions are pixel
+/// space; the caller owns the space claim at the boundary.
+#[cfg(feature = "ab_glyph")]
+impl<U> From<Vec2<U, f32>> for ab_glyph::Point {
+    fn from(position: Vec2<U, f32>) -> Self {
+        Self { x: position.x, y: position.y }
+    }
+}
+
+/// An `ab_glyph` point as a `Vec2` in the caller-chosen unit `U`.
+#[cfg(feature = "ab_glyph")]
+impl<U> From<ab_glyph::Point> for Vec2<U, f32> {
+    fn from(point: ab_glyph::Point) -> Self {
+        Self::new(point.x, point.y)
+    }
+}
+
+/// The `f32` vector as an `ab_glyph` font scale (em extent per axis).
+#[cfg(feature = "ab_glyph")]
+impl<U> From<Vec2<U, f32>> for ab_glyph::PxScale {
+    fn from(v: Vec2<U, f32>) -> Self {
+        Self { x: v.x, y: v.y }
+    }
+}
+
+/// An `ab_glyph` font scale as a `Vec2` in the caller-chosen unit `U`.
+#[cfg(feature = "ab_glyph")]
+impl<U> From<ab_glyph::PxScale> for Vec2<U, f32> {
+    fn from(scale: ab_glyph::PxScale) -> Self {
+        Self::new(scale.x, scale.y)
+    }
+}
+
 /// Serde adapter for `#[serde(with)]`: `Vec2<U>` as a compact
 /// `[x, y]` pair instead of the default `{"x": .., "y": ..}` map.
 ///
@@ -819,6 +854,24 @@ mod tests {
         assert_eq!((g.x(), g.y()), (10.5, 20.5));
         let back: Vec2<Pixels, f32> = g.into();
         assert_eq!(back, p);
+    }
+
+    /// `ab_glyph` points and scales convert both ways for any unit -
+    /// the caller owns the space claim at the boundary.
+    #[cfg(feature = "ab_glyph")]
+    #[test]
+    fn ab_glyph_point_scale_conversions() {
+        let p = Vec2::<Pixels, f32>::new(10.5, 20.5);
+        let g: ab_glyph::Point = p.into();
+        assert_eq!((g.x, g.y), (10.5, 20.5));
+        let back: Vec2<Pixels, f32> = g.into();
+        assert_eq!(back, p);
+
+        let s = ab_glyph::PxScale { x: 12.0, y: 16.0 };
+        let v: Vec2<Pixels, f32> = s.into();
+        assert_eq!((v.x, v.y), (12.0, 16.0));
+        let back: ab_glyph::PxScale = v.into();
+        assert_eq!((back.x, back.y), (12.0, 16.0));
     }
 
     /// `max`/`min` combine component-wise for integer coordinates.

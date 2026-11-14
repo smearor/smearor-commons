@@ -445,6 +445,35 @@ impl<U> From<Rect<U, i32>> for gtk4::graphene::Rect {
     }
 }
 
+// ---------------------------------------------------------------------------
+
+/// The `f32` rectangle as an `ab_glyph::Rect` (min/max corner form).
+#[cfg(feature = "ab_glyph")]
+impl<U> From<Rect<U, f32>> for ab_glyph::Rect {
+    fn from(rectangle: Rect<U, f32>) -> Self {
+        let max = rectangle.min + rectangle.size;
+        Self {
+            min: ab_glyph::Point {
+                x: rectangle.min.x,
+                y: rectangle.min.y,
+            },
+            max: ab_glyph::Point { x: max.x, y: max.y },
+        }
+    }
+}
+
+/// An `ab_glyph::Rect` as a `Rect` in the caller-chosen unit `U` -
+/// min/size form, so the corner difference is computed here.
+#[cfg(feature = "ab_glyph")]
+impl<U> From<ab_glyph::Rect> for Rect<U, f32> {
+    fn from(rectangle: ab_glyph::Rect) -> Self {
+        Self::new(
+            Vec2::new(rectangle.min.x, rectangle.min.y),
+            Vec2::new(rectangle.max.x - rectangle.min.x, rectangle.max.y - rectangle.min.y),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -613,5 +642,20 @@ mod tests {
         // Wider than bounds on x: centered (-50 shift); fits on y: clamped.
         assert_eq!(offset.x, -50.0);
         assert_eq!(offset.y, 0.0);
+    }
+
+    /// `ab_glyph::Rect` converts between min/max corners and min/size
+    /// in both directions.
+    #[cfg(feature = "ab_glyph")]
+    #[test]
+    fn ab_glyph_rect_conversions() {
+        let source = ab_glyph::Rect {
+            min: ab_glyph::Point { x: 1.0, y: 2.0 },
+            max: ab_glyph::Point { x: 5.0, y: 9.0 },
+        };
+        let rect = Rect::<Pixels, f32>::from(source);
+        assert_eq!((rect.min.x, rect.min.y, rect.size.x, rect.size.y), (1.0, 2.0, 4.0, 7.0));
+        let back = ab_glyph::Rect::from(rect);
+        assert_eq!((back.min.x, back.min.y, back.max.x, back.max.y), (1.0, 2.0, 5.0, 9.0));
     }
 }
