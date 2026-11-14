@@ -507,6 +507,8 @@ impl<'de> Deserialize<'de> for Color<u8> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     /// `alpha_over` composites an effective-alpha source over dst.
     #[test]
     fn alpha_over_full_source_wins() {
@@ -520,7 +522,14 @@ mod tests {
         assert_eq!(red.alpha_over(&Color::<u8>::default(), Alpha::TRANSPARENT), Color::<u8>::default());
     }
 
-    use super::*;
+    /// `alpha_over` at half coverage mixes channels but keeps dst alpha.
+    #[test]
+    fn alpha_over_half_alpha_blends_channels() {
+        let white = Color::<u8>::new(255, 255, 255);
+        let result = white.alpha_over(&Color::<u8>::new_rgba(0, 0, 0, 255), 128u8);
+        assert_eq!(result.a, 255, "output alpha should be fully opaque");
+        assert!(result.r > 0 && result.r < 255, "red should be blended");
+    }
 
     #[test]
     fn f64_new_sets_alpha_to_one() {
