@@ -11,6 +11,7 @@
 //! stay in consumer crates as thin newtype wrappers around [`Color<T>`].
 
 mod alpha;
+mod alpha_percent;
 #[cfg(feature = "cairo")]
 mod cairo;
 mod color;
@@ -25,6 +26,7 @@ mod parse_color_error;
 mod static_palette;
 
 pub use alpha::Alpha;
+pub use alpha_percent::AlphaPercent;
 pub use color::Color;
 pub use luminance::Luminance;
 pub use luminance_weights::LuminanceWeights;
