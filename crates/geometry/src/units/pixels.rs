@@ -31,6 +31,14 @@ impl<T> Pixels<T> {
     }
 }
 
+impl Pixels<u32> {
+    /// The wrapped count as `usize` for index arithmetic - buffer
+    /// extents and row indices fit comfortably.
+    pub const fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+}
+
 impl Pixels<f64> {
     /// The numeric value in pixels.
     pub const fn as_f64(self) -> f64 {
