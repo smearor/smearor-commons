@@ -10,6 +10,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Add;
 use std::ops::AddAssign;
+use std::ops::Div;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
@@ -100,6 +101,14 @@ impl<U, T: Copy + Add<Output = T>> Rect<U, T> {
     /// The rectangle translated by `delta`.
     pub fn translated(&self, delta: Vec2<U, T>) -> Self {
         Self::new(self.min + delta, self.size)
+    }
+
+    /// The rectangle's center point (`min + size / 2`).
+    pub fn center(&self) -> Vec2<U, T>
+    where
+        T: Div<Output = T> + From<u8>,
+    {
+        self.min + self.size / T::from(2u8)
     }
 }
 
@@ -252,11 +261,6 @@ impl<U> Rect<U, f64> {
             min: Vec2::<U>::new(center.x - size.x / 2.0, center.y - size.y / 2.0),
             size,
         }
-    }
-
-    /// Center point of the rectangle.
-    pub fn center(&self) -> Vec2<U> {
-        Vec2::<U>::new(self.min.x + self.size.x / 2.0, self.min.y + self.size.y / 2.0)
     }
 
     /// The rectangle's four corners, starting at `top_left` (the
@@ -642,6 +646,13 @@ mod tests {
         // Wider than bounds on x: centered (-50 shift); fits on y: clamped.
         assert_eq!(offset.x, -50.0);
         assert_eq!(offset.y, 0.0);
+    }
+
+    /// `center` returns `min + size / 2`.
+    #[test]
+    fn center_returns_midpoint() {
+        let rect = Rect::<Pixels>::from_xywh(10.0, 20.0, 30.0, 40.0);
+        assert_eq!(rect.center(), Vec2::<Pixels>::new(25.0, 40.0));
     }
 
     /// `ab_glyph::Rect` converts between min/max corners and min/size
