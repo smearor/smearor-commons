@@ -451,6 +451,19 @@ impl<U> Vec2<U, f64> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// `u32` domain math - saturating arithmetic for integer extents
+// ---------------------------------------------------------------------------
+
+impl<U> Vec2<U, u32> {
+    /// Component-wise [`u32::saturating_sub`]: `rhs` subtracted, clamped at
+    /// zero per component. Useful for fitting an inner extent into an outer
+    /// one (`(outer - inner) / 2` without underflow).
+    pub fn saturating_sub(self, rhs: Self) -> Self {
+        Self::new(self.x.saturating_sub(rhs.x), self.y.saturating_sub(rhs.y))
+    }
+}
+
 impl Vec2<Millimeters> {
     /// Creates a point from typed millimeter components.
     pub fn from_mm(x: Millimeters, y: Millimeters) -> Self {
@@ -858,6 +871,14 @@ mod tests {
 
     /// `ab_glyph` points and scales convert both ways for any unit -
     /// the caller owns the space claim at the boundary.
+    /// `saturating_sub` clamps each component at zero.
+    #[test]
+    fn saturating_sub_clamps_per_component() {
+        let a = Vec2::<Pixels, u32>::new(10, 4);
+        let b = Vec2::<Pixels, u32>::new(6, 8);
+        assert_eq!(a.saturating_sub(b), Vec2::<Pixels, u32>::new(4, 0));
+    }
+
     #[cfg(feature = "ab_glyph")]
     #[test]
     fn ab_glyph_point_scale_conversions() {
