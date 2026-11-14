@@ -76,6 +76,11 @@ impl<F: PixelFormat> PixelBuffer<F> {
         Pixels::new(self.size.y)
     }
 
+    /// The pixel count (`width * height`).
+    pub fn area(&self) -> Pixels<u64> {
+        Pixels::new(self.size.x as u64 * self.size.y as u64)
+    }
+
     /// The packed pixel bytes.
     pub fn pixels(&self) -> &[u8] {
         &self.pixels
@@ -136,6 +141,18 @@ impl PixelBuffer<Bgra> {
     }
 }
 
+impl<F: PixelFormat> AsRef<[u8]> for PixelBuffer<F> {
+    fn as_ref(&self) -> &[u8] {
+        &self.pixels
+    }
+}
+
+impl<F: PixelFormat> AsMut<[u8]> for PixelBuffer<F> {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.pixels
+    }
+}
+
 /// Swaps byte `0` and `2` of every 4-byte pixel (`r <-> b`, `a` kept).
 fn swap_first_third_channel(pixels: &mut [u8]) {
     for pixel in pixels.as_chunks_mut::<4>().0 {
@@ -149,6 +166,23 @@ mod tests {
     use crate::Bgra;
     use crate::Rgba;
     use smearor_commons_geometry::Size;
+
+    /// `area` counts pixels, not bytes.
+    #[test]
+    fn area_counts_pixels() {
+        let buffer = PixelBuffer::<Rgba>::new(Size::new(4, 3));
+        assert_eq!(buffer.area().as_raw(), 12);
+    }
+
+    /// `AsRef`/`AsMut` expose the packed bytes.
+    #[test]
+    fn as_ref_as_mut_expose_bytes() {
+        let mut buffer = PixelBuffer::<Rgba>::new(Size::new(1, 1));
+        let bytes: &mut [u8] = buffer.as_mut();
+        bytes[0] = 42;
+        let bytes: &[u8] = buffer.as_ref();
+        assert_eq!(bytes, &[42, 0, 0, 0]);
+    }
 
     /// `new` allocates the packed length zeroed.
     #[test]
