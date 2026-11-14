@@ -20,8 +20,14 @@ impl Alpha {
     pub const OPAQUE: Self = Self(1.0);
 
     /// Creates an alpha value, clamped to `0.0-1.0`.
-    pub fn new(value: f64) -> Self {
-        Self(value.clamp(0.0, 1.0))
+    pub const fn new(value: f64) -> Self {
+        Self(if value < 0.0 {
+            0.0
+        } else if value > 1.0 {
+            1.0
+        } else {
+            value
+        })
     }
 
     /// The numeric value.
