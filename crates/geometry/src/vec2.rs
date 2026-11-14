@@ -462,6 +462,23 @@ impl<U> Vec2<U, u32> {
     pub fn saturating_sub(self, rhs: Self) -> Self {
         Self::new(self.x.saturating_sub(rhs.x), self.y.saturating_sub(rhs.y))
     }
+
+    /// Component conversion to `i32` via `as` - wraps on values beyond
+    /// `i32::MAX`, like the language cast.
+    pub fn to_i32(&self) -> Vec2<U, i32> {
+        Vec2::new(self.x as i32, self.y as i32)
+    }
+
+    /// Component conversion to `f32` via `as` - loses precision on values
+    /// beyond `f32`'s mantissa, like the language cast.
+    pub fn to_f32(&self) -> Vec2<U, f32> {
+        Vec2::new(self.x as f32, self.y as f32)
+    }
+
+    /// Component conversion to `f64` via `as` - exact for all `u32`.
+    pub fn to_f64(&self) -> Vec2<U, f64> {
+        Vec2::new(self.x as f64, self.y as f64)
+    }
 }
 
 impl Vec2<Millimeters> {
