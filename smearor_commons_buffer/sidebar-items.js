@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BufferError","PixelFormatId"],"struct":["Bgr","Bgra","Bgrx","BufferMetadata","BufferView","BufferViewMut","Gray","PixelBuffer","Rgb","Rgba","Rgbx","Stride"],"trait":["PixelFormat"]};

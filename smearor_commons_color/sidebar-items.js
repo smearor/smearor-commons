@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {};
+window.SIDEBAR_ITEMS = {"macro":[["palette",1],["palette_definition",1],["static_palette",1]],"struct":["Alpha","AlphaPercent","Color","Luminance","LuminanceWeights","NamedColor","Palette","ParseColorError","StaticPalette"],"trait":["PaletteDefinition"]};

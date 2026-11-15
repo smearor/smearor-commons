@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["smearor_commons_animation",[["impl JsonSchema for <a class=\"enum\" href=\"smearor_commons_animation/enum.EasingFunction.html\" title=\"enum smearor_commons_animation::EasingFunction\">EasingFunction</a>",0],["impl&lt;T&gt; JsonSchema for <a class=\"struct\" href=\"smearor_commons_animation/struct.Span.html\" title=\"struct smearor_commons_animation::Span\">Span</a>&lt;T&gt;<div class=\"where\">where\n    T: JsonSchema,</div>",0],["impl&lt;T&gt; JsonSchema for <a class=\"struct\" href=\"smearor_commons_animation/struct.ThreePhaseSpan.html\" title=\"struct smearor_commons_animation::ThreePhaseSpan\">ThreePhaseSpan</a>&lt;T&gt;<div class=\"where\">where\n    T: JsonSchema,</div>",0]]],["smearor_commons_geometry",[["impl JsonSchema for <a class=\"struct\" href=\"smearor_commons_geometry/struct.Degrees.html\" title=\"struct smearor_commons_geometry::Degrees\">Degrees</a>",0],["impl JsonSchema for <a class=\"struct\" href=\"smearor_commons_geometry/struct.Fraction.html\" title=\"struct smearor_commons_geometry::Fraction\">Fraction</a>",0],["impl JsonSchema for <a class=\"struct\" href=\"smearor_commons_geometry/struct.Millimeters.html\" title=\"struct smearor_commons_geometry::Millimeters\">Millimeters</a>",0],["impl JsonSchema for <a class=\"struct\" href=\"smearor_commons_geometry/struct.Radians.html\" title=\"struct smearor_commons_geometry::Radians\">Radians</a>",0],["impl JsonSchema for <a class=\"struct\" href=\"smearor_commons_geometry/struct.SquareMillimeters.html\" title=\"struct smearor_commons_geometry::SquareMillimeters\">SquareMillimeters</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[693,891]}

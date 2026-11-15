@@ -1,1 +1,0 @@
-rd_("BnGeneric color types for the Smearor ecosystem.CiGeneric 2D geometry primitives for the Smearor ecosystem.")
