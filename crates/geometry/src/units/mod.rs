@@ -9,6 +9,7 @@
 //! quantity type [`crate::RotationRad`].
 
 mod degrees;
+mod degrees_per_pixel;
 mod millimeters;
 mod pixels;
 mod pixels_per_mm;
@@ -17,6 +18,7 @@ mod square_millimeters;
 mod units_per_mm;
 
 pub use degrees::Degrees;
+pub use degrees_per_pixel::DegreesPerPixel;
 pub use millimeters::Millimeters;
 pub use pixels::Pixels;
 pub use pixels_per_mm::PixelsPerMm;

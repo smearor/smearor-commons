@@ -61,6 +61,7 @@ pub use size::WidgetSizeExt;
 pub use transforms::CenteredTransform;
 pub use transforms::SimilarityTransform;
 pub use units::Degrees;
+pub use units::DegreesPerPixel;
 pub use units::Millimeters;
 pub use units::Pixels;
 pub use units::PixelsPerMm;
