@@ -449,6 +449,25 @@ impl<U> From<Rect<U, i32>> for gtk4::graphene::Rect {
     }
 }
 
+/// A `gdk::Rectangle` as a `Rect` in the caller-chosen unit `U` -
+/// integer device geometry (monitor layout, workarea).
+#[cfg(feature = "gtk4")]
+impl<U> From<gtk4::gdk::Rectangle> for Rect<U, i32> {
+    fn from(rectangle: gtk4::gdk::Rectangle) -> Self {
+        Self::from_xywh(rectangle.x(), rectangle.y(), rectangle.width(), rectangle.height())
+    }
+}
+
+/// The `i32` rectangle as a `gdk::Rectangle` - integer device geometry
+/// (monitor layout, workarea); the boundary call interprets the
+/// components in GTK's coordinate space regardless of the unit `U`.
+#[cfg(feature = "gtk4")]
+impl<U> From<Rect<U, i32>> for gtk4::gdk::Rectangle {
+    fn from(rectangle: Rect<U, i32>) -> Self {
+        Self::new(rectangle.min.x, rectangle.min.y, rectangle.size.x, rectangle.size.y)
+    }
+}
+
 // ---------------------------------------------------------------------------
 
 /// The `f32` rectangle as an `ab_glyph::Rect` (min/max corner form).
@@ -530,6 +549,16 @@ mod tests {
         assert_eq!(rect.to_i32_floor(), Rectangle::<i32>::from_xywh(10, 20, 100, 50));
         assert_eq!(rect.to_i32_ceil(), Rectangle::<i32>::from_xywh(11, 21, 101, 51));
         assert_eq!(Rectangle::<i32>::from_xywh(10, 20, 100, 50).to_f32(), Rectangle::<f32>::from_xywh(10.0, 20.0, 100.0, 50.0));
+    }
+
+    /// The gtk4 gate converts `gdk::Rectangle` in both directions.
+    #[cfg(feature = "gtk4")]
+    #[test]
+    fn gdk_rectangle_conversion() {
+        let rectangle = Rectangle::<i32>::from(gtk4::gdk::Rectangle::new(10, 20, 100, 50));
+        assert_eq!(rectangle, Rectangle::<i32>::from_xywh(10, 20, 100, 50));
+        let back = gtk4::gdk::Rectangle::from(rectangle);
+        assert_eq!((back.x(), back.y(), back.width(), back.height()), (10, 20, 100, 50));
     }
 
     /// `Rectangle` displays position and extent of both corners.
