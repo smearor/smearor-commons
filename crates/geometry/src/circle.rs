@@ -1,3 +1,4 @@
+use crate::Rect;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
@@ -105,6 +106,39 @@ impl<U> Circle<U, f64> {
     pub fn circumference_f64(&self) -> f64 {
         2.0 * PI * self.radius
     }
+
+    /// Rasterizes the disk into 1-px-high integer rectangles - one
+    /// [`Rect<U, i32>`] per covered scanline, in the circle's own
+    /// coordinate space.
+    ///
+    /// Each row uses the chord at its center-nearest edge (the widest
+    /// the circle reaches inside that row), so the union covers every
+    /// point [`contains`](Self::contains) would hit - an outer
+    /// rasterization suitable for rectangle-union regions like
+    /// `cairo::Region`.
+    pub fn region_rects(&self) -> Vec<Rect<U, i32>> {
+        let top = (self.center.y - self.radius).floor() as i32;
+        // `floor + 1` keeps the row containing the bottom edge inside
+        // the range even when it lands exactly on a scanline boundary
+        // (`ceil` would exclude it there).
+        let bottom = (self.center.y + self.radius).floor() as i32 + 1;
+        (top..bottom)
+            .filter_map(|y| {
+                // Distance from the center to the row's nearest edge -
+                // zero when the row straddles the center line.
+                let nearest = (f64::from(y) - self.center.y).max(self.center.y - f64::from(y + 1)).max(0.0);
+                if nearest > self.radius {
+                    return None;
+                }
+                let half = (self.radius * self.radius - nearest * nearest).sqrt().max(0.5);
+                let left = (self.center.x - half).floor() as i32;
+                // Same edge rule as `bottom`: include the column the
+                // right edge lands on when it is exactly integer.
+                let right = (self.center.x + half).floor() as i32 + 1;
+                Some(Rect::from_xywh(left, y, right - left, 1))
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -150,6 +184,30 @@ mod tests {
         let unit = Circle::<()>::new(Vec2::new(0.0, 0.0), FRAC_1_SQRT_2);
         let unit_area: f64 = unit.area();
         assert!((unit_area - PI / 2.0).abs() < 1e-9);
+    }
+
+    /// The scanline rasterization covers every point `contains`
+    /// reports inside - an outer rasterization, so every integer point
+    /// of a contained point's pixel is unioned.
+    #[test]
+    fn region_rects_cover_contained_points() {
+        let circle = Circle::<Pixels>::new(Vec2::new(10.0, 10.0), 5.0);
+        let rects = circle.region_rects();
+        assert!(!rects.is_empty());
+        for dy in -6..=6 {
+            for dx in -6..=6 {
+                let point = Vec2::new(10.0 + f64::from(dx), 10.0 + f64::from(dy));
+                if circle.contains(&point) {
+                    let covered = rects.iter().any(|rect| {
+                        point.x >= f64::from(rect.min.x)
+                            && point.x < f64::from(rect.min.x + rect.size.x)
+                            && point.y >= f64::from(rect.min.y)
+                            && point.y < f64::from(rect.min.y + rect.size.y)
+                    });
+                    assert!(covered, "contained point {point:?} not covered");
+                }
+            }
+        }
     }
 
     /// Measures carry the coordinate unit when `U` is a unit newtype.
