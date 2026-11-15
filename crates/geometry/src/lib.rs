@@ -59,6 +59,7 @@ pub use size::Size;
 pub use size::WidgetSizeExt;
 #[cfg(feature = "gtk4")]
 pub use transforms::CenteredTransform;
+pub use transforms::RigidTransform;
 pub use transforms::SimilarityTransform;
 pub use units::Degrees;
 pub use units::DegreesPerPixel;
