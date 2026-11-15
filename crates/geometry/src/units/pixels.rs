@@ -1,3 +1,4 @@
+use crate::Fraction;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
@@ -87,6 +88,14 @@ impl Mul<f64> for Pixels<f64> {
 
     fn mul(self, factor: f64) -> Self {
         Self(self.0 * factor)
+    }
+}
+
+impl Mul<Fraction> for Pixels<f64> {
+    type Output = Self;
+
+    fn mul(self, fraction: Fraction) -> Self {
+        Self(self.0 * fraction.0)
     }
 }
 
