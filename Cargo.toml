@@ -16,6 +16,7 @@ homepage = "https://smearor.io/"
 smearor-commons-geometry = { path = "crates/geometry" }
 smearor-commons-font = { path = "crates/font" }
 smearor-commons-color = { path = "crates/color" }
+smearor-commons-layout = { path = "crates/layout" }
 # core
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

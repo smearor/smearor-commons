@@ -1605,6 +1605,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "smearor-commons-layout"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "smearor-commons-geometry",
+ "thiserror",
+]
+
+[[package]]
 name = "smithay"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
