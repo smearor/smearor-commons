@@ -539,6 +539,17 @@ impl<U> From<ab_glyph::Rect> for Rect<U, f32> {
     }
 }
 
+/// A `cairo::RectangleInt` as a `Rect` in the caller-chosen unit `U` -
+/// integer device geometry read back from a [`cairo::Region`]
+/// (`extents`, `rectangle(i)`); the boundary call interprets the
+/// components in cairo's coordinate space.
+#[cfg(feature = "cairo")]
+impl<U> From<cairo::RectangleInt> for Rect<U, i32> {
+    fn from(rectangle: cairo::RectangleInt) -> Self {
+        Self::from_xywh(rectangle.x(), rectangle.y(), rectangle.width(), rectangle.height())
+    }
+}
+
 /// The `i32` rectangle as a `cairo::RectangleInt` - integer device
 /// geometry for region unions (e.g. wayland input regions); the
 /// boundary call interprets the components in cairo's coordinate
