@@ -468,6 +468,21 @@ impl<U> From<Rect<U, f32>> for gtk4::graphene::Rect {
     }
 }
 
+/// A `graphene::Rect` as a `Rect` in the caller-chosen unit `U` -
+/// GTK render geometry (widget bounds, allocations); the boundary
+/// call interprets the components in GTK's coordinate space.
+#[cfg(feature = "gtk4")]
+impl<U> From<gtk4::graphene::Rect> for Rect<U, f64> {
+    fn from(rectangle: gtk4::graphene::Rect) -> Self {
+        Self::from_xywh(
+            f64::from(rectangle.x()),
+            f64::from(rectangle.y()),
+            f64::from(rectangle.width()),
+            f64::from(rectangle.height()),
+        )
+    }
+}
+
 /// The `i32` rectangle as a `graphene::Rect`.
 #[cfg(feature = "gtk4")]
 impl<U> From<Rect<U, i32>> for gtk4::graphene::Rect {
