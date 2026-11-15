@@ -1,4 +1,6 @@
 use crate::Fraction;
+use crate::Millimeters;
+use crate::Pixels;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
@@ -53,6 +55,15 @@ impl ScaleFactor {
     pub fn lerp(from: ScaleFactor, to: ScaleFactor, t: Fraction) -> Self {
         Self(from.0 + (to.0 - from.0) * t)
     }
+
+    /// The scale `after / before` between two pixel spans - the
+    /// pinch-gesture factor. `ONE` for a `before` span at or below
+    /// ~1 px: a degenerate pinch never scales.
+    pub fn between(before: Pixels, after: Pixels) -> Self {
+        /// Base spans at or below this never pinch (division guard).
+        const MIN_BASE: Pixels = Pixels::new(1.0);
+        if before > MIN_BASE { Self::new(after / before) } else { Self::ONE }
+    }
 }
 
 impl Default for ScaleFactor {
@@ -91,6 +102,24 @@ impl<U> Mul<ScaleFactor> for Vec2<U> {
     }
 }
 
+impl Mul<ScaleFactor> for Millimeters {
+    type Output = Millimeters;
+
+    /// Scales the millimeter length uniformly (`len * factor`).
+    fn mul(self, factor: ScaleFactor) -> Millimeters {
+        self * factor.0
+    }
+}
+
+impl Mul<ScaleFactor> for Pixels<f64> {
+    type Output = Pixels<f64>;
+
+    /// Scales the pixel length uniformly (`len * factor`).
+    fn mul(self, factor: ScaleFactor) -> Pixels<f64> {
+        self * factor.0
+    }
+}
+
 impl From<f64> for ScaleFactor {
     fn from(factor: f64) -> Self {
         Self::new(factor)
@@ -121,6 +150,7 @@ async_graphql::scalar!(ScaleFactor);
 mod tests {
     use super::ScaleFactor;
     use crate::Fraction;
+    use crate::Millimeters;
     use crate::Pixels;
     use crate::Vec2;
 
@@ -169,5 +199,19 @@ mod tests {
         let v = Vec2::<Pixels>::new(4.0, -2.0) * ScaleFactor::new(0.5);
         assert_eq!(v.x, 2.0);
         assert_eq!(v.y, -1.0);
+    }
+
+    /// Unit lengths scale uniformly too.
+    #[test]
+    fn mul_scales_unit_lengths() {
+        assert_eq!((Millimeters::new(10.0) * ScaleFactor::new(0.5)).as_f64(), 5.0);
+        assert_eq!((Pixels::new(8.0) * ScaleFactor::new(2.0)).as_f64(), 16.0);
+    }
+
+    /// Pinching computes the span ratio; a degenerate base yields ONE.
+    #[test]
+    fn between_computes_ratio_with_guard() {
+        assert_eq!(ScaleFactor::between(Pixels::new(100.0), Pixels::new(80.0)).as_f64(), 0.8);
+        assert_eq!(ScaleFactor::between(Pixels::new(0.5), Pixels::new(40.0)), ScaleFactor::ONE);
     }
 }
