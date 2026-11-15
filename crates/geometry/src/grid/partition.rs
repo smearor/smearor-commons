@@ -130,6 +130,34 @@ impl Grid {
         let max = frame.min + Vec2::new(T::from(cell.col.0 + 1) * size.x, T::from(cell.row.0 + 1) * size.y);
         Rect::new(min, max - min)
     }
+
+    /// The cell containing `point` inside `frame` - the inverse of
+    /// [`rect_within`](Self::rect_within). `None` when `point` lies
+    /// outside the frame; a point exactly on the right or bottom edge
+    /// maps to a column/row beyond the grid and yields `None` too, so
+    /// the far edge is half-open and every point belongs to at most
+    /// one cell.
+    pub fn cell_at<U, T>(&self, point: Vec2<U, T>, frame: Rect<U, T>) -> Option<Cell>
+    where
+        T: Copy + PartialOrd + Add<Output = T> + Sub<Output = T> + Div<Output = T> + From<u32> + Into<f64>,
+    {
+        if !frame.contains(&point) {
+            return None;
+        }
+        let size = self.cell_size(frame.size);
+        let offset = point - frame.min;
+        let cell = Cell::new(Col((offset.x / size.x).into() as u32), Row((offset.y / size.y).into() as u32));
+        self.index(cell).map(|_| cell)
+    }
+
+    /// The linear row-major index of the cell containing `point` -
+    /// [`cell_at`](Self::cell_at) resolved through [`index`](Self::index).
+    pub fn index_at<U, T>(&self, point: Vec2<U, T>, frame: Rect<U, T>) -> Option<u32>
+    where
+        T: Copy + PartialOrd + Add<Output = T> + Sub<Output = T> + Div<Output = T> + From<u32> + Into<f64>,
+    {
+        self.cell_at(point, frame).and_then(|cell| self.index(cell))
+    }
 }
 
 #[cfg(test)]
@@ -221,6 +249,29 @@ mod tests {
                 assert_eq!(rect.bottom(), south.min.y);
             }
         }
+    }
+
+    #[test]
+    fn cell_at_is_the_inverse_of_rect_within() {
+        let grid = Grid::new(8, 8);
+        let frame = Rect::new(Vec2::<(), f64>::new(10.0, 20.0), Vec2::new(80.0, 80.0));
+        assert_eq!(grid.cell_at(Vec2::new(15.0, 25.0), frame), Some(Cell::new(Col(0), Row(0))));
+        assert_eq!(grid.cell_at(Vec2::new(35.0, 55.0), frame), Some(Cell::new(Col(2), Row(3))));
+        // Cell-internal point maps to the same cell whose rect covers it.
+        let cell = grid.cell_at(Vec2::new(49.9, 79.9), frame).expect("inside");
+        assert!(grid.rect_within(cell, frame).contains(&Vec2::new(49.9, 79.9)));
+    }
+
+    #[test]
+    fn cell_at_rejects_outside_and_far_edge() {
+        let grid = Grid::new(8, 8);
+        let frame = Rect::new(Vec2::<(), f64>::new(0.0, 0.0), Vec2::new(80.0, 80.0));
+        assert_eq!(grid.cell_at(Vec2::new(-0.5, 40.0), frame), None);
+        // Half-open far edge: 80.0 is on the frame's right/bottom edge.
+        assert_eq!(grid.cell_at(Vec2::new(80.0, 40.0), frame), None);
+        assert_eq!(grid.cell_at(Vec2::new(40.0, 80.0), frame), None);
+        assert_eq!(grid.index_at(Vec2::new(40.0, 40.0), frame), Some(4 * 8 + 4));
+        assert_eq!(grid.index_at(Vec2::new(90.0, 40.0), frame), None);
     }
 
     #[test]
