@@ -126,15 +126,6 @@ impl<U, T> Vec2<U, T> {
         Self::new(self.x * other.x, self.y * other.y)
     }
 
-    /// Component-wise quotient: each axis divided by the other vector's
-    /// matching component - per-axis scale factors, not a projection.
-    pub fn component_div(&self, other: &Vec2<U, T>) -> Self
-    where
-        T: Copy + Div<Output = T>,
-    {
-        Self::new(self.x / other.x, self.y / other.y)
-    }
-
     /// Component-wise maximum of two points in the same unit.
     pub fn max(&self, other: &Self) -> Self
     where
@@ -576,6 +567,19 @@ impl<U, T: Copy + Div<Output = T>> Div<T> for Vec2<U, T> {
     }
 }
 
+/// Component-wise quotient `v / w`: each axis divided by the other
+/// vector's matching component - per-axis scale factors, not a
+/// projection. Unlike `*` (where `v * w` could read as a dot product)
+/// vector-by-vector division has no competing meaning, so the operator
+/// is elementwise.
+impl<U, T: Copy + Div<Output = T>> Div for Vec2<U, T> {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        Self::new(self.x / rhs.x, self.y / rhs.y)
+    }
+}
+
 // Numeric casts between component types, preserving the unit `U`.
 
 impl<U> From<Vec2<U, i32>> for Vec2<U, f32> {
@@ -736,10 +740,10 @@ pub mod serde_points {
 #[cfg(test)]
 mod tests {
     /// `map` transforms each component and may change the numeric type;
-    /// `component_div` yields the per-axis quotient.
+    /// `v / w` yields the per-axis quotient.
     #[test]
-    fn component_div_quotient() {
-        let quotient = Vec2::<Pixels>::new(6.0, 9.0).component_div(&Vec2::new(2.0, 3.0));
+    fn div_quotient() {
+        let quotient = Vec2::<Pixels>::new(6.0, 9.0) / Vec2::new(2.0, 3.0);
         assert_eq!(quotient, Vec2::new(3.0, 3.0));
     }
 
