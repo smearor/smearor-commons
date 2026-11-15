@@ -113,6 +113,24 @@ impl<U, T: Copy + Add<Output = T>> Rect<U, T> {
 }
 
 impl<U, T: Copy + PartialOrd + Add<Output = T>> Rect<U, T> {
+    /// The smallest axis-aligned rectangle containing all `points` -
+    /// `None` when the iterator is empty. Mapping transformed corners
+    /// back to a bounding box is the generic shape behind every
+    /// "corners through a transform, then AABB" computation.
+    pub fn from_points(points: impl IntoIterator<Item = Vec2<U, T>>) -> Option<Self>
+    where
+        T: Sub<Output = T>,
+    {
+        let mut points = points.into_iter();
+        let first = points.next()?;
+        let (mut min, mut max) = (first, first);
+        for point in points {
+            min = Vec2::<U, T>::new(if point.x < min.x { point.x } else { min.x }, if point.y < min.y { point.y } else { min.y });
+            max = Vec2::<U, T>::new(if point.x > max.x { point.x } else { max.x }, if point.y > max.y { point.y } else { max.y });
+        }
+        Some(Self::new(min, max - min))
+    }
+
     /// Whether `point` lies inside this rectangle (bounds inclusive).
     pub fn contains(&self, point: &Vec2<U, T>) -> bool {
         point.x >= self.min.x && point.x <= self.right() && point.y >= self.min.y && point.y <= self.bottom()
@@ -611,6 +629,14 @@ mod tests {
         let b = Rect::<Pixels>::from_xywh(50.0, 25.0, 100.0, 50.0);
         assert_eq!(a.intersection(&b), Some(Rect::<Pixels>::from_xywh(50.0, 25.0, 50.0, 50.0)));
         assert_eq!(a.intersection(&Rect::<Pixels>::from_xywh(200.0, 0.0, 100.0, 10.0)), None);
+    }
+
+    #[test]
+    fn from_points_is_the_bounding_box() {
+        let rect =
+            Rect::<Pixels>::from_points([Vec2::<Pixels>::new(1.0, 2.0), Vec2::<Pixels>::new(5.0, 3.0), Vec2::<Pixels>::new(-1.0, 0.0)]).unwrap_or_default();
+        assert_eq!(rect, Rect::<Pixels>::from_xywh(-1.0, 0.0, 6.0, 3.0));
+        assert!(Rect::<Pixels>::from_points([]).is_none());
     }
 
     #[test]
