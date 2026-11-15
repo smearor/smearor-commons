@@ -294,6 +294,15 @@ impl<U> Rect<U, f64> {
         Self::new(min, size)
     }
 
+    /// The rectangle grown by `margin` (a scalar in the unit `U`) on
+    /// every side - the counterpart of [`Self::inset`].
+    pub fn outset(&self, margin: U) -> Self
+    where
+        U: From<f64> + Into<f64>,
+    {
+        self.inset(U::from(-margin.into()))
+    }
+
     /// The size of the axis-aligned bounding box of this rectangle's
     /// extent rotated by `rotation` around its center (position is
     /// irrelevant for the bounding box).
@@ -591,6 +600,14 @@ mod tests {
         let b = Rect::<Pixels>::from_xywh(50.0, 25.0, 100.0, 50.0);
         assert_eq!(a.intersection(&b), Some(Rect::<Pixels>::from_xywh(50.0, 25.0, 50.0, 50.0)));
         assert_eq!(a.intersection(&Rect::<Pixels>::from_xywh(200.0, 0.0, 100.0, 10.0)), None);
+    }
+
+    #[test]
+    fn outset_grows_all_sides() {
+        assert_eq!(
+            Rect::<Pixels>::from_xywh(10.0, 20.0, 100.0, 50.0).outset(Pixels::new(5.0)),
+            Rect::<Pixels>::from_xywh(5.0, 15.0, 110.0, 60.0)
+        );
     }
 
     #[test]
