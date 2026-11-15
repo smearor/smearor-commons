@@ -124,11 +124,12 @@ impl<U> Circle<U, f64> {
     /// rasterization suitable for rectangle-union regions like
     /// `cairo::Region`.
     pub fn region_rects(&self) -> Vec<Rect<U, i32>> {
-        let top = (self.center.y - self.radius).floor() as i32;
+        let bounds = self.bounding_box();
+        let top = bounds.min.y.floor() as i32;
         // `floor + 1` keeps the row containing the bottom edge inside
         // the range even when it lands exactly on a scanline boundary
         // (`ceil` would exclude it there).
-        let bottom = (self.center.y + self.radius).floor() as i32 + 1;
+        let bottom = bounds.bottom().floor() as i32 + 1;
         (top..bottom)
             .filter_map(|y| {
                 // Distance from the center to the row's nearest edge -
