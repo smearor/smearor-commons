@@ -18,6 +18,8 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libxkbcommon-dev
       - name: Build docs
         run: cargo doc --workspace --all-features --no-deps
       - name: Deploy to GitHub Pages

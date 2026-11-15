@@ -22,6 +22,8 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.MSRV }}
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libxkbcommon-dev
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
       - name: Verify MSRV
