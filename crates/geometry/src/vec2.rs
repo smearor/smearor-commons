@@ -443,7 +443,7 @@ impl<U> Vec2<U, f64> {
     /// non-positive or the ratio degenerates (`0` or non-finite): a
     /// degenerate extent has no meaningful aspect.
     pub fn aspect(&self) -> Option<AspectRatio> {
-        (self.x > 0.0 && self.y > 0.0).then(|| self.x / self.y).and_then(AspectRatio::new)
+        (self.x > 0.0 && self.y > 0.0).then_some(self.x / self.y).and_then(AspectRatio::new)
     }
 
     /// Geometric centroid of a non-empty point set.
@@ -721,6 +721,32 @@ pub mod serde_pair {
     /// Deserializes `[x, y]` into a `Vec2` in the unit `U`.
     pub fn deserialize<'de, U, D: Deserializer<'de>>(deserializer: D) -> Result<Vec2<U>, D::Error> {
         <[f64; 2]>::deserialize(deserializer).map(Vec2::from)
+    }
+}
+
+/// Serde adapter for `#[serde(with)]`: `Option<Vec2<U>>` as a
+/// compact `[x, y]` pair - the absent-tolerant form of
+/// [`serde_pair`]. Serializes `Some` as `[x, y]` and `None` as
+/// `null`; combine with `#[serde(default)]` on the field so a
+/// missing key also yields `None`.
+pub mod serde_pair_option {
+    use super::Vec2;
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
+
+    /// Serializes `Some(p)` as `[p.x, p.y]`, `None` as `null`.
+    pub fn serialize<U, S: Serializer>(pos: &Option<Vec2<U>>, serializer: S) -> Result<S::Ok, S::Error> {
+        match pos {
+            Some(point) => [point.x, point.y].serialize(serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    /// Deserializes `[x, y]` into `Some(Vec2)`, `null` into `None`.
+    pub fn deserialize<'de, U, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Vec2<U>>, D::Error> {
+        <Option<[f64; 2]>>::deserialize(deserializer).map(|pair| pair.map(Vec2::from))
     }
 }
 

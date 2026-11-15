@@ -71,4 +71,5 @@ pub use units::SquareMillimeters;
 pub use units::UnitsPerMm;
 pub use vec2::Vec2;
 pub use vec2::serde_pair;
+pub use vec2::serde_pair_option;
 pub use vec2::serde_points;
