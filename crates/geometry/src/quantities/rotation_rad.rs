@@ -133,6 +133,21 @@ impl RotationRad {
         Self(self.0.normalized())
     }
 
+    /// The direction `delta` turns this rotation to - `self + delta`
+    /// normalized to `[0, 2*PI)`. Unlike [`Add`], which preserves
+    /// the unnormalized sum for signed deltas, this yields the
+    /// canonical direction for incremental rotation updates
+    /// (scroll, drag, animation steps).
+    pub fn rotated(self, delta: RotationRad) -> RotationRad {
+        (self + delta).normalized()
+    }
+
+    /// [`Self::rotated`] with the turn given in degrees - for
+    /// pixel- or sensitivity-scaled deltas like `dy * step`.
+    pub fn rotated_degrees(self, degrees: impl Into<f64>) -> RotationRad {
+        self.rotated(Self::from_degrees(degrees))
+    }
+
     /// The shortest signed arc from `self` to `to`, in [-π, π].
     ///
     /// The ±PI wrap is crossed instead of going the long way around;
@@ -313,6 +328,27 @@ mod tests {
         assert!((RotationRad::new(-0.5).normalized().as_f64() - (TAU - 0.5)).abs() < 1e-9);
         assert!((RotationRad::new(3.0 * PI).normalized().as_f64() - PI).abs() < 1e-9);
         assert!(RotationRad::new(TAU).normalized().as_f64().abs() < 1e-9);
+    }
+
+    /// `rotated` composes the turn and wraps the direction into
+    /// `[0, 2*PI)` - the incremental-update counterpart of `Add`,
+    /// which keeps the unnormalized sum.
+    #[test]
+    fn rotated_wraps_composed_turn() {
+        let quarter = RotationRad::from_degrees(90.0);
+        assert!((RotationRad::ZERO.rotated(quarter).to_degrees() - 90.0).abs() < 1e-9);
+        assert!((RotationRad::from_degrees(350.0).rotated(quarter).to_degrees() - 80.0).abs() < 1e-9);
+        assert!((RotationRad::from_degrees(10.0).rotated(-quarter).to_degrees() - 280.0).abs() < 1e-9);
+    }
+
+    /// `rotated_degrees` is `rotated` with a degrees-valued delta,
+    /// including values outside `[0, 360)` from scaled inputs.
+    #[test]
+    fn rotated_degrees_scales_and_wraps() {
+        let rotation = RotationRad::from_degrees(10.0);
+        assert!((rotation.rotated_degrees(5.0).to_degrees() - 15.0).abs() < 1e-9);
+        assert!((rotation.rotated_degrees(-20.0).to_degrees() - 350.0).abs() < 1e-9);
+        assert!((rotation.rotated_degrees(720.0).to_degrees() - 10.0).abs() < 1e-9);
     }
 
     /// `alpha = 1` makes the blend pure `new` - history has no weight.
