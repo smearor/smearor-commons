@@ -14,3 +14,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial workspace scaffold: `smearor-commons-geometry` and `smearor-commons-color` crate skeletons in a mono-workspace, prepared for publication to crates.io.
+- `smearor-commons-geometry`: `Circle::bounding_box` returning the circumscribed square as `Rect<U, f64>`.

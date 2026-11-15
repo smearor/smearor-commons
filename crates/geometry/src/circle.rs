@@ -63,6 +63,13 @@ impl<U> Circle<U, f64> {
         self.center.distance_f64(&other.center) < self.radius + other.radius
     }
 
+    /// The axis-aligned square fully containing the disk
+    /// (`center ± radius` on both axes).
+    pub fn bounding_box(&self) -> Rect<U, f64> {
+        let diameter = self.diameter_f64();
+        Rect::centered(self.center, Vec2::new(diameter, diameter))
+    }
+
     /// The radius in the unit `U` - the unit-carrying counterpart of
     /// the raw `radius` field, like [`Vec2::x_unit`].
     pub fn radius_unit(&self) -> U
@@ -170,6 +177,16 @@ mod tests {
         assert!(a.overlaps(&overlapping));
         assert!(!a.overlaps(&separate));
         assert!(a.overlaps(&a));
+    }
+
+    /// The bounding box is the square `center ± radius`.
+    #[test]
+    fn bounding_box_is_circumscribed_square() {
+        let circle = Circle::<Pixels>::new(Vec2::new(10.0, 20.0), 5.0);
+        let bounds = circle.bounding_box();
+        assert_eq!(bounds.min, Vec2::new(5.0, 15.0));
+        assert_eq!(bounds.max(), Vec2::new(15.0, 25.0));
+        assert_eq!(bounds.center(), Vec2::new(10.0, 20.0));
     }
 
     /// The classic measures follow the radius - plain `f64` on the
