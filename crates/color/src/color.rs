@@ -144,6 +144,19 @@ impl Color<f64> {
         }
     }
 
+    /// Adds `amount` to every color channel - an additive lift,
+    /// unlike [`Self::lighten`]'s blend toward white. Channels are
+    /// not clamped; use [`Self::clamp`] when the result must stay in
+    /// `[0, 1]`.
+    pub fn brighten(&self, amount: f64) -> Self {
+        Self {
+            r: self.r + amount,
+            g: self.g + amount,
+            b: self.b + amount,
+            a: self.a,
+        }
+    }
+
     /// The color lifted to at least `min` luminance (BT.709) by
     /// blending toward white - dark colors stay readable on dark
     /// backgrounds. Alpha is preserved.
@@ -223,6 +236,19 @@ impl Color<f32> {
             r: self.r + (1.0 - self.r) * factor,
             g: self.g + (1.0 - self.g) * factor,
             b: self.b + (1.0 - self.b) * factor,
+            a: self.a,
+        }
+    }
+
+    /// Adds `amount` to every color channel - an additive lift,
+    /// unlike [`Self::lighten`]'s blend toward white. Channels are
+    /// not clamped; use [`Self::clamp`] when the result must stay in
+    /// `[0, 1]`.
+    pub fn brighten(&self, amount: f32) -> Self {
+        Self {
+            r: self.r + amount,
+            g: self.g + amount,
+            b: self.b + amount,
             a: self.a,
         }
     }
@@ -534,6 +560,14 @@ mod tests {
     #[test]
     fn f64_new_sets_alpha_to_one() {
         assert_eq!(Color::<f64>::new(0.5, 0.25, 0.75).a, 1.0);
+    }
+
+    /// `brighten` shifts every color channel additively and keeps alpha.
+    #[test]
+    fn f64_brighten_adds_to_each_channel() {
+        let color = Color::<f64>::new_rgba(0.2, 0.4, 0.6, 0.5).brighten(0.1);
+        assert!((color.r - 0.3).abs() < 1e-12 && (color.g - 0.5).abs() < 1e-12 && (color.b - 0.7).abs() < 1e-12);
+        assert_eq!(color.a, 0.5, "alpha stays untouched");
     }
 
     #[test]
