@@ -431,6 +431,13 @@ impl<U> Vec2<U, f64> {
         self.map(|v| v / 2.0)
     }
 
+    /// The mean of the two components - a scalar average, not a
+    /// vector. For per-axis factors (e.g. mm-per-pixel on x and y)
+    /// this is the single factor absorbing axis jitter.
+    pub fn component_mean(&self) -> f64 {
+        (self.x + self.y) / 2.0
+    }
+
     /// The aspect ratio `x / y` - `width / height` for a
     /// [`crate::Size`] extent. Returns `None` when either component is
     /// non-positive or the ratio degenerates (`0` or non-finite): a
