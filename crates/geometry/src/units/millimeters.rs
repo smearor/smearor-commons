@@ -1,3 +1,4 @@
+use crate::Fraction;
 use serde::Deserialize;
 use serde::Serialize;
 use std::cmp::Ordering;
@@ -85,6 +86,14 @@ impl Mul<f64> for Millimeters {
 
     fn mul(self, factor: f64) -> Self {
         Self(self.0 * factor)
+    }
+}
+
+impl Mul<Fraction> for Millimeters {
+    type Output = Self;
+
+    fn mul(self, fraction: Fraction) -> Self {
+        Self(self.0 * fraction.0)
     }
 }
 
