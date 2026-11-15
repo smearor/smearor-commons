@@ -126,6 +126,15 @@ impl<U, T> Vec2<U, T> {
         Self::new(self.x * other.x, self.y * other.y)
     }
 
+    /// Component-wise quotient: each axis divided by the other vector's
+    /// matching component - per-axis scale factors, not a projection.
+    pub fn component_div(&self, other: &Vec2<U, T>) -> Self
+    where
+        T: Copy + Div<Output = T>,
+    {
+        Self::new(self.x / other.x, self.y / other.y)
+    }
+
     /// Component-wise maximum of two points in the same unit.
     pub fn max(&self, other: &Self) -> Self
     where
@@ -727,6 +736,13 @@ pub mod serde_points {
 #[cfg(test)]
 mod tests {
     /// `map` transforms each component and may change the numeric type;
+    /// `component_div` yields the per-axis quotient.
+    #[test]
+    fn component_div_quotient() {
+        let quotient = Vec2::<Pixels>::new(6.0, 9.0).component_div(&Vec2::new(2.0, 3.0));
+        assert_eq!(quotient, Vec2::new(3.0, 3.0));
+    }
+
     /// `component_mul` scales per axis.
     #[test]
     fn map_and_component_mul() {
