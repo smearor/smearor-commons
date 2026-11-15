@@ -178,6 +178,21 @@ impl Color<f64> {
             a: self.a.clamp(0.0, 1.0),
         }
     }
+
+    /// The color with its alpha channel replaced by `alpha` - for
+    /// fades driven by an external opacity (disabled state, hover
+    /// highlight) rather than the color's own alpha.
+    pub fn with_alpha(&self, alpha: impl Into<Alpha>) -> Self {
+        Self::new_rgba(self.r, self.g, self.b, alpha.into().as_f64())
+    }
+
+    /// The color with its alpha channel scaled by `factor` (0.0-1.0) -
+    /// relative dimming that keeps the color's own alpha. Unlike
+    /// [`Self::with_alpha`], a faded color stays faded when the slot
+    /// already carries transparency.
+    pub fn fade(&self, factor: impl Into<Alpha>) -> Self {
+        Self::new_rgba(self.r, self.g, self.b, self.a * factor.into().as_f64())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -274,6 +289,21 @@ impl Color<f32> {
             a: self.a.clamp(0.0, 1.0),
         }
     }
+
+    /// The color with its alpha channel replaced by `alpha` - for
+    /// fades driven by an external opacity (disabled state, hover
+    /// highlight) rather than the color's own alpha.
+    pub fn with_alpha(&self, alpha: impl Into<Alpha>) -> Self {
+        Self::new_rgba(self.r, self.g, self.b, alpha.into().as_f32())
+    }
+
+    /// The color with its alpha channel scaled by `factor` (0.0-1.0) -
+    /// relative dimming that keeps the color's own alpha. Unlike
+    /// [`Self::with_alpha`], a faded color stays faded when the slot
+    /// already carries transparency.
+    pub fn fade(&self, factor: impl Into<Alpha>) -> Self {
+        Self::new_rgba(self.r, self.g, self.b, self.a * factor.into().as_f32())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -332,6 +362,21 @@ impl Color<u8> {
         }
         let blend = |s: u8, d: u8| ((s as f32 * src_alpha + d as f32 * dst_alpha * (1.0 - src_alpha)) / out_alpha).round() as u8;
         Self::new_rgba(blend(self.r, dst.r), blend(self.g, dst.g), blend(self.b, dst.b), (out_alpha * 255.0).round() as u8)
+    }
+
+    /// The color with its alpha channel replaced by `alpha` - for
+    /// fades driven by an external opacity (disabled state, hover
+    /// highlight) rather than the color's own alpha.
+    pub fn with_alpha(&self, alpha: impl Into<Alpha>) -> Self {
+        Self::new_rgba(self.r, self.g, self.b, alpha.into().as_u8())
+    }
+
+    /// The color with its alpha channel scaled by `factor` (0.0-1.0) -
+    /// relative dimming that keeps the color's own alpha. Unlike
+    /// [`Self::with_alpha`], a faded color stays faded when the slot
+    /// already carries transparency.
+    pub fn fade(&self, factor: impl Into<Alpha>) -> Self {
+        Self::new_rgba(self.r, self.g, self.b, (Alpha::from(self.a) * factor.into().as_f64()).as_u8())
     }
 }
 
@@ -534,6 +579,25 @@ impl<'de> Deserialize<'de> for Color<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `with_alpha` replaces the alpha channel, keeping rgb.
+    #[test]
+    fn with_alpha_replaces_alpha() {
+        let color = Color::<f64>::new_rgba(0.2, 0.4, 0.6, 0.5).with_alpha(Alpha::new(0.8));
+        assert_eq!(color, Color::<f64>::new_rgba(0.2, 0.4, 0.6, 0.8));
+        assert_eq!(Color::<f32>::WHITE.with_alpha(0.5_f32), Color::<f32>::new_rgba(1.0, 1.0, 1.0, 0.5));
+        assert_eq!(Color::<u8>::WHITE.with_alpha(Alpha::new(0.5)), Color::<u8>::new_rgba(255, 255, 255, 128));
+    }
+
+    /// `fade` scales the existing alpha instead of replacing it.
+    #[test]
+    fn fade_scales_alpha() {
+        assert_eq!(Color::<f64>::new_rgba(0.2, 0.4, 0.6, 0.5).fade(Alpha::new(0.4)), Color::<f64>::new_rgba(0.2, 0.4, 0.6, 0.2));
+        assert_eq!(Color::<f32>::WHITE.fade(Alpha::new(0.4)), Color::<f32>::new_rgba(1.0, 1.0, 1.0, 0.4));
+        assert_eq!(Color::<u8>::new_rgba(255, 0, 0, 128).fade(Alpha::new(0.5)), Color::<u8>::new_rgba(255, 0, 0, 64));
+        // An already transparent color stays transparent.
+        assert_eq!(Color::<u8>::new_rgba(255, 0, 0, 0).fade(Alpha::new(0.5)).a, 0);
+    }
 
     /// `alpha_over` composites an effective-alpha source over dst.
     #[test]
