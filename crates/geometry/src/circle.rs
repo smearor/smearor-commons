@@ -150,6 +150,24 @@ impl<U> Circle<U, f64> {
             })
             .collect()
     }
+
+    /// Rasterizes the disk into a cairo [`Region`](cairo::Region) in
+    /// the circle's own coordinate space - one
+    /// [`RectangleInt`](cairo::RectangleInt) per
+    /// [`region_rects`](Self::region_rects) strip. Used e.g. for
+    /// circular dead zones inside a wayland surface's input region.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`cairo::Error`]s from `Region` construction.
+    #[cfg(feature = "cairo")]
+    pub fn region(&self) -> Result<cairo::Region, cairo::Error> {
+        let region = cairo::Region::create();
+        for rect in self.region_rects() {
+            region.union_rectangle(&rect.into())?;
+        }
+        Ok(region)
+    }
 }
 
 #[cfg(test)]
