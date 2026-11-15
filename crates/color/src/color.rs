@@ -378,6 +378,51 @@ impl Color<u8> {
     pub fn fade(&self, factor: impl Into<Alpha>) -> Self {
         Self::new_rgba(self.r, self.g, self.b, (Alpha::from(self.a) * factor.into().as_f64()).as_u8())
     }
+
+    /// The perceived luminance with custom `weights` (0.0-1.0).
+    ///
+    /// Computed via the normalized `f64` channels.
+    pub fn luminance(&self, weights: LuminanceWeights) -> Luminance {
+        Color::<f64>::from(*self).luminance(weights)
+    }
+
+    /// The perceived luminance with ITU-R BT.709 weights (0.0-1.0).
+    pub fn luminance_709(&self) -> Luminance {
+        Color::<f64>::from(*self).luminance_709()
+    }
+
+    /// The perceived luminance with ITU-R BT.601 weights (0.0-1.0).
+    pub fn luminance_601(&self) -> Luminance {
+        Color::<f64>::from(*self).luminance_601()
+    }
+
+    /// Linear blend toward `other` by `t` (0 = self, 1 = other), via
+    /// the normalized `f64` channels. All four channels are
+    /// interpolated; `t` is clamped to `[0, 1]`.
+    pub fn lerp(&self, other: &Self, t: f64) -> Self {
+        Self::from(Color::<f64>::from(*self).lerp(&Color::<f64>::from(*other), t))
+    }
+
+    /// Lightens the color by blending each channel toward white by
+    /// `factor` (0 = unchanged, 1 = white). Alpha is preserved.
+    pub fn lighten(&self, factor: f64) -> Self {
+        Self::from(Color::<f64>::from(*self).lighten(factor))
+    }
+
+    /// Adds `amount` (in normalized channel units, `1.0` = full
+    /// range) to every color channel - an additive lift, unlike
+    /// [`Self::lighten`]'s blend toward white. Out-of-range results
+    /// saturate at the channel bounds.
+    pub fn brighten(&self, amount: f64) -> Self {
+        Self::from(Color::<f64>::from(*self).brighten(amount).clamp())
+    }
+
+    /// The color lifted to at least `min` luminance (BT.709) by
+    /// blending toward white - dark colors stay readable on dark
+    /// backgrounds. Alpha is preserved.
+    pub fn with_min_luminance(&self, min: impl Into<Luminance>) -> Self {
+        Self::from(Color::<f64>::from(*self).with_min_luminance(min))
+    }
 }
 
 impl Default for Color<f64> {
@@ -821,5 +866,27 @@ mod tests {
     fn from_rgb_u32_is_const_usable() {
         const COLOR: Color<u8> = Color::<u8>::from_rgb_u32(0xEDD49E);
         assert_eq!(COLOR, Color::<u8>::new(0xED, 0xD4, 0x9E));
+    }
+
+    /// `Color<u8>` luminance delegates through the normalized channels.
+    #[test]
+    fn u8_luminance_601_weights() {
+        assert!((Color::<u8>::new(255, 0, 0).luminance_601().as_f64() - 0.299).abs() < 1e-9);
+        assert!((Color::<u8>::WHITE.luminance_601().as_f64() - 1.0).abs() < 1e-9);
+        assert_eq!(Color::<u8>::BLACK.luminance_601(), Luminance::MIN);
+    }
+
+    /// `Color<u8>::lighten` matches the f64 blend, rounded to u8.
+    #[test]
+    fn u8_lighten_brightens_dark_colour() {
+        let brown = Color::<u8>::new(0x70, 0x4B, 0x1C);
+        assert_eq!(brown.lighten(0.45).to_string(), "#b09c82");
+    }
+
+    /// `Color<u8>::brighten` saturates at the channel bounds.
+    #[test]
+    fn u8_brighten_saturates() {
+        assert_eq!(Color::<u8>::new(200, 10, 10).brighten(0.5).r, 255);
+        assert_eq!(Color::<u8>::new(10, 200, 10).brighten(-0.4).g, 98);
     }
 }
