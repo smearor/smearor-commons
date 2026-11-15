@@ -124,6 +124,9 @@ impl<U> Circle<U, f64> {
     /// rasterization suitable for rectangle-union regions like
     /// `cairo::Region`.
     pub fn region_rects(&self) -> Vec<Rect<U, i32>> {
+        if self.radius <= 0.0 {
+            return Vec::new();
+        }
         let bounds = self.bounding_box();
         let top = bounds.min.y.floor() as i32;
         // `floor + 1` keeps the row containing the bottom edge inside
