@@ -37,6 +37,13 @@ impl PixelsPerMm {
         Vec2::<Pixels>::new(self.scale(Millimeters::new(vector.x)).as_f64(), self.scale(Millimeters::new(vector.y)).as_f64())
     }
 
+    /// Maps a millimeter length onto pixels, floored at `floor` -
+    /// the hairline convention: a scaled stroke never drops below a
+    /// minimum pixel width, so hairlines stay visible at any zoom.
+    pub fn scale_at_least(&self, mm: Millimeters, floor: Pixels) -> Pixels {
+        self.scale(mm).max(floor)
+    }
+
     /// Maps a pixel length back onto millimeters - the hit-testing
     /// direction (widget geometry → surface coordinates).
     pub fn unscale(&self, px: Pixels) -> Millimeters {
@@ -79,5 +86,13 @@ mod tests {
         assert!((factor.scale(Millimeters::new(10.0)).as_f64() - 40.0).abs() < 1e-9);
         assert!((factor.unscale(Pixels::new(40.0)).as_f64() - 10.0).abs() < 1e-9);
         assert!((factor.unscale(factor.scale(Millimeters::new(17.5))).as_f64() - 17.5).abs() < 1e-9);
+    }
+
+    /// The floor keeps scaled hairlines visible.
+    #[test]
+    fn scale_at_least_floors_small_lengths() {
+        let factor = PixelsPerMm::new(2.0);
+        assert_eq!(factor.scale_at_least(Millimeters::new(0.1), Pixels::new(0.5)).as_f64(), 0.5);
+        assert_eq!(factor.scale_at_least(Millimeters::new(10.0), Pixels::new(0.5)).as_f64(), 20.0);
     }
 }
