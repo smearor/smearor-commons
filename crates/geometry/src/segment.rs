@@ -1,6 +1,7 @@
 //! `Segment` - a straight segment between two positions.
 
 use crate::Fraction;
+use crate::Polygon;
 use crate::Projection;
 use crate::RotationRad;
 use crate::Vec2;
@@ -33,6 +34,20 @@ impl<U: Copy> Segment<U> {
     /// from→to vector).
     pub fn direction(&self) -> RotationRad {
         RotationRad::new((self.to.y - self.from.y).atan2(self.to.x - self.from.x))
+    }
+
+    /// The arrowhead drawn at `to`: the filled triangle spanning
+    /// `half_span` to either side of the shaft's direction, `head`
+    /// long - a scalar in the segment's unit space (the same
+    /// convention [`Vec2::from_polar`] uses for `radius`). Order is
+    /// tip, wing, wing - one closed polygon for a solid fill.
+    pub fn arrow_head(&self, head: f64, half_span: RotationRad) -> Polygon<U> {
+        let angle = self.direction();
+        Polygon::new(vec![
+            self.to,
+            self.to - Vec2::<U>::from_polar(head, angle - half_span),
+            self.to - Vec2::<U>::from_polar(head, angle + half_span),
+        ])
     }
 
     /// Strict crossing - `true` when the interiors of both segments
@@ -157,6 +172,21 @@ impl<U: Copy> Segment<U> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The arrowhead triangle points along the segment direction.
+    #[test]
+    fn arrow_head_spans_shaft_direction() {
+        let shaft = Segment::new(Vec2::<()>::new(0.0, 0.0), Vec2::<()>::new(10.0, 0.0));
+        let head = shaft.arrow_head(4.0, RotationRad::from(0.5));
+        let [tip, wing_a, wing_b] = head.0[..] else {
+            panic!("triangle");
+        };
+        assert_eq!(tip, Vec2::new(10.0, 0.0));
+        assert!((wing_a.x - (10.0 - 4.0 * 0.5_f64.cos())).abs() < 1e-12);
+        assert!((wing_a.y - (-4.0 * (-0.5_f64).sin())).abs() < 1e-12);
+        assert!((wing_b.y - (-4.0 * 0.5_f64.sin())).abs() < 1e-12);
+    }
+
     use crate::Millimeters;
 
     /// `midpoint` averages both endpoints; `direction` is the
