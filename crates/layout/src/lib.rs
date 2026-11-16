@@ -13,10 +13,12 @@
 //! `smearor-commons-geometry`, so pixels, millimeters and erased
 //! coordinates share the same algorithms.
 
+mod anchor_weights;
 mod error;
 mod placement;
 mod table_side;
 
+pub use anchor_weights::AnchorWeights;
 pub use error::LayoutError;
 pub use placement::Placement;
 pub use table_side::TableSide;
