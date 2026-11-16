@@ -56,11 +56,7 @@ pub fn footprint_for<U>(size: Vec2<U>, rotation: Rotation, turn: QuarterTurn) ->
         Rotation::QuarterTurn(turn) if turn.swaps_axes() => Vec2::new(size.y, size.x),
         _ => size,
     };
-    if turn.swaps_axes() {
-        Vec2::new(unswapped.y, unswapped.x)
-    } else {
-        unswapped
-    }
+    if turn.swaps_axes() { Vec2::new(unswapped.y, unswapped.x) } else { unswapped }
 }
 
 impl<U, T: Copy> Placement<U, T> {
