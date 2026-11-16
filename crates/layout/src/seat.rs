@@ -65,6 +65,64 @@ impl Seat {
         Self::center(TableSide::nearest(rotation))
     }
 
+    /// The seat's position along the table perimeter, clockwise in
+    /// edge-length units `0.0..4.0`: the bottom edge spans `0..1`
+    /// (right-to-left, `offset` decreases), the left edge `1..2`
+    /// (bottom-to-top), the top edge `2..3` (left-to-right), the right
+    /// edge `3..4` (top-to-bottom) - continuous at the corners, so
+    /// seats on neighboring sides compare directly. An unpinned
+    /// `offset` resolves to `HALF`, like [`Self::placement`].
+    ///
+    /// The coordinate orders seats for "pass to the next occupied
+    /// seat" and lets consumers position seat indicators around the
+    /// table.
+    pub fn perimeter_position(&self) -> f64 {
+        let offset = self.offset.unwrap_or(Fraction::HALF).as_f64();
+        match self.side {
+            TableSide::Bottom => 1.0 - offset,
+            TableSide::Left => 2.0 - offset,
+            TableSide::Top => 2.0 + offset,
+            TableSide::Right => 3.0 + offset,
+        }
+    }
+
+    /// The occupied seat one step clockwise along the table perimeter:
+    /// the roster seat with the smallest positive distance in
+    /// [`Self::perimeter_position`]. Empty sides are skipped, several
+    /// seats on one side are visited in order, and a seat at this
+    /// seat's own position does not count.
+    ///
+    /// Returns `None` when `roster` is empty or holds no position
+    /// other than this seat's.
+    pub fn next_in(&self, roster: &[Seat]) -> Option<Seat> {
+        self.step_in(roster, true)
+    }
+
+    /// The occupied seat one step counter-clockwise - the mirror of
+    /// [`Self::next_in`].
+    pub fn previous_in(&self, roster: &[Seat]) -> Option<Seat> {
+        self.step_in(roster, false)
+    }
+
+    /// Shared walk of `next_in`/`previous_in`: picks the roster seat
+    /// with the smallest strictly-positive perimeter distance in the
+    /// chosen direction.
+    fn step_in(&self, roster: &[Seat], clockwise: bool) -> Option<Seat> {
+        let here = self.perimeter_position();
+        let mut best: Option<(Seat, f64)> = None;
+        for seat in roster {
+            let position = seat.perimeter_position();
+            let distance = if clockwise { position - here } else { here - position }.rem_euclid(4.0);
+            if distance <= f64::EPSILON {
+                continue;
+            }
+            if best.is_none_or(|(_, shortest)| distance < shortest) {
+                best = Some((*seat, distance));
+            }
+        }
+        best.map(|(seat, _)| seat)
+    }
+
     /// Places `footprint` in front of this seat: `margin` (scalar in
     /// the space of `bounds`) off the edge, positioned along the
     /// edge at `offset` (unpinned offsets resolve to `HALF`),
@@ -102,6 +160,63 @@ mod tests {
             min: Vec2::new(0.0, 0.0),
             size: Vec2::new(400.0, 300.0),
         }
+    }
+
+    /// `perimeter_position` is continuous at the corners: a seat pinned
+    /// to a shared corner agrees with its neighbor side's value.
+    #[test]
+    fn perimeter_is_continuous_at_corners() {
+        assert_eq!(Seat::at(TableSide::Bottom, Fraction::new(0.0)).perimeter_position(), 1.0);
+        assert_eq!(Seat::at(TableSide::Left, Fraction::new(1.0)).perimeter_position(), 1.0);
+        assert_eq!(Seat::at(TableSide::Left, Fraction::new(0.0)).perimeter_position(), 2.0);
+        assert_eq!(Seat::at(TableSide::Top, Fraction::new(0.0)).perimeter_position(), 2.0);
+        assert_eq!(Seat::at(TableSide::Top, Fraction::new(1.0)).perimeter_position(), 3.0);
+        assert_eq!(Seat::at(TableSide::Right, Fraction::new(0.0)).perimeter_position(), 3.0);
+    }
+
+    /// `next_in` skips empty sides and visits two seats on one side in
+    /// order; `previous_in` is its exact inverse.
+    #[test]
+    fn next_in_visits_occupied_seats_only() {
+        let roster = [
+            Seat::center(TableSide::Bottom),
+            Seat::center(TableSide::Right),
+            Seat::at(TableSide::Top, Fraction::new(0.25)),
+            Seat::at(TableSide::Top, Fraction::new(0.75)),
+        ];
+        let [a, b, c, d] = roster;
+        // Clockwise A (bottom) -> C (top-left) -> D (top-right) -> B (right) -> A.
+        assert_eq!(a.next_in(&roster), Some(c));
+        assert_eq!(c.next_in(&roster), Some(d));
+        assert_eq!(d.next_in(&roster), Some(b));
+        assert_eq!(b.next_in(&roster), Some(a));
+        // Counter-clockwise runs the tour backwards.
+        assert_eq!(a.previous_in(&roster), Some(b));
+        assert_eq!(c.previous_in(&roster), Some(a));
+    }
+
+    /// An unpinned seat resolves to `HALF` for ordering, like
+    /// `placement` does for positioning.
+    #[test]
+    fn next_in_treats_unpinned_as_centered() {
+        let roster = [Seat::new(TableSide::Bottom), Seat::new(TableSide::Top)];
+        assert_eq!(Seat::center(TableSide::Bottom).next_in(&roster), Some(roster[1]));
+    }
+
+    /// No roster or only the own position means there is no next seat.
+    #[test]
+    fn next_in_without_other_seats_is_none() {
+        let me = Seat::center(TableSide::Bottom);
+        assert_eq!(me.next_in(&[]), None);
+        assert_eq!(me.next_in(&[me]), None);
+    }
+
+    /// A seat outside the roster still finds the next occupied seat
+    /// after its own perimeter position.
+    #[test]
+    fn next_in_from_unlisted_position() {
+        let roster = [Seat::center(TableSide::Right), Seat::center(TableSide::Bottom)];
+        assert_eq!(Seat::center(TableSide::Top).next_in(&roster), Some(roster[0]));
     }
 
     /// `placement` puts the footprint against the correct edge,
