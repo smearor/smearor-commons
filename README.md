@@ -18,6 +18,8 @@ and games). Published to crates.io.
 |---|---|
 | `smearor-commons-geometry` | Unit-tagged 2D vectors, rotations, rectangles and shapes |
 | `smearor-commons-color` | Channel-generic `Color<T>`, hex parsing and color operations |
+| `smearor-commons-animation` | Generic `Interpolate`/`Trajectory`/`TimedAnimation` machinery with easing and a GTK4 frame-clock driver |
+| `smearor-commons-layout` | Headless tabletop layouting: `TableSide`/`Seat`, `LayoutStrategy` trait, `FlowLayout` and `SeatLayout` |
 
 ## Design
 
