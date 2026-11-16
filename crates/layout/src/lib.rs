@@ -3,10 +3,13 @@
 //!
 //! [`TableSide`] names the four edges of a rectangular surface; a
 //! [`Placement`] is the technical target of an arrangement
-//! (center + quarter-turn rotation + footprint). Consumer crates keep
-//! their semantic types ("player", "card", "note") and map them onto
-//! these primitives - which side a user sits at, or what a placed
-//! item *is*, stays downstream.
+//! (center + rotation + footprint). A [`LayoutStrategy`] maps a list
+//! of [`LayoutItem`]s onto `Placement`s inside bounds - the built-ins
+//! are [`FlowLayout`] (side-by-side lines, non-overlapping) and
+//! [`SeatLayout`] (the four table seats). Consumer crates keep their
+//! semantic types ("player", "card", "note") and map them onto these
+//! primitives - which side a user sits at, or what a placed item
+//! *is*, stays downstream.
 //!
 //! Pure `std` with unconditional `serde`; all geometry is unit-generic
 //! over the `U` marker of `Vec2`/`Rect` from
@@ -16,11 +19,13 @@
 mod anchor_weights;
 mod error;
 mod layout_item;
+mod layout_strategy;
 mod placement;
 mod table_side;
 
 pub use anchor_weights::AnchorWeights;
 pub use error::LayoutError;
 pub use layout_item::LayoutItem;
+pub use layout_strategy::LayoutStrategy;
 pub use placement::Placement;
 pub use table_side::TableSide;
