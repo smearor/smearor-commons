@@ -21,6 +21,7 @@ mod error;
 mod layout_item;
 mod layout_strategy;
 mod placement;
+mod seat_assignment;
 mod table_side;
 
 pub use anchor_weights::AnchorWeights;
@@ -28,4 +29,8 @@ pub use error::LayoutError;
 pub use layout_item::LayoutItem;
 pub use layout_strategy::LayoutStrategy;
 pub use placement::Placement;
+pub use placement::footprint_for;
+pub use seat::Seat;
+pub use seat_assignment::SeatAssignment;
+pub use seat_layout::SeatLayout;
 pub use table_side::TableSide;
