@@ -46,12 +46,18 @@ impl Seat {
 
     /// The seat one step clockwise (`side` steps, `offset` keeps).
     pub fn clockwise(&self) -> Self {
-        Self { side: self.side.clockwise(), ..*self }
+        Self {
+            side: self.side.clockwise(),
+            ..*self
+        }
     }
 
     /// The seat one step counter-clockwise.
     pub fn counter_clockwise(&self) -> Self {
-        Self { side: self.side.counter_clockwise(), ..*self }
+        Self {
+            side: self.side.counter_clockwise(),
+            ..*self
+        }
     }
 
     /// The centered seat nearest a (free) rotation.
@@ -92,7 +98,10 @@ mod tests {
     use smearor_commons_geometry::Vec2;
 
     fn bounds() -> Rect<Pixels> {
-        Rect { min: Vec2::new(0.0, 0.0), size: Vec2::new(400.0, 300.0) }
+        Rect {
+            min: Vec2::new(0.0, 0.0),
+            size: Vec2::new(400.0, 300.0),
+        }
     }
 
     /// `placement` puts the footprint against the correct edge,
@@ -142,7 +151,11 @@ mod tests {
     /// Serde round-trips a seat with and without a pinned offset.
     #[test]
     fn serde_round_trip() {
-        for seat in [Seat::new(TableSide::Top), Seat::center(TableSide::Bottom), Seat::at(TableSide::Left, Fraction::new(0.3))] {
+        for seat in [
+            Seat::new(TableSide::Top),
+            Seat::center(TableSide::Bottom),
+            Seat::at(TableSide::Left, Fraction::new(0.3)),
+        ] {
             let json = serde_json::to_string(&seat).expect("serialize");
             assert_eq!(serde_json::from_str::<Seat>(&json).expect("deserialize"), seat);
         }
