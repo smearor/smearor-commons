@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["LayoutError","TableSide"],"struct":["Placement"]};
+window.SIDEBAR_ITEMS = {"enum":["LayoutError","SeatAssignment","TableSide"],"fn":["footprint_for"],"struct":["AnchorWeights","FlowLayout","LayoutItem","Placement","Seat","SeatLayout"],"trait":["LayoutStrategy"]};
