@@ -1,3 +1,4 @@
+use crate::AnchorWeights;
 use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_geometry::QuarterTurn;
@@ -86,16 +87,14 @@ impl TableSide {
         }
     }
 
-    /// Anchor weights resolving the side's edge inside bounds:
-    /// `(horizontal, vertical)` with `0.0` = left/top, `0.5` = center,
-    /// `1.0` = right/bottom. `Bottom` anchors `(0.5, 1.0)` - bottom
-    /// edge, horizontally centered.
-    pub fn anchor_weights(&self) -> (f64, f64) {
+    /// The side's edge-center anchor inside bounds: `Bottom`
+    /// anchors `BOTTOM_CENTER` - bottom edge, horizontally centered.
+    pub fn anchor_weights(&self) -> AnchorWeights {
         match self {
-            Self::Bottom => (0.5, 1.0),
-            Self::Left => (0.0, 0.5),
-            Self::Top => (0.5, 0.0),
-            Self::Right => (1.0, 0.5),
+            Self::Bottom => AnchorWeights::BOTTOM_CENTER,
+            Self::Left => AnchorWeights::CENTER_LEFT,
+            Self::Top => AnchorWeights::TOP_CENTER,
+            Self::Right => AnchorWeights::CENTER_RIGHT,
         }
     }
 }
@@ -218,10 +217,11 @@ mod tests {
     /// Each side anchors the correct edge, centered on the other axis.
     #[test]
     fn anchor_weights_point_at_the_edge() {
-        assert_eq!(TableSide::Bottom.anchor_weights(), (0.5, 1.0));
-        assert_eq!(TableSide::Left.anchor_weights(), (0.0, 0.5));
-        assert_eq!(TableSide::Top.anchor_weights(), (0.5, 0.0));
-        assert_eq!(TableSide::Right.anchor_weights(), (1.0, 0.5));
+        use crate::AnchorWeights;
+        assert_eq!(TableSide::Bottom.anchor_weights(), AnchorWeights::BOTTOM_CENTER);
+        assert_eq!(TableSide::Left.anchor_weights(), AnchorWeights::CENTER_LEFT);
+        assert_eq!(TableSide::Top.anchor_weights(), AnchorWeights::TOP_CENTER);
+        assert_eq!(TableSide::Right.anchor_weights(), AnchorWeights::CENTER_RIGHT);
     }
 
     /// `Display`/`FromStr` spell the lowercase side names both ways.
