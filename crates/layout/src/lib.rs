@@ -15,10 +15,12 @@
 
 mod anchor_weights;
 mod error;
+mod layout_item;
 mod placement;
 mod table_side;
 
 pub use anchor_weights::AnchorWeights;
 pub use error::LayoutError;
+pub use layout_item::LayoutItem;
 pub use placement::Placement;
 pub use table_side::TableSide;
