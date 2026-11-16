@@ -31,6 +31,7 @@ mod quantities;
 mod rect;
 mod rectangle;
 mod scanline;
+mod segment;
 mod size;
 mod transforms;
 mod units;
@@ -56,6 +57,7 @@ pub use quantities::SmoothingAlpha;
 pub use rect::Rect;
 pub use rectangle::Rectangle;
 pub use scanline::Scanline;
+pub use segment::Segment;
 pub use size::Size;
 #[cfg(feature = "gtk4")]
 pub use size::WidgetSizeExt;
