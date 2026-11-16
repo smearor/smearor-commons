@@ -1,4 +1,5 @@
 use crate::AspectRatio;
+use crate::Fraction;
 use crate::Millimeters;
 use crate::Pixels;
 use crate::RotationRad;
@@ -553,6 +554,16 @@ impl<U, T: Copy + Mul<Output = T>> Mul<T> for Vec2<U, T> {
     /// The vector scaled by a dimensionless factor.
     fn mul(self, factor: T) -> Self {
         Self::new(self.x * factor, self.y * factor)
+    }
+}
+
+impl<U> Mul<Fraction> for Vec2<U> {
+    type Output = Self;
+
+    /// The vector scaled by a progress fraction - the natural
+    /// interpolation operator `point + direction * t`.
+    fn mul(self, fraction: Fraction) -> Self {
+        self * fraction.as_f64()
     }
 }
 
