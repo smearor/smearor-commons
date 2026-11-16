@@ -17,6 +17,13 @@ pub enum EasingFunction {
     EaseOut,
     /// Slow start and end, fast middle (quadratic ease-in-out).
     EaseInOut,
+    /// Slow start, fast finish (cubic ease-in).
+    EaseInCubic,
+    /// Fast start, slow finish (cubic ease-out) - the classic
+    /// "arrive" curve for camera and pose transitions.
+    EaseOutCubic,
+    /// Slow start and end, fast middle (cubic ease-in-out).
+    EaseInOutCubic,
     /// Goes beyond the target and settles back.
     Overshoot {
         /// Overshoot strength - higher values overshoot further.
@@ -52,6 +59,15 @@ impl EasingFunction {
                     -1.0 + (4.0 - 2.0 * t) * t
                 }
             }
+            Self::EaseInCubic => t * t * t,
+            Self::EaseOutCubic => 1.0 - (1.0 - t).powi(3),
+            Self::EaseInOutCubic => {
+                if t < 0.5 {
+                    4.0 * t * t * t
+                } else {
+                    1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+                }
+            }
             Self::Overshoot { overshoot_amount } => {
                 let s = overshoot_amount * 1.525;
                 if t < 0.5 {
@@ -79,6 +95,9 @@ mod tests {
             EasingFunction::EaseIn,
             EasingFunction::EaseOut,
             EasingFunction::EaseInOut,
+            EasingFunction::EaseInCubic,
+            EasingFunction::EaseOutCubic,
+            EasingFunction::EaseInOutCubic,
             EasingFunction::Overshoot { overshoot_amount: 1.7 },
             EasingFunction::overshoot(),
         ] {

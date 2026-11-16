@@ -45,7 +45,13 @@ impl<S: Trajectory> TimedAnimation<S> {
 
     /// Starts the animation clock.
     pub fn start(&mut self) {
-        self.start_time = Some(Instant::now());
+        self.start_at(Instant::now());
+    }
+
+    /// Starts the animation clock at `at` - the injectable variant
+    /// of [`Self::start`] for frame-locked animations and tests.
+    pub fn start_at(&mut self, at: Instant) {
+        self.start_time = Some(at);
     }
 
     /// Whether [`Self::start`] has been called.
@@ -56,22 +62,40 @@ impl<S: Trajectory> TimedAnimation<S> {
     /// Whether the animation duration has elapsed since
     /// [`Self::start`].
     pub fn is_complete(&self) -> bool {
-        self.start_time.is_some_and(|start| start.elapsed() >= self.duration)
+        self.is_complete_at(Instant::now())
+    }
+
+    /// Whether the animation duration has elapsed at `now` - the
+    /// injectable variant of [`Self::is_complete`].
+    pub fn is_complete_at(&self, now: Instant) -> bool {
+        self.start_time.is_some_and(|start| now.saturating_duration_since(start) >= self.duration)
     }
 
     /// The linear time progress `0.0..=1.0` since [`Self::start`] -
     /// `None` before it. Values `>= 1.0` mean the animation has run
     /// through.
     pub fn progress(&self) -> Option<Fraction> {
+        self.progress_at(Instant::now())
+    }
+
+    /// The linear time progress at `now` - the injectable variant
+    /// of [`Self::progress`].
+    pub fn progress_at(&self, now: Instant) -> Option<Fraction> {
         self.start_time
-            .map(|start| Fraction::new(start.elapsed().as_secs_f64() / self.duration.as_secs_f64()))
+            .map(|start| Fraction::new(now.saturating_duration_since(start).as_secs_f64() / self.duration.as_secs_f64()))
     }
 
     /// The eased trajectory value at the current point in time -
     /// `None` before [`Self::start`]. At or past the end the exact
     /// `t = 1.0` value is returned.
     pub fn value(&self) -> Option<S::Value> {
-        let progress = self.progress()?;
+        self.value_at(Instant::now())
+    }
+
+    /// The eased trajectory value at `now` - the injectable variant
+    /// of [`Self::value`].
+    pub fn value_at(&self, now: Instant) -> Option<S::Value> {
+        let progress = self.progress_at(now)?;
         if progress >= Fraction::ONE {
             return Some(self.trajectory.value_at(Fraction::ONE));
         }
