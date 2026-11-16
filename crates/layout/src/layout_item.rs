@@ -1,4 +1,4 @@
-use crate::TableSide;
+use crate::Seat;
 use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_geometry::Rotation;
@@ -19,9 +19,10 @@ pub struct LayoutItem<U, T = f64> {
     /// (e.g. [`crate::FlowLayout`]) or override it (e.g.
     /// [`crate::SeatLayout`]).
     pub rotation: Rotation,
-    /// Explicit seat assignment; `None` leaves distribution to the
-    /// strategy (e.g. round-robin in [`crate::SeatLayout`]).
-    pub seat: Option<TableSide>,
+    /// Explicit seat assignment - side and optional edge offset;
+    /// `None` leaves distribution to the strategy (e.g. round-robin
+    /// in [`crate::SeatLayout`]).
+    pub seat: Option<Seat>,
 }
 
 /// Field-wise equality - the unit marker `U` carries no value.
@@ -51,7 +52,7 @@ impl<U, T: Copy> LayoutItem<U, T> {
     }
 
     /// The item with an explicit seat assignment.
-    pub fn with_seat(self, seat: TableSide) -> Self {
+    pub fn with_seat(self, seat: Seat) -> Self {
         Self { seat: Some(seat), ..self }
     }
 }
