@@ -18,6 +18,7 @@
 
 mod anchor_weights;
 mod error;
+mod flow_layout;
 mod layout_item;
 mod layout_strategy;
 mod placement;
@@ -27,6 +28,7 @@ mod table_side;
 
 pub use anchor_weights::AnchorWeights;
 pub use error::LayoutError;
+pub use flow_layout::FlowLayout;
 pub use layout_item::LayoutItem;
 pub use layout_strategy::LayoutStrategy;
 pub use placement::Placement;
