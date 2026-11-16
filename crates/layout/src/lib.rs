@@ -22,6 +22,7 @@ mod layout_item;
 mod layout_strategy;
 mod placement;
 mod seat_assignment;
+mod seat_layout;
 mod table_side;
 
 pub use anchor_weights::AnchorWeights;
