@@ -2,10 +2,10 @@ use crate::LayoutError;
 use crate::LayoutItem;
 use crate::LayoutStrategy;
 use crate::Placement;
+use crate::Seat;
 use crate::SeatAssignment;
 use crate::TableSide;
 use crate::footprint_for;
-use crate::seat;
 use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_geometry::Rect;
@@ -48,22 +48,32 @@ impl SeatLayout {
 }
 
 impl<U> LayoutStrategy<U> for SeatLayout {
-    /// Per side: items spread along the edge centered as a group,
-    /// each `edge_margin` off the edge, rotated to the side's
-    /// orientation. Extents along the edge use the footprint at the
-    /// target rotation ([`footprint_for`]). A group wider than its
+    /// Per side: pinned seats take their [`Seat::offset`], unpinned
+    /// items spread along the edge centered as a group, each
+    /// `edge_margin` off the edge, rotated to the side's orientation.
+    /// Extents along the edge use the footprint at the target
+    /// rotation ([`footprint_for`]). A spread group wider than its
     /// edge reports [`LayoutError::DoesNotFit`].
     fn arrange(&self, bounds: Rect<U>, items: &[LayoutItem<U>]) -> Result<Vec<Placement<U>>, LayoutError> {
         let count = items.len();
-        let sides: Vec<TableSide> = items
+        let seats: Vec<Seat> = items
             .iter()
             .enumerate()
-            .map(|(index, item)| item.seat.unwrap_or_else(|| TableSide::ALL[index % TableSide::ALL.len()]))
+            .map(|(index, item)| item.seat.unwrap_or_else(|| Seat::new(TableSide::ALL[index % TableSide::ALL.len()])))
             .collect();
 
         let mut placements: Vec<Option<Placement<U>>> = vec![None; count];
         for side in TableSide::ALL {
-            let group: Vec<usize> = (0..count).filter(|&index| sides[index] == side).collect();
+            // Pinned seats land verbatim on their offsets.
+            for (index, seat_ref) in seats.iter().enumerate() {
+                if seat_ref.side == side && seat_ref.offset.is_some() {
+                    let footprint = footprint_for(items[index].size, items[index].rotation, side.to_quarter_turn());
+                    placements[index] = Some(seat_ref.placement(bounds, footprint, self.edge_margin));
+                }
+            }
+
+            // The unpinned pool spreads along the edge as a group.
+            let group: Vec<usize> = (0..count).filter(|&index| seats[index].side == side && seats[index].offset.is_none()).collect();
             if group.is_empty() {
                 continue;
             }
@@ -93,7 +103,7 @@ impl<U> LayoutStrategy<U> for SeatLayout {
             };
             for (&index, footprint) in group.iter().zip(&target) {
                 let edge_extent = if Self::horizontal_edge(side) { footprint.x } else { footprint.y };
-                let mut placement = seat(side, bounds, *footprint, self.edge_margin);
+                let mut placement = Seat::new(side).placement(bounds, *footprint, self.edge_margin);
                 placement.center = if Self::horizontal_edge(side) {
                     Vec2::new(cursor + edge_extent / 2.0, placement.center.y)
                 } else {
@@ -115,6 +125,7 @@ mod tests {
     use super::SeatLayout;
     use crate::LayoutItem;
     use crate::LayoutStrategy;
+    use crate::Seat;
     use crate::TableSide;
     use smearor_commons_geometry::Pixels;
     use smearor_commons_geometry::QuarterTurn;
@@ -147,7 +158,7 @@ mod tests {
     /// An explicit seat wins over the round-robin order.
     #[test]
     fn explicit_seat_wins() {
-        let items = [item(100.0, 50.0).with_seat(TableSide::Right)];
+        let items = [item(100.0, 50.0).with_seat(Seat::new(TableSide::Right))];
         let placements = SeatLayout::default().arrange(bounds(), &items).expect("fits");
         assert_eq!(placements[0].rotation, Rotation::QuarterTurn(QuarterTurn::Deg270));
         // Target footprint is 50x100 after the Deg270 axis swap.
@@ -157,7 +168,10 @@ mod tests {
     /// Items sharing a side spread along its edge without overlap.
     #[test]
     fn same_side_items_spread() {
-        let items = [item(100.0, 50.0).with_seat(TableSide::Bottom), item(100.0, 50.0).with_seat(TableSide::Bottom)];
+        let items = [
+            item(100.0, 50.0).with_seat(Seat::new(TableSide::Bottom)),
+            item(100.0, 50.0).with_seat(Seat::new(TableSide::Bottom)),
+        ];
         let placements = SeatLayout::default().arrange(bounds(), &items).expect("fits");
         // Two 100-wide items + 24 gap centered on the 400-wide edge.
         assert!((placements[0].center.x - (200.0 - 12.0 - 50.0)).abs() < 1e-9);
@@ -167,7 +181,10 @@ mod tests {
     /// A group wider than its edge reports `DoesNotFit`.
     #[test]
     fn overflowing_side_errors() {
-        let items = [item(300.0, 50.0).with_seat(TableSide::Top), item(300.0, 50.0).with_seat(TableSide::Top)];
+        let items = [
+            item(300.0, 50.0).with_seat(Seat::new(TableSide::Top)),
+            item(300.0, 50.0).with_seat(Seat::new(TableSide::Top)),
+        ];
         assert!(SeatLayout::default().arrange(bounds(), &items).is_err());
     }
 
@@ -175,10 +192,16 @@ mod tests {
     /// a 200-wide item at Left (Deg90) needs 200 of vertical edge.
     #[test]
     fn target_footprint_drives_edge_extents() {
-        let items = [item(200.0, 50.0).with_seat(TableSide::Left), item(200.0, 50.0).with_seat(TableSide::Left)];
+        let items = [
+            item(200.0, 50.0).with_seat(Seat::new(TableSide::Left)),
+            item(200.0, 50.0).with_seat(Seat::new(TableSide::Left)),
+        ];
         // Two 50x200 footprints + 24 gap = 424 > 300 edge length.
         assert!(SeatLayout::default().arrange(bounds(), &items).is_err());
-        let ok = [item(100.0, 50.0).with_seat(TableSide::Left), item(100.0, 50.0).with_seat(TableSide::Left)];
+        let ok = [
+            item(100.0, 50.0).with_seat(Seat::new(TableSide::Left)),
+            item(100.0, 50.0).with_seat(Seat::new(TableSide::Left)),
+        ];
         assert!(SeatLayout::default().arrange(bounds(), &ok).is_ok());
     }
 }
