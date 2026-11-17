@@ -9,6 +9,7 @@ use crate::Alpha;
 /// `Eq`-capable wire form of an [`Alpha`]: serializes as a bare u8,
 /// orders and compares exactly where a fraction cannot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct AlphaPercent(pub u8);
 
@@ -73,6 +74,14 @@ impl fmt::Display for AlphaPercent {
     }
 }
 
+#[cfg(feature = "zbus")]
+impl zvariant::Type for AlphaPercent {
+    const SIGNATURE: &'static zvariant::Signature = <u8 as zvariant::Type>::SIGNATURE;
+}
+
+#[cfg(feature = "async-graphql")]
+async_graphql::scalar!(AlphaPercent);
+
 #[cfg(test)]
 mod tests {
     use super::Alpha;
@@ -93,5 +102,21 @@ mod tests {
     fn alpha_round_trip() {
         assert_eq!(AlphaPercent::from(Alpha::new(0.75)).percent(), 75);
         assert!((Alpha::from(AlphaPercent::new(75)).as_f64() - 0.75).abs() < 1e-9);
+    }
+
+    #[cfg(feature = "zbus")]
+    #[test]
+    fn zvariant_round_trip() {
+        let context = zvariant::serialized::Context::new_dbus(zvariant::LE, 0);
+        let bytes = zvariant::to_bytes(context, &AlphaPercent::new(75)).unwrap();
+        let decoded: AlphaPercent = bytes.deserialize().unwrap().0;
+        assert_eq!(decoded.percent(), 75);
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_is_integer() {
+        let schema = serde_json::to_value(schemars::schema_for!(AlphaPercent)).unwrap();
+        assert!(schema.to_string().contains("integer"));
     }
 }

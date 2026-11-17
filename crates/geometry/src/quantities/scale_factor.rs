@@ -16,6 +16,7 @@ use std::ops::Mul;
 /// transforms; domain limits (degenerate-size floors, per-object
 /// bounds) belong to consumer wrappers.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct ScaleFactor(pub f64);
 

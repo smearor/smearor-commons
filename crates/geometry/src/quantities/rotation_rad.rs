@@ -23,6 +23,7 @@ use std::ops::Sub;
 /// the pipeline. Plain scalar uses (thresholds, wire values) use
 /// [`Radians`]/[`Degrees`] directly.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct RotationRad(pub Radians);
 
@@ -307,6 +308,11 @@ impl Mul<f64> for RotationRad {
     fn mul(self, factor: f64) -> RotationRad {
         Self(self.0 * factor)
     }
+}
+
+#[cfg(feature = "zbus")]
+impl zvariant::Type for RotationRad {
+    const SIGNATURE: &'static zvariant::Signature = <f64 as zvariant::Type>::SIGNATURE;
 }
 
 #[cfg(feature = "async-graphql")]

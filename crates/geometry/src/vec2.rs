@@ -34,6 +34,7 @@ use std::ops::SubAssign;
 /// skipped. With the `async-graphql` feature, `Vec2<Millimeters>` is
 /// exposed as the GraphQL object type `Point`.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Vec2<U = (), T = f64> {
     /// X coordinate in the unit `U`.
     pub x: T,
@@ -61,6 +62,32 @@ impl Vec2<Millimeters> {
     async fn y(&self) -> f64 {
         self.y
     }
+}
+
+/// `Vec2<Pixels>` is exposed as the GraphQL object type `PixelPoint` -
+/// the screen-space counterpart of the millimeter `Point`.
+#[cfg(feature = "async-graphql")]
+#[async_graphql::Object(name = "PixelPoint")]
+impl Vec2<Pixels> {
+    /// X coordinate in pixels.
+    async fn x(&self) -> f64 {
+        self.x
+    }
+
+    /// Y coordinate in pixels.
+    async fn y(&self) -> f64 {
+        self.y
+    }
+}
+
+/// The `x`/`y` pair serializes as a two-field structure - the skipped
+/// `PhantomData<U>` unit marker keeps `U` out of the signature.
+#[cfg(feature = "zbus")]
+impl<U, T> zvariant::Type for Vec2<U, T>
+where
+    T: zvariant::Type,
+{
+    const SIGNATURE: &'static zvariant::Signature = <(T, T) as zvariant::Type>::SIGNATURE;
 }
 
 // Manual impls: `PhantomData<U>` carries no value, so `Vec2<U>` must not
@@ -1278,5 +1305,41 @@ mod tests {
         let json = serde_json::to_string(&row).unwrap_or_default();
         assert_eq!(json, r#"{"pos":[80.0,220.0]}"#);
         assert_eq!(serde_json::from_str::<Row>(&json).ok(), Some(row));
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_is_xy_object() {
+        let schema = serde_json::to_value(schemars::schema_for!(Vec2<Pixels>)).unwrap();
+        let text = schema.to_string();
+        assert!(text.contains("\"x\"") && text.contains("\"y\""));
+    }
+
+    #[cfg(feature = "zbus")]
+    #[test]
+    fn zvariant_signature_and_round_trip() {
+        assert_eq!(<Vec2<Pixels> as zvariant::Type>::SIGNATURE.to_string(), "(dd)");
+        let context = zvariant::serialized::Context::new_dbus(zvariant::LE, 0);
+        let bytes = zvariant::to_bytes(context, &Vec2::<Pixels>::new(3.0, 4.0)).unwrap();
+        let decoded: Vec2<Pixels> = bytes.deserialize().unwrap().0;
+        assert_eq!(decoded, Vec2::new(3.0, 4.0));
+    }
+
+    #[cfg(feature = "async-graphql")]
+    #[test]
+    fn pixel_point_in_schema_sdl() {
+        struct Query;
+
+        #[async_graphql::Object]
+        impl Query {
+            async fn point(&self) -> Vec2<Pixels> {
+                Vec2::new(1.0, 2.0)
+            }
+        }
+
+        let sdl = async_graphql::Schema::build(Query, async_graphql::EmptyMutation, async_graphql::EmptySubscription)
+            .finish()
+            .sdl();
+        assert!(sdl.contains("type PixelPoint"));
     }
 }

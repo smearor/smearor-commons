@@ -11,6 +11,8 @@ use serde::Serialize;
 /// `GestureRotate::angle_delta` and of [`crate::RotationRad`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "async-graphql", derive(async_graphql::Enum))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "zbus", derive(zvariant::Type))]
 pub enum RotationDirection {
     /// Positive angle change - clockwise as seen by the viewer.
     Clockwise,
@@ -44,7 +46,7 @@ impl RotationDirection {
 mod tests {
     use super::RotationDirection;
     use crate::Degrees;
-use crate::QuarterTurn;
+    use crate::QuarterTurn;
 
     /// Positive deltas are clockwise, negative counter-clockwise,
     /// zero has no direction.

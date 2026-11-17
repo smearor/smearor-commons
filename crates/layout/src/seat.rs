@@ -17,7 +17,14 @@ use smearor_commons_geometry::Vec2;
 /// the side, a strategy may distribute the item along it";
 /// `Some(fraction)` pins the item to that edge position
 /// (`HALF` = centered). Which *user* sits there stays consumer domain.
+///
+/// No `zvariant::Type` impl: `Option<Fraction>` has no D-Bus signature
+/// (the format knows no nullable) - wire consumers transport a seat as
+/// a `(TableSide, f64)` pair with `NaN` for an unpinned offset.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "async-graphql", derive(async_graphql::SimpleObject, async_graphql::InputObject))]
+#[cfg_attr(feature = "async-graphql", graphql(input_name = "SeatInput"))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Seat {
     /// The table edge the seat faces.
     pub side: TableSide,
@@ -244,7 +251,7 @@ impl Seat {
 /// own half-extent) leave room. Interval boundaries count as free -
 /// landing exactly on a boundary means exactly `gap` clearance.
 /// Prefers the positive direction on ties.
-fn nearest_free_slot(blocked: &mut Vec<(f64, f64)>) -> f64 {
+fn nearest_free_slot(blocked: &mut [(f64, f64)]) -> f64 {
     blocked.sort_by(|left, right| left.0.partial_cmp(&right.0).unwrap_or(std::cmp::Ordering::Equal));
     let mut merged: Vec<(f64, f64)> = Vec::with_capacity(blocked.len());
     for &(left, right) in blocked.iter() {
@@ -499,5 +506,39 @@ mod tests {
             let json = serde_json::to_string(&seat).expect("serialize");
             assert_eq!(serde_json::from_str::<Seat>(&json).expect("deserialize"), seat);
         }
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_has_side_and_offset() {
+        let schema = serde_json::to_value(schemars::schema_for!(Seat)).unwrap();
+        let text = schema.to_string();
+        assert!(text.contains("\"side\"") && text.contains("\"offset\""));
+    }
+
+    #[cfg(feature = "async-graphql")]
+    #[test]
+    fn seat_in_schema_sdl() {
+        struct Query;
+
+        #[async_graphql::Object]
+        impl Query {
+            async fn seat(&self) -> Seat {
+                Seat::center(TableSide::Bottom)
+            }
+        }
+
+        struct Mutation;
+
+        #[async_graphql::Object]
+        impl Mutation {
+            async fn assign_seat(&self, _seat: Seat) -> bool {
+                true
+            }
+        }
+
+        let sdl = async_graphql::Schema::build(Query, Mutation, async_graphql::EmptySubscription).finish().sdl();
+        assert!(sdl.contains("type Seat"));
+        assert!(sdl.contains("input SeatInput"));
     }
 }

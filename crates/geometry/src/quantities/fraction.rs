@@ -146,6 +146,14 @@ impl Display for Fraction {
     }
 }
 
+#[cfg(feature = "zbus")]
+impl zvariant::Type for Fraction {
+    const SIGNATURE: &'static zvariant::Signature = <f64 as zvariant::Type>::SIGNATURE;
+}
+
+#[cfg(feature = "async-graphql")]
+async_graphql::scalar!(Fraction);
+
 #[cfg(test)]
 mod tests {
     use super::Fraction;
@@ -163,5 +171,28 @@ mod tests {
     fn inverse_complements_to_one() {
         assert_eq!(Fraction::new(0.25).inverse().as_f64(), 0.75);
         assert_eq!(Fraction::ZERO.inverse(), Fraction::ONE);
+    }
+
+    #[cfg(feature = "zbus")]
+    #[test]
+    fn zvariant_round_trip() {
+        let context = zvariant::serialized::Context::new_dbus(zvariant::LE, 0);
+        let bytes = zvariant::to_bytes(context, &Fraction::HALF).unwrap();
+        let decoded: Fraction = bytes.deserialize().unwrap().0;
+        assert_eq!(decoded, Fraction::HALF);
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_is_number() {
+        let schema = serde_json::to_value(schemars::schema_for!(Fraction)).unwrap();
+        assert!(schema.to_string().contains("\"number\""));
+    }
+
+    #[cfg(feature = "async-graphql")]
+    #[test]
+    fn graphql_scalar_round_trip() {
+        use async_graphql::ScalarType;
+        assert_eq!(Fraction::parse(Fraction::HALF.to_value()).unwrap(), Fraction::HALF);
     }
 }

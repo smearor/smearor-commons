@@ -10,7 +10,12 @@ use serde::Serialize;
 /// that distinguish the two (rotation widgets with snap presets,
 /// configuration formats allowing both forms) model it directly
 /// instead of re-deriving snappedness from raw angle values.
+///
+/// No `zvariant::Type` impl: the two variants carry different payload
+/// signatures, which D-Bus cannot express under a single signature -
+/// wire consumers transport the angle as `f64` or `QuarterTurn`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum Rotation {
     /// A snapped right-angle rotation.
     QuarterTurn(QuarterTurn),
@@ -97,6 +102,9 @@ impl From<RotationRad> for Rotation {
         Self::Free(angle)
     }
 }
+
+#[cfg(feature = "async-graphql")]
+async_graphql::scalar!(Rotation);
 
 #[cfg(test)]
 mod tests {

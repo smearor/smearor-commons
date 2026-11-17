@@ -18,6 +18,7 @@ use std::ops::Sub;
 /// `Pixels<u32>` carry exact pixel counts - buffer extents, texture
 /// dimensions, device coordinates. Serializes as a bare number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct Pixels<T = f64>(pub T);
 
@@ -171,6 +172,14 @@ impl<T: Display> Display for Pixels<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
+}
+
+#[cfg(feature = "zbus")]
+impl<T> zvariant::Type for Pixels<T>
+where
+    T: zvariant::Type,
+{
+    const SIGNATURE: &'static zvariant::Signature = T::SIGNATURE;
 }
 
 #[cfg(test)]

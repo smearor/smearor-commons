@@ -25,6 +25,7 @@ use std::fmt::Formatter;
 /// assert_eq!(LIGHT.as_str(), "light");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct NamedColor(Cow<'static, str>);
 
 impl NamedColor {
@@ -86,6 +87,14 @@ impl<'de> Deserialize<'de> for NamedColor {
     }
 }
 
+#[cfg(feature = "zbus")]
+impl zvariant::Type for NamedColor {
+    const SIGNATURE: &'static zvariant::Signature = <str as zvariant::Type>::SIGNATURE;
+}
+
+#[cfg(feature = "async-graphql")]
+async_graphql::scalar!(NamedColor);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +133,30 @@ mod tests {
         assert_eq!(json, "\"light\"");
         let parsed: NamedColor = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, LIGHT);
+    }
+
+    #[cfg(feature = "zbus")]
+    #[test]
+    fn zvariant_round_trip() {
+        assert_eq!(<NamedColor as zvariant::Type>::SIGNATURE.to_string(), "s");
+        let context = zvariant::serialized::Context::new_dbus(zvariant::LE, 0);
+        let bytes = zvariant::to_bytes(context, &NamedColor::new("accent")).unwrap();
+        let decoded: NamedColor = bytes.deserialize().unwrap().0;
+        assert_eq!(decoded.as_str(), "accent");
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_is_string() {
+        let schema = serde_json::to_value(schemars::schema_for!(NamedColor)).unwrap();
+        assert!(schema.to_string().contains("\"string\""));
+    }
+
+    #[cfg(feature = "async-graphql")]
+    #[test]
+    fn graphql_scalar_round_trip() {
+        use async_graphql::ScalarType;
+        let parsed = NamedColor::parse(NamedColor::new("accent").to_value()).unwrap();
+        assert_eq!(parsed.as_str(), "accent");
     }
 }

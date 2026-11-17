@@ -1571,11 +1571,14 @@ dependencies = [
 name = "smearor-commons-color"
 version = "0.1.0"
 dependencies = [
+ "async-graphql",
  "cairo-rs",
  "gtk4",
+ "schemars",
  "serde",
  "serde_json",
  "thiserror",
+ "zvariant",
 ]
 
 [[package]]
@@ -1608,10 +1611,13 @@ dependencies = [
 name = "smearor-commons-layout"
 version = "0.1.0"
 dependencies = [
+ "async-graphql",
+ "schemars",
  "serde",
  "serde_json",
  "smearor-commons-geometry",
  "thiserror",
+ "zvariant",
 ]
 
 [[package]]

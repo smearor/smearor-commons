@@ -17,6 +17,9 @@ use std::str::FromStr;
 /// hand passes 6 -> 9 -> 12 -> 3, and each step corresponds to a
 /// `+90` degree (clockwise) reading rotation.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "async-graphql", derive(async_graphql::Enum))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "zbus", derive(zvariant::Type))]
 #[serde(rename_all = "lowercase")]
 pub enum TableSide {
     /// Bottom edge - items rotated `Deg0` read correctly here.
@@ -259,5 +262,25 @@ mod tests {
             assert_eq!(json, format!("\"{side}\""));
             assert_eq!(serde_json::from_str::<TableSide>(&json).expect("deserialize"), side);
         }
+    }
+
+    #[cfg(feature = "zbus")]
+    #[test]
+    fn zvariant_round_trip() {
+        assert_eq!(<TableSide as zvariant::Type>::SIGNATURE.to_string(), "u");
+        let context = zvariant::serialized::Context::new_dbus(zvariant::LE, 0);
+        for side in TableSide::ALL {
+            let bytes = zvariant::to_bytes(context, &side).unwrap();
+            let decoded: TableSide = bytes.deserialize().unwrap().0;
+            assert_eq!(decoded, side);
+        }
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_is_string_enum() {
+        let schema = serde_json::to_value(schemars::schema_for!(TableSide)).unwrap();
+        let text = schema.to_string();
+        assert!(text.contains("bottom") && text.contains("top"));
     }
 }

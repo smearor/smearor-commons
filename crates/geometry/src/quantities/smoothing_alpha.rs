@@ -11,6 +11,7 @@ use std::time::Duration;
 /// Averages out the differential-latency distortion sensors report during
 /// motion. `0.0` disables smoothing, `1.0` passes raw values through.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct SmoothingAlpha(f64);
 

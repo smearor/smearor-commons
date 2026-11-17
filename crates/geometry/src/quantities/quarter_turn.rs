@@ -16,6 +16,8 @@ use std::str::FromStr;
 /// angle - use it where only the four snapped orientations exist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "async-graphql", derive(async_graphql::Enum))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "zbus", derive(zvariant::Type))]
 pub enum QuarterTurn {
     /// No rotation - native orientation.
     #[default]

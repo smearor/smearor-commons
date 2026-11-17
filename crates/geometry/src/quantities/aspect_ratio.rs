@@ -13,6 +13,7 @@ use std::ops::Mul;
 /// [`crate::Vec2::unrotated_fit`] need no defensive `aspect <= 0`
 /// guard - "invalid" is unrepresentable.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct AspectRatio(f64);
 

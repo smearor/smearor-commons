@@ -26,6 +26,7 @@ use std::ops::SubAssign;
 /// serve integer and float boundaries - smithay `Rectangle<i32, K>`
 /// and graphene `Rect` alike.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Rect<U = (), T = f64> {
     /// Top-left corner in the unit `U`.
     pub min: Vec2<U, T>,
@@ -583,6 +584,16 @@ impl<U> From<Rect<U, i32>> for cairo::RectangleInt {
     }
 }
 
+/// `min` and `size` serialize as two `Vec2` structures - the skipped
+/// `PhantomData<U>` unit marker keeps `U` out of the signature.
+#[cfg(feature = "zbus")]
+impl<U, T> zvariant::Type for Rect<U, T>
+where
+    T: zvariant::Type,
+{
+    const SIGNATURE: &'static zvariant::Signature = <(Vec2<U, T>, Vec2<U, T>) as zvariant::Type>::SIGNATURE;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -815,5 +826,24 @@ mod tests {
         assert_eq!((rect.min.x, rect.min.y, rect.size.x, rect.size.y), (1.0, 2.0, 4.0, 7.0));
         let back = ab_glyph::Rect::from(rect);
         assert_eq!((back.min.x, back.min.y, back.max.x, back.max.y), (1.0, 2.0, 5.0, 9.0));
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn json_schema_is_min_size_object() {
+        let schema = serde_json::to_value(schemars::schema_for!(Rect<Pixels>)).unwrap();
+        let text = schema.to_string();
+        assert!(text.contains("\"min\"") && text.contains("\"size\""));
+    }
+
+    #[cfg(feature = "zbus")]
+    #[test]
+    fn zvariant_signature_and_round_trip() {
+        assert_eq!(<Rect<Pixels> as zvariant::Type>::SIGNATURE.to_string(), "((dd)(dd))");
+        let rect = Rect::<Pixels>::new(Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0));
+        let context = zvariant::serialized::Context::new_dbus(zvariant::LE, 0);
+        let bytes = zvariant::to_bytes(context, &rect).unwrap();
+        let decoded: Rect<Pixels> = bytes.deserialize().unwrap().0;
+        assert_eq!((decoded.min.x, decoded.min.y, decoded.size.x, decoded.size.y), (1.0, 2.0, 3.0, 4.0));
     }
 }

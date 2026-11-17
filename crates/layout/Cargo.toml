@@ -10,14 +10,18 @@ homepage.workspace = true
 description = "Tabletop layout primitives for the Smearor ecosystem: table sides, placements and arrangement strategies."
 
 [features]
-# transport / schema and ui / backend gates (added when needed)
-# async-graphql = ["dep:async-graphql", "smearor-commons-geometry/async-graphql"]
-# schemars = ["dep:schemars", "smearor-commons-geometry/schemars"]
+# transport / schema
+async-graphql = ["dep:async-graphql", "smearor-commons-geometry/async-graphql"]
+schemars = ["dep:schemars", "smearor-commons-geometry/schemars"]
+zbus = ["dep:zvariant", "smearor-commons-geometry/zbus"]
 
 [dependencies]
 serde.workspace = true
 smearor-commons-geometry.workspace = true
 thiserror.workspace = true
+async-graphql = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+zvariant = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
