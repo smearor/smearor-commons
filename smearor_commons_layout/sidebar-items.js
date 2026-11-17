@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["LayoutError","SeatAssignment","TableSide"],"fn":["footprint_for"],"struct":["AnchorWeights","FlowLayout","LayoutItem","Placement","Seat","SeatLayout"],"trait":["LayoutStrategy"]};
+window.SIDEBAR_ITEMS = {"enum":["LayoutError","SeatAssignment","TableSide","WorkspaceSize"],"fn":["footprint_for","physical_zoom"],"struct":["AnchorWeights","FlowLayout","LayoutItem","Placement","Seat","SeatLayout","View"],"trait":["LayoutStrategy"]};
