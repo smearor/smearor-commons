@@ -26,6 +26,8 @@ mod seat;
 mod seat_assignment;
 mod seat_layout;
 mod table_side;
+mod view;
+mod workspace_size;
 
 pub use anchor_weights::AnchorWeights;
 pub use error::LayoutError;
@@ -38,3 +40,6 @@ pub use seat::Seat;
 pub use seat_assignment::SeatAssignment;
 pub use seat_layout::SeatLayout;
 pub use table_side::TableSide;
+pub use view::View;
+pub use view::physical_zoom;
+pub use workspace_size::WorkspaceSize;

@@ -21,5 +21,11 @@ seat — filling freed gaps along the edge lane, checking `gap`
 clearance against every physically occupying item, and allowing a
 lane behind the edge row when the queue reaches farther from the seat
 (`TableSide::right_direction`, `nearest_free_slot`).
+- `smearor-commons-layout`: virtual surface types `WorkspaceSize<U>`
+(`FollowWidget`/`Fixed`/`Infinite`) and `View<U>` — a camera region
+with on-screen `rotation`, `pan`/`zoom_at`/`rotate_around`,
+`to_widget`/`to_workspace` mapping (expand-to-fit), `physical_zoom`
+for dpi-calibrated millimeters, and `Interpolate` for animated view
+transitions.
 - `smearor-commons-animation`: `Interpolate` trait (scalars, `Vec2`, `RotationRad` shortest-arc, `ScaleFactor`), `Span`/`ThreePhaseSpan` trajectories, `TimedAnimation` with `EasingFunction`s, and a `gtk4`-gated `drive` helper running animations on a widget's frame clock.
 - `smearor-commons-layer`: layer-shell vocabulary — `SmearorLayer`, `LayerConfig` and orientation-to-edge conversions shared by CLI args, config files and layer-shell surfaces, with an optional `gtk4-layer-shell` bridge.
