@@ -19,7 +19,7 @@ jobs:
         with:
           toolchain: stable
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgtk4-layer-shell-dev libxkbcommon-dev
       - name: Build docs
         run: cargo doc --workspace --all-features --no-deps
       - name: Deploy to GitHub Pages

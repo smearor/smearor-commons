@@ -59,7 +59,7 @@ jobs:
           target: ${{ matrix.target }}
           components: clippy
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgtk4-layer-shell-dev libxkbcommon-dev
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
       - name: Run sccache-cache
@@ -84,7 +84,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgtk4-layer-shell-dev libxkbcommon-dev
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
       - name: Run sccache-cache
@@ -113,7 +113,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgtk4-layer-shell-dev libxkbcommon-dev
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
       - name: Run sccache-cache
