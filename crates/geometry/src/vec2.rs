@@ -425,6 +425,36 @@ impl<U> Vec2<U, f64> {
         Vec2::new(aspect * height, height)
     }
 
+    /// The smallest rectangle of aspect ratio `aspect` (width/height)
+    /// whose `rotation`-rotated bounding box contains a rectangle of
+    /// size `self` - the covering, aspect-preserving counterpart of
+    /// [`Vec2::unrotated_bounds`], dual to [`Vec2::unrotated_fit`].
+    ///
+    /// Solves `A·(aspect·h, h) >= self` for the smallest `h` over the
+    /// absolute sin/cos matrix `A`: the looser of the two axis
+    /// constraints wins, so the result covers `self` on both axes and
+    /// is tight on at least one of them. Like `unrotated_fit` this
+    /// never diverges and never goes negative. At `aspect == 1` it
+    /// degenerates to the square cover `max(w, h) / (|cos| + |sin|)`.
+    ///
+    /// Covering with the aspect of a feasible
+    /// [`Vec2::unrotated_bounds`] solve reproduces that solve
+    /// exactly - both axes then constrain the same height. That
+    /// makes the aspect-clamped cover a continuous fallback for the
+    /// exact solve: the cover meets it at the clamp edge and relaxes
+    /// into overhang beyond it.
+    ///
+    /// `aspect` is strictly positive by construction
+    /// ([`AspectRatio`]); negative components of `self` are clamped to
+    /// [`Vec2::ZERO`].
+    pub fn unrotated_cover(&self, aspect: AspectRatio, rotation: RotationRad) -> Self {
+        let aspect = aspect.as_f64();
+        let (sin, cos) = rotation.sin_cos();
+        let (abs_sin, abs_cos) = (sin.abs(), cos.abs());
+        let height = (self.x / (aspect * abs_cos + abs_sin)).max(self.y / (aspect * abs_sin + abs_cos)).max(0.0);
+        Vec2::new(aspect * height, height)
+    }
+
     /// Half of this vector component-wise - the midpoint between the
     /// origin and `self`. For a [`crate::Size`] extent this is its
     /// center offset.
@@ -445,6 +475,15 @@ impl<U> Vec2<U, f64> {
     /// degenerate extent has no meaningful aspect.
     pub fn aspect(&self) -> Option<AspectRatio> {
         (self.x > 0.0 && self.y > 0.0).then_some(self.x / self.y).and_then(AspectRatio::new)
+    }
+
+    /// The raw aspect ratio `x / y` without validation - preserves the
+    /// sign, so degenerate extents report negative, infinite or `NaN`
+    /// values that [`Vec2::aspect`] would reject. Useful when the sign
+    /// itself carries meaning, e.g. distinguishing the infeasible
+    /// negative branches of [`Vec2::unrotated_bounds`].
+    pub fn signed_aspect(&self) -> f64 {
+        self.x / self.y
     }
 
     /// Geometric centroid of a non-empty point set.
@@ -1092,6 +1131,56 @@ mod tests {
                 assert!(bounds.x >= 0.0 && bounds.y >= 0.0);
             }
         }
+    }
+
+    /// The rotated bounds of the covering fit never undercover the
+    /// target, for a sweep of angles and aspects - including the
+    /// singularity where `unrotated_bounds` diverges.
+    #[test]
+    fn unrotated_cover_rotated_bounds_stay_outside() {
+        let target = Vec2::<Pixels>::new(100.0, 30.0);
+        for &degrees in &[12.3, 30.0, 45.0, 77.2, 90.0, 150.0] {
+            for &aspect in &[0.5, 1.0, 2.0, 4.0] {
+                let aspect = AspectRatio::new(aspect).unwrap();
+                let rotation = RotationRad::from_degrees(degrees);
+                let bounds = target.unrotated_cover(aspect, rotation).rotated_bounds(rotation);
+                assert!(bounds.x >= target.x - 1e-9 && bounds.y >= target.y - 1e-9, "deg {degrees} aspect {aspect}: {bounds:?}");
+            }
+        }
+    }
+
+    /// At the 45° singularity `unrotated_cover` still returns a
+    /// bounded, positive size - for a square aspect it is the square
+    /// cover `max(w, h) / (|cos| + |sin|)`.
+    #[test]
+    fn unrotated_cover_stays_bounded_at_singularity() {
+        let cover = Vec2::<Pixels>::new(10.0, 6.0).unrotated_cover(AspectRatio::ONE, RotationRad::from_degrees(45.0));
+        let expected = 10.0 / (2.0_f64.sqrt());
+        assert!((cover.x - expected).abs() < 1e-9 && (cover.y - expected).abs() < 1e-9);
+    }
+
+    /// Covering with the exact solve's own aspect reproduces
+    /// `unrotated_bounds` wherever the solve is feasible - both axis
+    /// constraints then hit the same height, so `max` picks it. This
+    /// is what makes the aspect-clamped cover continuous with the
+    /// exact solve.
+    #[test]
+    fn unrotated_cover_matches_exact_solve_at_its_aspect() {
+        let target = Vec2::<Pixels>::new(100.0, 30.0);
+        let rotation = RotationRad::from_degrees(10.0);
+        let solved = target.unrotated_bounds(rotation);
+        let aspect = solved.aspect().unwrap();
+        let cover = target.unrotated_cover(aspect, rotation);
+        assert!((cover.x - solved.x).abs() < 1e-9 && (cover.y - solved.y).abs() < 1e-9);
+    }
+
+    /// `signed_aspect` reports the raw `x / y` ratio including the
+    /// negative and non-finite values `aspect` rejects.
+    #[test]
+    fn signed_aspect_reports_raw_ratio() {
+        assert!((Vec2::<Pixels>::new(4.0, 2.0).signed_aspect() - 2.0).abs() < 1e-9);
+        assert!(Vec2::<Pixels>::new(4.0, -2.0).signed_aspect() < 0.0);
+        assert!(Vec2::<Pixels>::new(4.0, 0.0).signed_aspect().is_infinite());
     }
 
     /// `direction` reads the atan2 angle of each axis and quadrant.
