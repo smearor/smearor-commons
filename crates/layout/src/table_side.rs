@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_geometry::QuarterTurn;
 use smearor_commons_geometry::RotationRad;
+use smearor_commons_geometry::Vec2;
 use std::fmt;
 use std::str::FromStr;
 
@@ -66,6 +67,23 @@ impl TableSide {
             Self::Left => QuarterTurn::Deg90,
             Self::Top => QuarterTurn::Deg180,
             Self::Right => QuarterTurn::Deg270,
+        }
+    }
+
+    /// Unit direction pointing to the seated user's right along this
+    /// edge, in screen coordinates (x right, y down).
+    ///
+    /// A user at the bottom edge faces up the board, so their right is
+    /// +x; a user at the top edge faces down, so their right is -x;
+    /// users at the left/right edges face right/left, so their right
+    /// is +y/-y. The vector orients "place to my right" fanning of
+    /// items queueing at a seat.
+    pub fn right_direction<U>(&self) -> Vec2<U> {
+        match self {
+            Self::Bottom => Vec2::new(1.0, 0.0),
+            Self::Top => Vec2::new(-1.0, 0.0),
+            Self::Left => Vec2::new(0.0, 1.0),
+            Self::Right => Vec2::new(0.0, -1.0),
         }
     }
 
