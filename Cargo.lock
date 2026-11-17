@@ -1682,6 +1682,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "smearor-commons-animation",
  "smearor-commons-geometry",
  "thiserror",
  "zvariant",

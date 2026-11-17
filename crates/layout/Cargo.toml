@@ -17,6 +17,7 @@ zbus = ["dep:zvariant", "smearor-commons-geometry/zbus"]
 
 [dependencies]
 serde.workspace = true
+smearor-commons-animation.workspace = true
 smearor-commons-geometry.workspace = true
 thiserror.workspace = true
 async-graphql = { workspace = true, optional = true }
