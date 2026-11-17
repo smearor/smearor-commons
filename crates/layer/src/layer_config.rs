@@ -84,7 +84,11 @@ mod tests {
             monitor: Some(1),
             exclusive_zone: Some(Pixels::new(64)),
         };
-        let overrides = LayerConfig { layer: Some(SmearorLayer::Overlay), exclusive_zone: Some(Pixels::new(0)), ..Default::default() };
+        let overrides = LayerConfig {
+            layer: Some(SmearorLayer::Overlay),
+            exclusive_zone: Some(Pixels::new(0)),
+            ..Default::default()
+        };
         let merged = config.merge(&overrides);
         assert_eq!(merged.layer, Some(SmearorLayer::Overlay));
         assert_eq!(merged.namespace.as_deref(), Some("app"));
@@ -95,10 +99,17 @@ mod tests {
     /// The exclusive zone applies only when a layer is selected.
     #[test]
     fn exclusive_zone_requires_a_layer() {
-        let config = LayerConfig { exclusive_zone: Some(Pixels::new(64)), ..Default::default() };
+        let config = LayerConfig {
+            exclusive_zone: Some(Pixels::new(64)),
+            ..Default::default()
+        };
         assert_eq!(config.effective_exclusive_zone(), None);
 
-        let config = LayerConfig { layer: Some(SmearorLayer::Top), exclusive_zone: Some(Pixels::new(64)), ..Default::default() };
+        let config = LayerConfig {
+            layer: Some(SmearorLayer::Top),
+            exclusive_zone: Some(Pixels::new(64)),
+            ..Default::default()
+        };
         assert_eq!(config.effective_exclusive_zone(), Some(Pixels::new(64)));
     }
 

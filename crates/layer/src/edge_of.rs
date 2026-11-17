@@ -1,8 +1,8 @@
 use gtk4_layer_shell::Edge;
-#[cfg(feature = "layout")]
-use smearor_commons_layout::TableSide;
 use smearor_commons_geometry::QuarterTurn;
 use smearor_commons_geometry::Rotation;
+#[cfg(feature = "layout")]
+use smearor_commons_layout::TableSide;
 
 /// Converts snapped four-orientation vocabularies into the
 /// layer-shell screen [`Edge`] they face.
