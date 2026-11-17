@@ -57,6 +57,7 @@ pub use quantities::AspectRatio;
 pub use quantities::Fraction;
 pub use quantities::QuarterTurn;
 pub use quantities::Rotation;
+pub use quantities::RotationDirection;
 pub use quantities::RotationRad;
 pub use quantities::ScaleFactor;
 pub use quantities::SmoothingAlpha;

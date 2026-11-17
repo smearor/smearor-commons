@@ -15,6 +15,8 @@ mod easing;
 #[cfg(feature = "gtk4")]
 mod frame_driver;
 mod interpolate;
+mod rotation_snap;
+mod snap_update;
 mod span;
 mod three_phase_span;
 mod timed_animation;
@@ -24,6 +26,8 @@ pub use easing::EasingFunction;
 #[cfg(feature = "gtk4")]
 pub use frame_driver::drive;
 pub use interpolate::Interpolate;
+pub use rotation_snap::RotationSnap;
+pub use snap_update::SnapUpdate;
 use smearor_commons_geometry::RotationRad;
 use smearor_commons_geometry::ScaleFactor;
 use smearor_commons_geometry::Vec2;

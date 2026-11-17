@@ -1,3 +1,5 @@
+use crate::Degrees;
+use crate::RotationDirection;
 use crate::RotationRad;
 use crate::Vec2;
 use serde::Deserialize;
@@ -48,6 +50,32 @@ impl QuarterTurn {
             Self::Deg180 => Self::Deg90,
             Self::Deg270 => Self::Deg180,
         }
+    }
+
+    /// The quarter turn whose snap zone contains `rotation`.
+    ///
+    /// Snap gestures divide the circle into zones reaching 45°
+    /// to either side of each turn's angle: `[0°, 45°)` for `Deg0`,
+    /// `[45°, 135°)` for `Deg90`, `[135°, 225°)` for `Deg180` and
+    /// `[225°, 360°)` for `Deg270` - the wrap-around range
+    /// `315°..360°` stays engaged with `Deg270` rather than `Deg0`.
+    pub fn snap_zone(rotation: RotationRad) -> Self {
+        match rotation.degrees().normalized() {
+            d if d < Degrees::EIGHTH_TURN => Self::Deg0,
+            d if d < Degrees::EIGHTH_TURN * 3.0 => Self::Deg90,
+            d if d < Degrees::EIGHTH_TURN * 5.0 => Self::Deg180,
+            _ => Self::Deg270,
+        }
+    }
+
+    /// The turn a snap gesture starting at `rotation` settles on
+    /// when dragged further in `direction`: one step from the turn
+    /// whose [`snap_zone`](Self::snap_zone) contains `rotation`.
+    ///
+    /// A gesture beginning at `Deg0` snaps to `Deg90` when dragged
+    /// clockwise and to `Deg270` counter-clockwise.
+    pub fn snap_target(rotation: RotationRad, direction: RotationDirection) -> Self {
+        direction.step(Self::snap_zone(rotation))
     }
 
     /// The turn undoing this one - `Deg0`/`Deg180` are their own
@@ -204,5 +232,42 @@ mod tests {
     #[test]
     fn to_rotation_rad_matches_degrees() {
         assert!((QuarterTurn::Deg90.to_rotation_rad().to_degrees() - 90.0).abs() < 1e-9);
+    }
+
+    /// Snap zones cover ±45° around each turn, with the wrap range
+    /// `315°..360°` staying engaged with `Deg270`.
+    #[test]
+    fn snap_zone_covers_the_circle() {
+        use crate::RotationRad;
+
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(0.0)), QuarterTurn::Deg0);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(44.9)), QuarterTurn::Deg0);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(45.0)), QuarterTurn::Deg90);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(134.9)), QuarterTurn::Deg90);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(135.0)), QuarterTurn::Deg180);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(224.9)), QuarterTurn::Deg180);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(225.0)), QuarterTurn::Deg270);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(315.0)), QuarterTurn::Deg270);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(359.9)), QuarterTurn::Deg270);
+        assert_eq!(QuarterTurn::snap_zone(RotationRad::from_degrees(-10.0)), QuarterTurn::Deg270);
+    }
+
+    /// The snap target is one step in the drag direction from the
+    /// engaged zone's turn.
+    #[test]
+    fn snap_target_steps_from_the_engaged_zone() {
+        use crate::RotationDirection;
+        use crate::RotationRad;
+
+        let cw = RotationDirection::Clockwise;
+        let ccw = RotationDirection::CounterClockwise;
+
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(0.0), cw), QuarterTurn::Deg90);
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(0.0), ccw), QuarterTurn::Deg270);
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(100.0), cw), QuarterTurn::Deg180);
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(100.0), ccw), QuarterTurn::Deg0);
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(315.0), cw), QuarterTurn::Deg0);
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(315.0), ccw), QuarterTurn::Deg180);
+        assert_eq!(QuarterTurn::snap_target(RotationRad::from_degrees(360.0), cw), QuarterTurn::Deg90);
     }
 }
