@@ -1,10 +1,11 @@
 //! Layer-shell vocabulary for the Smearor ecosystem.
 //!
-//! [`SmearorLayer`] is the ecosystem's vocabulary for the four
-//! layer-shell layers: it parses from CLI arguments ([`FromStr`]),
-//! deserializes from configuration files (`serde`) and converts into
-//! the backend [`gtk4_layer_shell::Layer`] when the
-//! `gtk4-layer-shell` feature is enabled.
+//! [`SmearorLayer`] is the shared name for the four layer-shell
+//! layers: it parses from CLI arguments ([`FromStr`]), deserializes
+//! from configuration files (`serde`) and converts into the backend
+//! [`gtk4_layer_shell::Layer`] when the `gtk4-layer-shell` feature
+//! is enabled. [`LayerConfig`] is the config quartet apps repeat
+//! across arguments, files and state.
 //!
 //! With `gtk4-layer-shell` enabled, [`EdgeOf`] maps the snapped
 //! four-orientation vocabularies - [`smearor_commons_geometry`]'s
@@ -19,8 +20,12 @@
 mod edge_of;
 #[cfg(feature = "gtk4-layer-shell")]
 mod gtk4_layer_shell;
+mod layer_config;
 mod parse_layer_error;
 mod smearor_layer;
 
+#[cfg(feature = "gtk4-layer-shell")]
+pub use edge_of::EdgeOf;
+pub use layer_config::LayerConfig;
 pub use parse_layer_error::ParseLayerError;
 pub use smearor_layer::SmearorLayer;
