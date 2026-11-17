@@ -1,4 +1,5 @@
 use crate::Corners;
+use crate::Fraction;
 use crate::RotationRad;
 use crate::Scanline;
 use crate::Vec2;
@@ -281,6 +282,18 @@ impl<U> Rect<U, f64> {
         }
     }
 
+    /// Creates the rectangle of the given `size` whose `fraction`
+    /// point lands on `anchor`: `min = anchor - size . fraction`.
+    /// `(0, 0)` anchors the min corner, `(0.5, 0.5)` equals
+    /// [`Self::centered`], `(1, 1)` the max corner - the generic form
+    /// for placing a document extent by an interior reference point.
+    pub fn anchored(anchor: Vec2<U>, size: Vec2<U>, fraction: Vec2<Fraction>) -> Self {
+        Self {
+            min: Vec2::<U>::new(anchor.x - size.x * fraction.x, anchor.y - size.y * fraction.y),
+            size,
+        }
+    }
+
     /// The rectangle's four corners, starting at `top_left` (the
     /// rect's `min`).
     pub fn corners(&self) -> Corners<U> {
@@ -539,6 +552,15 @@ impl<U> From<ab_glyph::Rect> for Rect<U, f32> {
     }
 }
 
+/// A float `Rect` as a `cairo::Rectangle` - the unit-erased f64
+/// boundary form for cairo/rsvg render calls.
+#[cfg(feature = "cairo")]
+impl<U> From<Rect<U, f64>> for cairo::Rectangle {
+    fn from(rectangle: Rect<U, f64>) -> Self {
+        Self::new(rectangle.min.x, rectangle.min.y, rectangle.size.x, rectangle.size.y)
+    }
+}
+
 /// A `cairo::RectangleInt` as a `Rect` in the caller-chosen unit `U` -
 /// integer device geometry read back from a [`cairo::Region`]
 /// (`extents`, `rectangle(i)`); the boundary call interprets the
@@ -731,6 +753,22 @@ mod tests {
         assert!(!region.is_empty());
         // The rotated square's diagonal is wider than its axis-aligned side.
         assert!(region.num_rectangles() > 10);
+    }
+
+    #[test]
+    fn anchored_places_the_fraction_point_on_the_anchor() {
+        let anchor = Vec2::<Pixels>::new(50.0, 40.0);
+        let size = Vec2::<Pixels>::new(20.0, 10.0);
+        let fraction = Vec2::<Fraction>::new(0.5, 0.95);
+        let rect = Rect::<Pixels>::anchored(anchor, size, fraction);
+        // min = anchor - size * fraction, per axis.
+        assert_eq!(rect.min, Vec2::new(40.0, 30.5));
+        assert_eq!(rect.size, size);
+        // fraction (0.5, 0.5) equals `centered`.
+        assert_eq!(
+            Rect::<Pixels>::anchored(anchor, size, Vec2::<Fraction>::new(0.5, 0.5)),
+            Rect::<Pixels>::centered(anchor, size)
+        );
     }
 
     #[test]
