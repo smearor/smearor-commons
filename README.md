@@ -16,16 +16,19 @@ and games). Published to crates.io.
 
 | Crate | Description |
 |---|---|
-| `smearor-commons-geometry` | Unit-tagged 2D vectors, rotations, rectangles and shapes |
-| `smearor-commons-color` | Channel-generic `Color<T>`, hex parsing and color operations |
 | `smearor-commons-animation` | Generic `Interpolate`/`Trajectory`/`TimedAnimation` machinery with easing and a GTK4 frame-clock driver |
+| `smearor-commons-buffer` | Format-tagged pixel buffers, strided views and metadata |
+| `smearor-commons-color` | Channel-generic `Color<T>`, hex parsing and color operations |
+| `smearor-commons-font` | Font metric helpers on `ab_glyph` fonts: scale fitting, bounds centering and text truncation |
+| `smearor-commons-geometry` | Unit-tagged 2D vectors, rotations, rectangles and shapes |
+| `smearor-commons-layer` | Layer-shell vocabulary: `SmearorLayer`, `LayerConfig` and orientation-to-edge conversions |
 | `smearor-commons-layout` | Headless tabletop layouting: `TableSide`/`Seat`, `LayoutStrategy` trait, `FlowLayout` and `SeatLayout` |
 
 ## Design
 
 - Pure `std` core — no GUI/compositor dependencies by default.
 - Optional integrations (`async-graphql`, `schemars`, `zbus`, `evdev`,
-  `gtk4`, `cairo`, `smithay`) live behind feature gates.
+  `gtk4`, `gtk4-layer-shell`, `cairo`, `smithay`) live behind feature gates.
 - `serde` is an unconditional dependency.
 - Semantic newtypes (`FigureColor`, `BoardOrientation`, `CardPosition`,
   ...) stay in consumer crates as thin wrappers around these technical
