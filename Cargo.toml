@@ -16,6 +16,7 @@ homepage = "https://smearor.io/"
 smearor-commons-geometry = { path = "crates/geometry" }
 smearor-commons-font = { path = "crates/font" }
 smearor-commons-color = { path = "crates/color" }
+smearor-commons-layer = { path = "crates/layer" }
 smearor-commons-layout = { path = "crates/layout" }
 # core
 serde = { version = "1.0", features = ["derive"] }
@@ -30,4 +31,5 @@ zvariant = "5"
 ab_glyph = "0.2"
 cairo-rs = "0.22"
 gtk4 = { version = "0.11", features = ["v4_20"] }
+gtk4-layer-shell = "0.8.1"
 smithay = { version = "0.7", default-features = false }

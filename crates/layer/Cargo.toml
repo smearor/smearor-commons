@@ -1,0 +1,22 @@
+[package]
+name = "smearor-commons-layer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Layer-shell layer selection for the Smearor ecosystem: the `SmearorLayer` enum shared by CLI args, config files and layer-shell surfaces."
+
+[features]
+# ui / backend
+gtk4-layer-shell = ["dep:gtk4-layer-shell"]
+
+[dependencies]
+gtk4-layer-shell = { workspace = true, optional = true }
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json = "1.0"
