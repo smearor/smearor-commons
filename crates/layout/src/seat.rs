@@ -141,6 +141,129 @@ impl Seat {
         };
         Placement::new(center, Rotation::QuarterTurn(self.side.to_quarter_turn()), footprint)
     }
+
+    /// Places the item in the best free spot nearest this seat: like
+    /// [`Self::placement`], but `taken` items are treated as physical
+    /// obstacles and the item slips into the closest free lateral gap
+    /// instead of stacking on them.
+    ///
+    /// `taken` holds each occupying item as `(center, footprint)` -
+    /// its live center and displayed extent; *every* item near the
+    /// seat counts, regardless of any seat assignment. Spots are
+    /// evaluated as lanes perpendicular to the edge: lane 0 is the
+    /// edge lane at `margin` inset (the preferred position), deeper
+    /// lanes stack behind it. Within a lane the free center with the
+    /// smallest lateral distance wins, so slots freed by removed items
+    /// are reused and a bigger item only takes a middle slot when it
+    /// actually fits between its neighbors with `gap` clearance.
+    /// Candidates are scored by seat-space distance
+    /// `hypot(offset, ROW_JUMP_WEIGHT * depth)`, so a card may leave
+    /// the edge lane when the queue there reaches notably farther
+    /// from the seat than a spot behind the first row.
+    pub fn fanned_placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: f64, taken: &[(Vec2<U>, Vec2<U>)], gap: f64) -> Placement<U> {
+        /// Perpendicular depth counts this much when scoring lanes -
+        /// staying on the edge is preferred unless the queue there is
+        /// notably farther from the seat.
+        const ROW_JUMP_WEIGHT: f64 = 2.0;
+
+        let mut placement = self.placement(bounds, footprint, margin);
+        let right: Vec2<U> = self.side.right_direction();
+        let inward = Vec2::new(right.y, -right.x);
+        let anchor = placement.center;
+        let own_t = self.tangential_extent(footprint) / 2.0;
+        let own_p = self.perpendicular_extent(footprint) / 2.0;
+        let anchor_inset = margin + own_p;
+
+        let (mut best_offset, mut best_depth, mut best_score) = (0.0, 0.0, f64::MAX);
+        let mut lane_inset = anchor_inset;
+        loop {
+            let mut blocked = Vec::new();
+            let mut inner_edge = lane_inset;
+            for &(center, item_footprint) in taken {
+                let item_inset = self.inset_of(center, bounds);
+                let item_p = self.perpendicular_extent(item_footprint) / 2.0;
+                if (item_inset - lane_inset).abs() >= item_p + own_p + gap {
+                    continue;
+                }
+                inner_edge = inner_edge.max(item_inset + item_p);
+                let delta = center - anchor;
+                let offset = delta.x * right.x + delta.y * right.y;
+                let item_t = self.tangential_extent(item_footprint) / 2.0;
+                blocked.push((offset - item_t - gap - own_t, offset + item_t + gap + own_t));
+            }
+            let depth = lane_inset - anchor_inset;
+            let offset = nearest_free_slot(&mut blocked);
+            let weighted = ROW_JUMP_WEIGHT * depth;
+            let score = (offset * offset + weighted * weighted).sqrt();
+            if score < best_score {
+                (best_offset, best_depth, best_score) = (offset, depth, score);
+            }
+            // An empty lane has no inner edge to stack the next lane
+            // behind; deeper lanes only score worse once their depth
+            // alone already beats the best candidate.
+            if blocked.is_empty() || weighted >= best_score {
+                break;
+            }
+            lane_inset = inner_edge + gap + own_p;
+        }
+        placement.center += right * best_offset + inward * best_depth;
+        placement
+    }
+
+    /// The item's extent along this seat's edge axis - x for the
+    /// bottom/top edges, y for the left/right edges.
+    fn tangential_extent<U>(&self, footprint: Vec2<U>) -> f64 {
+        match self.side {
+            TableSide::Bottom | TableSide::Top => footprint.x,
+            TableSide::Left | TableSide::Right => footprint.y,
+        }
+    }
+
+    /// The item's extent perpendicular to this seat's edge - y for the
+    /// bottom/top edges, x for the left/right edges.
+    fn perpendicular_extent<U>(&self, footprint: Vec2<U>) -> f64 {
+        match self.side {
+            TableSide::Bottom | TableSide::Top => footprint.y,
+            TableSide::Left | TableSide::Right => footprint.x,
+        }
+    }
+
+    /// The distance of a center point inward from this seat's edge.
+    fn inset_of<U>(&self, center: Vec2<U>, bounds: Rect<U>) -> f64 {
+        match self.side {
+            TableSide::Bottom => bounds.min.y + bounds.size.y - center.y,
+            TableSide::Top => center.y - bounds.min.y,
+            TableSide::Left => center.x - bounds.min.x,
+            TableSide::Right => bounds.min.x + bounds.size.x - center.x,
+        }
+    }
+}
+
+/// The center coordinate on a 1D lane nearest `0` where `blocked`
+/// intervals (in newcomer-center space, already expanded by gap and
+/// own half-extent) leave room. Interval boundaries count as free -
+/// landing exactly on a boundary means exactly `gap` clearance.
+/// Prefers the positive direction on ties.
+fn nearest_free_slot(blocked: &mut Vec<(f64, f64)>) -> f64 {
+    blocked.sort_by(|left, right| left.0.partial_cmp(&right.0).unwrap_or(std::cmp::Ordering::Equal));
+    let mut merged: Vec<(f64, f64)> = Vec::with_capacity(blocked.len());
+    for &(left, right) in blocked.iter() {
+        match merged.last_mut() {
+            Some((_, merged_right)) if left <= *merged_right => *merged_right = merged_right.max(right),
+            _ => merged.push((left, right)),
+        }
+    }
+    let is_free = |candidate: f64| merged.iter().all(|&(left, right)| candidate <= left || candidate >= right);
+    std::iter::once(0.0)
+        .chain(merged.iter().flat_map(|&(left, right)| [left, right]))
+        .filter(|&candidate| is_free(candidate))
+        .min_by(|left, right| {
+            left.abs()
+                .partial_cmp(&right.abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(right.partial_cmp(left).unwrap_or(std::cmp::Ordering::Equal))
+        })
+        .unwrap_or(0.0)
 }
 
 #[cfg(test)]
@@ -217,6 +340,108 @@ mod tests {
     fn next_in_from_unlisted_position() {
         let roster = [Seat::center(TableSide::Right), Seat::center(TableSide::Bottom)];
         assert_eq!(Seat::center(TableSide::Top).next_in(&roster), Some(roster[0]));
+    }
+
+    /// Items queueing at a seat fan out beside each other: the second
+    /// to the seated user's right, the third to their left, each with
+    /// `gap` clearance - nothing overlaps.
+    #[test]
+    fn fanned_placement_alternates_right_then_left() {
+        let seat = Seat::center(TableSide::Bottom);
+        let footprint = Vec2::new(100.0, 50.0);
+        let margin = 10.0;
+        // Bottom-center anchor: (200, 300 - 10 - 25) = (200, 265).
+        let first = seat.fanned_placement(bounds(), footprint, margin, &[], margin);
+        assert_eq!(first.center, Vec2::new(200.0, 265.0));
+
+        let second = seat.fanned_placement(bounds(), footprint, margin, &[(first.center, footprint)], margin);
+        // Right of the seated user is +x: 50 + 10 + 50 beyond the anchor.
+        assert_eq!(second.center, Vec2::new(310.0, 265.0));
+
+        let taken = [(first.center, footprint), (second.center, footprint)];
+        let third = seat.fanned_placement(bounds(), footprint, margin, &taken, margin);
+        assert_eq!(third.center, Vec2::new(90.0, 265.0));
+    }
+
+    /// "Right" is relative to the seated user: at the top edge they
+    /// face down the board, so their right is screen-left (-x).
+    #[test]
+    fn fanned_placement_right_is_user_relative() {
+        let seat = Seat::at(TableSide::Top, Fraction::new(0.25));
+        let footprint = Vec2::new(100.0, 50.0);
+        let first = seat.fanned_placement(bounds(), footprint, 10.0, &[], 10.0);
+        // Top edge at offset 0.25: (400 * 0.25, 10 + 25) = (100, 35).
+        assert_eq!(first.center, Vec2::new(100.0, 35.0));
+
+        let second = seat.fanned_placement(bounds(), footprint, 10.0, &[(first.center, footprint)], 10.0);
+        // The user's right is -x: 100 - (50 + 10 + 50) = -10.
+        assert_eq!(second.center, Vec2::new(-10.0, 35.0));
+    }
+
+    /// Occupancy is physical: an item merely near the seat's lateral
+    /// column but off the edge lane reserves no space - the newcomer
+    /// still lands at the anchor.
+    #[test]
+    fn fanned_placement_ignores_items_off_the_lane() {
+        let seat = Seat::center(TableSide::Bottom);
+        let footprint = Vec2::new(100.0, 50.0);
+        // Floating mid-table (inset 150, the lane sits at 35).
+        let off_lane = (Vec2::new(200.0, 150.0), footprint);
+        let placement = seat.fanned_placement(bounds(), footprint, 10.0, &[off_lane], 10.0);
+        assert_eq!(placement.center, Vec2::new(200.0, 265.0));
+    }
+
+    /// Freed slots are reused: a gap between two items is filled at
+    /// the position nearest the seat when the item fits with `gap`
+    /// clearance on both sides.
+    #[test]
+    fn fanned_placement_reuses_freed_slot() {
+        let seat = Seat::center(TableSide::Bottom);
+        let footprint = Vec2::new(100.0, 50.0);
+        let taken = [(Vec2::new(200.0, 265.0), footprint), (Vec2::new(510.0, 265.0), footprint)];
+        // The free lane point nearest the anchor is +110.
+        let placement = seat.fanned_placement(bounds(), footprint, 10.0, &taken, 10.0);
+        assert_eq!(placement.center, Vec2::new(310.0, 265.0));
+    }
+
+    /// A wider item only takes a middle slot when it fits between the
+    /// neighbors with `gap` clearance.
+    #[test]
+    fn fanned_placement_wide_item_checks_clearance() {
+        let seat = Seat::center(TableSide::Bottom);
+        let slim = Vec2::new(100.0, 50.0);
+        let wide = Vec2::new(300.0, 50.0);
+        // The gap between the two slim items is 210 wide - too narrow
+        // for the wide item (300 + 2*10). The nearest free spot is
+        // behind the row (depth 60, weighted 120 < 210 lateral).
+        let narrow_gap = [(Vec2::new(200.0, 265.0), slim), (Vec2::new(510.0, 265.0), slim)];
+        let placement = seat.fanned_placement(bounds(), wide, 10.0, &narrow_gap, 10.0);
+        assert_eq!(placement.center, Vec2::new(200.0, 205.0));
+
+        // With the right neighbor farther out the middle gap would
+        // fit, but the lane behind the anchor is closer - unless that
+        // lane is occupied too: then the clearance check decides and
+        // the wide item takes the middle slot.
+        let occupied_behind = (Vec2::new(200.0, 205.0), slim);
+        let wide_gap = [(Vec2::new(200.0, 265.0), slim), (Vec2::new(710.0, 265.0), slim), occupied_behind];
+        let placement = seat.fanned_placement(bounds(), wide, 10.0, &wide_gap, 10.0);
+        assert_eq!(placement.center, Vec2::new(410.0, 265.0));
+    }
+
+    /// A long edge queue lets the card leave the edge lane: a spot
+    /// behind the first row is closer to the seat than the far end.
+    #[test]
+    fn fanned_placement_escapes_behind_the_edge_row() {
+        let seat = Seat::center(TableSide::Bottom);
+        let footprint = Vec2::new(100.0, 50.0);
+        let taken: Vec<(Vec2<Pixels>, Vec2<Pixels>)> = [0.0, 110.0, -110.0, 220.0, 330.0]
+            .iter()
+            .map(|offset| (Vec2::new(200.0 + offset, 265.0), footprint))
+            .collect();
+        // The edge candidate sits at o = -220; the lane behind the row
+        // (depth 60, weighted 120) is closer to the seat.
+        let placement = seat.fanned_placement(bounds(), footprint, 10.0, &taken, 10.0);
+        assert_eq!(placement.center, Vec2::new(200.0, 205.0));
     }
 
     /// `placement` puts the footprint against the correct edge,
