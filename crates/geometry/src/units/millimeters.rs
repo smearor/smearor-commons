@@ -1,3 +1,4 @@
+use crate::AspectRatio;
 use crate::Fraction;
 use serde::Deserialize;
 use serde::Serialize;
@@ -94,6 +95,22 @@ impl Mul<Fraction> for Millimeters {
 
     fn mul(self, fraction: Fraction) -> Self {
         Self(self.0 * fraction.0)
+    }
+}
+
+impl Mul<AspectRatio> for Millimeters {
+    type Output = Self;
+
+    fn mul(self, ratio: AspectRatio) -> Self {
+        Self::new(self.as_f64() * ratio.as_f64())
+    }
+}
+
+impl Mul<Millimeters> for AspectRatio {
+    type Output = Millimeters;
+
+    fn mul(self, value: Millimeters) -> Millimeters {
+        value * self
     }
 }
 

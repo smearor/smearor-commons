@@ -1,3 +1,4 @@
+use crate::AspectRatio;
 use crate::Fraction;
 use serde::Deserialize;
 use serde::Serialize;
@@ -96,6 +97,22 @@ impl Mul<Fraction> for Pixels<f64> {
 
     fn mul(self, fraction: Fraction) -> Self {
         Self(self.0 * fraction.0)
+    }
+}
+
+impl Mul<AspectRatio> for Pixels<f64> {
+    type Output = Self;
+
+    fn mul(self, ratio: AspectRatio) -> Self {
+        Self::new(self.as_f64() * ratio.as_f64())
+    }
+}
+
+impl Mul<Pixels<f64>> for AspectRatio {
+    type Output = Pixels<f64>;
+
+    fn mul(self, value: Pixels<f64>) -> Pixels<f64> {
+        value * self
     }
 }
 

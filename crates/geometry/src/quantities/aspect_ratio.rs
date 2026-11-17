@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
+use std::ops::Mul;
 
 /// An aspect ratio - `width / height` of a [`crate::Size`]-like
 /// extent (`1.0` = square).
@@ -91,6 +92,22 @@ impl<'de> Deserialize<'de> for AspectRatio {
     {
         use serde::de::Error;
         Self::new(f64::deserialize(deserializer)?).ok_or_else(|| D::Error::custom("aspect ratio must be positive and finite"))
+    }
+}
+
+impl Mul<AspectRatio> for f64 {
+    type Output = f64;
+
+    fn mul(self, ratio: AspectRatio) -> f64 {
+        self * ratio.0
+    }
+}
+
+impl Mul<f64> for AspectRatio {
+    type Output = f64;
+
+    fn mul(self, scalar: f64) -> f64 {
+        self.0 * scalar
     }
 }
 
