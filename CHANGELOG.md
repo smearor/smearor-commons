@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- CI: install `libgtk-4-dev` and `libxkbcommon-dev` on runners so `--all-features` builds (gtk4, cairo, smithay) find the required system libraries; removed unused workspace dependencies (`evdev`, `smearor-commons-color`, `smearor-commons-font`).
+- CI: install `libgtk-4-dev`, `libgtk4-layer-shell-dev` and `libxkbcommon-dev` on runners so `--all-features` builds (gtk4, gtk4-layer-shell, cairo, smithay) find the required system libraries; removed unused workspace dependencies (`evdev`, `smearor-commons-color`, `smearor-commons-font`).
 
 ### Added
 
@@ -22,3 +22,4 @@ clearance against every physically occupying item, and allowing a
 lane behind the edge row when the queue reaches farther from the seat
 (`TableSide::right_direction`, `nearest_free_slot`).
 - `smearor-commons-animation`: `Interpolate` trait (scalars, `Vec2`, `RotationRad` shortest-arc, `ScaleFactor`), `Span`/`ThreePhaseSpan` trajectories, `TimedAnimation` with `EasingFunction`s, and a `gtk4`-gated `drive` helper running animations on a widget's frame clock.
+- `smearor-commons-layer`: layer-shell vocabulary — `SmearorLayer`, `LayerConfig` and orientation-to-edge conversions shared by CLI args, config files and layer-shell surfaces, with an optional `gtk4-layer-shell` bridge.
