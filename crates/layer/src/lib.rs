@@ -1,4 +1,4 @@
-//! Layer-shell layer selection for the Smearor ecosystem.
+//! Layer-shell vocabulary for the Smearor ecosystem.
 //!
 //! [`SmearorLayer`] is the ecosystem's vocabulary for the four
 //! layer-shell layers: it parses from CLI arguments ([`FromStr`]),
@@ -6,9 +6,17 @@
 //! the backend [`gtk4_layer_shell::Layer`] when the
 //! `gtk4-layer-shell` feature is enabled.
 //!
-//! `serde` is unconditional; backend conversions live behind their
-//! feature gate.
+//! With `gtk4-layer-shell` enabled, [`EdgeOf`] maps the snapped
+//! four-orientation vocabularies - [`smearor_commons_geometry`]'s
+//! `QuarterTurn`/`Rotation` and, behind the `layout` feature,
+//! [`smearor_commons_layout`]'s `TableSide` - onto the layer-shell
+//! `Edge` a surface anchors to.
+//!
+//! `serde` is unconditional; backend and domain integrations live
+//! behind their feature gates.
 
+#[cfg(feature = "gtk4-layer-shell")]
+mod edge_of;
 #[cfg(feature = "gtk4-layer-shell")]
 mod gtk4_layer_shell;
 mod parse_layer_error;

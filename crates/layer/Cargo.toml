@@ -7,15 +7,19 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Layer-shell layer selection for the Smearor ecosystem: the `SmearorLayer` enum shared by CLI args, config files and layer-shell surfaces."
+description = "Layer-shell vocabulary for the Smearor ecosystem: the `SmearorLayer` enum, `LayerConfig` and orientation-to-edge conversions shared by CLI args, config files and layer-shell surfaces."
 
 [features]
+# domain
+layout = ["dep:smearor-commons-layout"]
 # ui / backend
 gtk4-layer-shell = ["dep:gtk4-layer-shell"]
 
 [dependencies]
 gtk4-layer-shell = { workspace = true, optional = true }
 serde.workspace = true
+smearor-commons-geometry.workspace = true
+smearor-commons-layout = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]

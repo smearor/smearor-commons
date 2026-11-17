@@ -1669,6 +1669,8 @@ dependencies = [
  "gtk4-layer-shell",
  "serde",
  "serde_json",
+ "smearor-commons-geometry",
+ "smearor-commons-layout",
  "thiserror",
 ]
 
