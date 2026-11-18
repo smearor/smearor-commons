@@ -313,6 +313,24 @@ impl<U> Rect<U, f64> {
         !finite || self.size.x <= 0.0 || self.size.y <= 0.0
     }
 
+    /// The rectangle's area (`width * height`; `0.0` for degenerate
+    /// rects).
+    pub fn area(&self) -> f64 {
+        self.width() * self.height()
+    }
+
+    /// Fraction of this rectangle's area covered by `other`:
+    /// `Fraction::ZERO` when the rectangles are disjoint or this
+    /// rectangle is degenerate, `Fraction::ONE` when it is fully
+    /// covered. The result is clamped to `0.0..=1.0`.
+    pub fn overlap_fraction(&self, other: &Self) -> Fraction {
+        let area = self.area();
+        if area <= 0.0 {
+            return Fraction::ZERO;
+        }
+        Fraction::new(self.intersection(other).map(|rect| rect.area()).unwrap_or(0.0) / area).clamped()
+    }
+
     /// The rectangle shrunk by `margin` (a scalar in the unit `U`) on
     /// every side - negative or degenerate results clamp to an empty
     /// extent.
@@ -688,6 +706,18 @@ mod tests {
         let b = Rect::<Pixels>::from_xywh(50.0, 25.0, 100.0, 50.0);
         assert_eq!(a.intersection(&b), Some(Rect::<Pixels>::from_xywh(50.0, 25.0, 50.0, 50.0)));
         assert_eq!(a.intersection(&Rect::<Pixels>::from_xywh(200.0, 0.0, 100.0, 10.0)), None);
+    }
+
+    #[test]
+    fn overlap_fraction_measures_coverage() {
+        let a = Rect::<Pixels>::from_xywh(0.0, 0.0, 100.0, 100.0);
+        let half = Rect::<Pixels>::from_xywh(50.0, 0.0, 100.0, 100.0);
+        assert_eq!(a.overlap_fraction(&half), Fraction::HALF);
+        // Disjoint rects and degenerate self yield zero.
+        assert_eq!(a.overlap_fraction(&Rect::<Pixels>::from_xywh(200.0, 0.0, 10.0, 10.0)), Fraction::ZERO);
+        assert_eq!(Rect::<Pixels>::from_xywh(0.0, 0.0, 0.0, 10.0).overlap_fraction(&a), Fraction::ZERO);
+        // Full containment yields one.
+        assert_eq!(a.overlap_fraction(&Rect::<Pixels>::from_xywh(-50.0, -50.0, 500.0, 500.0)), Fraction::ONE);
     }
 
     #[test]
