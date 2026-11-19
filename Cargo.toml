@@ -14,15 +14,19 @@ homepage = "https://smearor.io/"
 [workspace.dependencies]
 # workspace crates
 smearor-commons-animation = { path = "crates/animation" }
+smearor-commons-buffer = { path = "crates/buffer" }
+smearor-commons-drawing = { path = "crates/drawing" }
 smearor-commons-geometry = { path = "crates/geometry" }
 smearor-commons-font = { path = "crates/font" }
 smearor-commons-color = { path = "crates/color" }
 smearor-commons-layer = { path = "crates/layer" }
 smearor-commons-layout = { path = "crates/layout" }
 # core
+ahash = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
+tracing = "0.1"
 # transport / schema (optional, feature-gated)
 async-graphql = "7"
 evdev = "0.13"
@@ -31,6 +35,7 @@ zvariant = "5"
 # ui / backend (optional, feature-gated)
 ab_glyph = "0.2"
 cairo-rs = "0.22"
+glib = "0.22"
 gtk4 = { version = "0.11", features = ["v4_20"] }
 gtk4-layer-shell = "0.8.1"
 smithay = { version = "0.7", default-features = false }

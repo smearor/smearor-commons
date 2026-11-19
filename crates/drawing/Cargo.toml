@@ -1,0 +1,36 @@
+[package]
+name = "smearor-commons-drawing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared rendering vocabulary for the Smearor ecosystem: icons, text, progress bars and highlights on pixel buffers (software raster) and, behind feature gates, cairo and GTK targets."
+
+[features]
+cairo = ["dep:cairo-rs"]
+gtk4 = ["dep:gtk4", "cairo"]
+
+[dependencies]
+ab_glyph.workspace = true
+ahash.workspace = true
+cairo-rs = { workspace = true, optional = true }
+gtk4 = { workspace = true, optional = true }
+serde.workspace = true
+smearor-commons-buffer.workspace = true
+smearor-commons-color.workspace = true
+smearor-commons-font.workspace = true
+smearor-commons-geometry = { workspace = true, features = ["ab_glyph"] }
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+glib.workspace = true
+gtk4.workspace = true
+miette = "7.4"
+nerd-fonts-rs = { git = "https://github.com/smearor/fonts-rs.git", default-features = false, features = ["render", "embed-fonts", "gtk"] }
+
+[[example]]
+name = "interactive_demo"

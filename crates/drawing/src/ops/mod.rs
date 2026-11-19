@@ -1,0 +1,35 @@
+//! The drawing capability traits and the [`DrawOps`] umbrella trait.
+//!
+//! The rendering vocabulary is split into per-capability traits so that
+//! backends can implement them incrementally and consumers can bound on
+//! exactly the capabilities they need:
+//!
+//! - [`DrawPrimitiveOps`]: surface fills and shape primitives
+//! - [`DrawIconOps`]: icon and glyph rendering
+//! - [`DrawTextOps`]: label and centered text rendering
+//! - [`DrawProgressOps`]: progress and gauge indicators
+//!
+//! [`DrawOps`] bundles all of them as a supertrait with a blanket impl —
+//! use it as a bound when a consumer needs the full vocabulary. Method
+//! calls still require the declaring trait in scope; importing
+//! [`crate::prelude`] brings in all capability traits at once.
+
+mod icon;
+mod primitive;
+mod progress;
+mod text;
+
+pub use icon::DrawIconOps;
+pub use primitive::DrawPrimitiveOps;
+pub use progress::DrawProgressOps;
+pub use text::DrawTextOps;
+
+/// Umbrella trait bundling all drawing capability traits.
+///
+/// Blanket-implemented for every type that implements all capability
+/// traits; useful as a bound (`T: DrawOps`) when a consumer needs the
+/// full vocabulary. It declares no methods itself — import the
+/// individual capability traits (or [`crate::prelude`]) to call them.
+pub trait DrawOps: DrawIconOps + DrawPrimitiveOps + DrawProgressOps + DrawTextOps {}
+
+impl<T> DrawOps for T where T: DrawIconOps + DrawPrimitiveOps + DrawProgressOps + DrawTextOps {}
