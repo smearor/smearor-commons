@@ -11,6 +11,10 @@ pub enum PixelFormatId {
     Rgba,
     /// `b, g, r, a` byte order.
     Bgra,
+    /// `r, g, b, a` byte order, color channels premultiplied by alpha.
+    RgbaPremultiplied,
+    /// `b, g, r, a` byte order, color channels premultiplied by alpha.
+    BgraPremultiplied,
     /// `r, g, b` byte order - no alpha.
     Rgb,
     /// `b, g, r` byte order - no alpha.
@@ -28,7 +32,7 @@ impl PixelFormatId {
     /// [`crate::PixelFormat::BYTES_PER_PIXEL`].
     pub const fn bytes_per_pixel(self) -> usize {
         match self {
-            Self::Rgba | Self::Bgra | Self::Rgbx | Self::Bgrx => 4,
+            Self::Rgba | Self::Bgra | Self::RgbaPremultiplied | Self::BgraPremultiplied | Self::Rgbx | Self::Bgrx => 4,
             Self::Rgb | Self::Bgr => 3,
             Self::Gray => 1,
         }
@@ -37,7 +41,7 @@ impl PixelFormatId {
     /// Whether the format carries an alpha channel - the runtime
     /// mirror of [`crate::PixelFormat::HAS_ALPHA`].
     pub const fn has_alpha(self) -> bool {
-        matches!(self, Self::Rgba | Self::Bgra)
+        matches!(self, Self::Rgba | Self::Bgra | Self::RgbaPremultiplied | Self::BgraPremultiplied)
     }
 }
 
@@ -47,6 +51,8 @@ impl Display for PixelFormatId {
         match self {
             Self::Rgba => write!(f, "RGBA"),
             Self::Bgra => write!(f, "BGRA"),
+            Self::RgbaPremultiplied => write!(f, "RGBA_PREMULTIPLIED"),
+            Self::BgraPremultiplied => write!(f, "BGRA_PREMULTIPLIED"),
             Self::Rgb => write!(f, "RGB"),
             Self::Bgr => write!(f, "BGR"),
             Self::Rgbx => write!(f, "RGBX"),
@@ -61,11 +67,13 @@ mod tests {
     use super::PixelFormatId;
     use crate::Bgr;
     use crate::Bgra;
+    use crate::BgraPremultiplied;
     use crate::Bgrx;
     use crate::Gray;
     use crate::PixelFormat;
     use crate::Rgb;
     use crate::Rgba;
+    use crate::RgbaPremultiplied;
     use crate::Rgbx;
 
     /// Every `PixelFormatId` mirrors its marker's trait constants.
@@ -74,6 +82,8 @@ mod tests {
         for (marker_bpp, marker_alpha, id) in [
             (Rgba::BYTES_PER_PIXEL, Rgba::HAS_ALPHA, PixelFormatId::Rgba),
             (Bgra::BYTES_PER_PIXEL, Bgra::HAS_ALPHA, PixelFormatId::Bgra),
+            (RgbaPremultiplied::BYTES_PER_PIXEL, RgbaPremultiplied::HAS_ALPHA, PixelFormatId::RgbaPremultiplied),
+            (BgraPremultiplied::BYTES_PER_PIXEL, BgraPremultiplied::HAS_ALPHA, PixelFormatId::BgraPremultiplied),
             (Rgb::BYTES_PER_PIXEL, Rgb::HAS_ALPHA, PixelFormatId::Rgb),
             (Bgr::BYTES_PER_PIXEL, Bgr::HAS_ALPHA, PixelFormatId::Bgr),
             (Rgbx::BYTES_PER_PIXEL, Rgbx::HAS_ALPHA, PixelFormatId::Rgbx),

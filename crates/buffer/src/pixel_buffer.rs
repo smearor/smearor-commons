@@ -1,10 +1,12 @@
 use crate::Bgra;
+use crate::BgraPremultiplied;
 use crate::BufferError;
 use crate::BufferMetadata;
 use crate::BufferView;
 use crate::BufferViewMut;
 use crate::PixelFormat;
 use crate::Rgba;
+use crate::RgbaPremultiplied;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Size;
 use std::marker::PhantomData;
@@ -139,6 +141,88 @@ impl PixelBuffer<Bgra> {
             format: PhantomData,
         }
     }
+
+    /// The same pixels with premultiplied alpha - the color channels are
+    /// multiplied by alpha in place and the buffer is retagged
+    /// [`BgraPremultiplied`]. Needed for `cairo::Format::ARgb32` and
+    /// `gdk::MemoryFormat::B8g8r8a8_PREMULTIPLIED` interop.
+    pub fn into_premultiplied(mut self) -> PixelBuffer<BgraPremultiplied> {
+        premultiply_alpha(&mut self.pixels);
+        PixelBuffer {
+            pixels: self.pixels,
+            size: self.size,
+            format: PhantomData,
+        }
+    }
+}
+
+impl PixelBuffer<Rgba> {
+    /// The same pixels with premultiplied alpha - the color channels are
+    /// multiplied by alpha in place and the buffer is retagged
+    /// [`RgbaPremultiplied`]. Needed for
+    /// `gdk::MemoryFormat::R8g8b8a8_PREMULTIPLIED` interop.
+    pub fn into_premultiplied(mut self) -> PixelBuffer<RgbaPremultiplied> {
+        premultiply_alpha(&mut self.pixels);
+        PixelBuffer {
+            pixels: self.pixels,
+            size: self.size,
+            format: PhantomData,
+        }
+    }
+}
+
+impl PixelBuffer<BgraPremultiplied> {
+    /// The same pixels with straight alpha - the color channels are
+    /// divided by alpha in place (fully transparent pixels are zeroed)
+    /// and the buffer is retagged [`Bgra`]. The inverse of
+    /// [`PixelBuffer<Bgra>::into_premultiplied`].
+    pub fn into_unpremultiplied(mut self) -> PixelBuffer<Bgra> {
+        unpremultiply_alpha(&mut self.pixels);
+        PixelBuffer {
+            pixels: self.pixels,
+            size: self.size,
+            format: PhantomData,
+        }
+    }
+
+    /// The same pixels in [`RgbaPremultiplied`] order - swaps the
+    /// `b`/`r` channel pairs in place and retags the buffer; the alpha
+    /// semantics stay premultiplied.
+    pub fn into_rgba(mut self) -> PixelBuffer<RgbaPremultiplied> {
+        swap_first_third_channel(&mut self.pixels);
+        PixelBuffer {
+            pixels: self.pixels,
+            size: self.size,
+            format: PhantomData,
+        }
+    }
+}
+
+impl PixelBuffer<RgbaPremultiplied> {
+    /// The same pixels with straight alpha - the color channels are
+    /// divided by alpha in place (fully transparent pixels are zeroed)
+    /// and the buffer is retagged [`Rgba`]. The inverse of
+    /// [`PixelBuffer<Rgba>::into_premultiplied`].
+    pub fn into_unpremultiplied(mut self) -> PixelBuffer<Rgba> {
+        unpremultiply_alpha(&mut self.pixels);
+        PixelBuffer {
+            pixels: self.pixels,
+            size: self.size,
+            format: PhantomData,
+        }
+    }
+
+    /// The same pixels in [`BgraPremultiplied`] order - swaps the
+    /// `r`/`b` channel pairs in place and retags the buffer; the alpha
+    /// semantics stay premultiplied.
+    pub fn into_bgra(mut self) -> PixelBuffer<BgraPremultiplied> {
+        swap_first_third_channel(&mut self.pixels);
+        PixelBuffer {
+            pixels: self.pixels,
+            size: self.size,
+            format: PhantomData,
+        }
+    }
 }
 
 impl<F: PixelFormat> AsRef<[u8]> for PixelBuffer<F> {
@@ -157,6 +241,29 @@ impl<F: PixelFormat> AsMut<[u8]> for PixelBuffer<F> {
 fn swap_first_third_channel(pixels: &mut [u8]) {
     for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
+    }
+}
+
+/// Multiplies the color channels (`0..3`) of every 4-byte pixel by its
+/// alpha (byte `3`), rounded to the nearest integer.
+fn premultiply_alpha(pixels: &mut [u8]) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
+        let alpha = pixel[3] as u16;
+        for channel in &mut pixel[..3] {
+            *channel = ((*channel as u16 * alpha + 127) / 255) as u8;
+        }
+    }
+}
+
+/// Restores straight color channels (`0..3`) from premultiplied pixels,
+/// rounded to the nearest integer and clamped to `255`; the color
+/// channels of fully transparent pixels are zeroed.
+fn unpremultiply_alpha(pixels: &mut [u8]) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
+        let alpha = pixel[3] as u16;
+        for channel in &mut pixel[..3] {
+            *channel = (*channel as u16 * 255 + alpha / 2).checked_div(alpha).map_or(0, |c| c.min(255) as u8);
+        }
     }
 }
 
@@ -208,6 +315,58 @@ mod tests {
         let bgra = rgba.into_bgra();
         assert_eq!(bgra.pixels(), &[3, 2, 1, 4, 30, 20, 10, 40]);
         assert_eq!(bgra.into_rgba().pixels(), &[1, 2, 3, 4, 10, 20, 30, 40]);
+    }
+
+    /// `into_premultiplied` scales the color channels by alpha.
+    #[test]
+    fn premultiply_scales_color_channels() {
+        let rgba = PixelBuffer::<Rgba>::from_raw(Size::new(2, 1), vec![200, 100, 50, 128, 255, 255, 255, 0]).unwrap();
+        let premultiplied = rgba.into_premultiplied();
+        // round(c * 128 / 255): 100, 50, 25 - alpha=0 zeroes everything.
+        assert_eq!(premultiplied.pixels(), &[100, 50, 25, 128, 0, 0, 0, 0]);
+    }
+
+    /// `into_unpremultiplied` restores the straight channels.
+    #[test]
+    fn unpremultiply_restores_color_channels() {
+        let pixels = vec![200, 100, 50, 128];
+        let premultiplied = PixelBuffer::<Rgba>::from_raw(Size::new(1, 1), pixels.clone()).unwrap().into_premultiplied();
+        let straight = premultiplied.into_unpremultiplied();
+        for (restored, original) in straight.pixels()[..3].iter().zip(&pixels[..3]) {
+            assert!((*restored as i32 - *original as i32).abs() <= 1, "channel should roundtrip within ±1");
+        }
+        assert_eq!(straight.pixels()[3], 128);
+    }
+
+    /// `into_unpremultiplied` zeroes fully transparent pixels.
+    #[test]
+    fn unpremultiply_zeroes_transparent_pixels() {
+        let premultiplied = PixelBuffer::<Rgba>::from_raw(Size::new(1, 1), vec![255, 255, 255, 0])
+            .unwrap()
+            .into_premultiplied();
+        let straight = premultiplied.into_unpremultiplied();
+        assert_eq!(straight.pixels(), &[0, 0, 0, 0]);
+    }
+
+    /// The premultiplied swizzle keeps alpha semantics and swaps order.
+    #[test]
+    fn premultiplied_channel_swap() {
+        let premultiplied = PixelBuffer::<Rgba>::from_raw(Size::new(1, 1), vec![200, 100, 50, 128])
+            .unwrap()
+            .into_premultiplied();
+        let bgra = premultiplied.into_bgra();
+        assert_eq!(bgra.pixels(), &[25, 50, 100, 128]);
+        assert_eq!(bgra.into_rgba().pixels(), &[100, 50, 25, 128]);
+    }
+
+    /// The full conversion matrix composes from the four primitives.
+    #[test]
+    fn straight_to_premultiplied_bgra_roundtrips() {
+        let pixels = vec![10, 20, 30, 255];
+        let rgba = PixelBuffer::<Rgba>::from_raw(Size::new(1, 1), pixels.clone()).unwrap();
+        let bgra_premultiplied = rgba.into_bgra().into_premultiplied();
+        assert_eq!(bgra_premultiplied.pixels(), &[30, 20, 10, 255]);
+        assert_eq!(bgra_premultiplied.into_unpremultiplied().into_rgba().pixels(), &pixels[..]);
     }
 
     /// `Bgra` is a distinct format at the type level.

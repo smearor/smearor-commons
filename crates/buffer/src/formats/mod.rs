@@ -7,20 +7,24 @@
 
 mod bgr;
 mod bgra;
+mod bgra_premultiplied;
 mod bgrx;
 mod gray;
 mod pixel_format;
 mod pixel_format_id;
 mod rgb;
 mod rgba;
+mod rgba_premultiplied;
 mod rgbx;
 
 pub use bgr::Bgr;
 pub use bgra::Bgra;
+pub use bgra_premultiplied::BgraPremultiplied;
 pub use bgrx::Bgrx;
 pub use gray::Gray;
 pub use pixel_format::PixelFormat;
 pub use pixel_format_id::PixelFormatId;
 pub use rgb::Rgb;
 pub use rgba::Rgba;
+pub use rgba_premultiplied::RgbaPremultiplied;
 pub use rgbx::Rgbx;
