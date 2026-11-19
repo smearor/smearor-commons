@@ -77,6 +77,58 @@ impl<U: Copy> Polyline<U> {
         }
         Self::new(current)
     }
+
+    /// The polyline resampled to `count` evenly spaced points along
+    /// its arc length - the $-family recognizers' canonical
+    /// normalization step: kills sampling-rate noise and makes
+    /// pointwise comparisons (e.g. discrete Fréchet) well-defined.
+    /// Fewer than two source points or a degenerate (zero-length)
+    /// course return the polyline unchanged; `count == 0` yields an
+    /// empty polyline.
+    pub fn resampled(&self, count: usize) -> Self {
+        if count == 0 {
+            return Self::new(Vec::new());
+        }
+        if self.0.len() < 2 {
+            return self.clone();
+        }
+        let total: f64 = self.0.windows(2).map(|pair| pair[0].distance_f64(&pair[1])).sum();
+        if total < 1e-6 {
+            return self.clone();
+        }
+        let step = total / (count - 1).max(1) as f64;
+        let mut out = Vec::with_capacity(count);
+        let mut previous = self.0[0];
+        out.push(previous);
+        let mut walked = 0.0;
+        for point in &self.0[1..] {
+            let mut seg = previous.distance_f64(point);
+            while walked + seg >= step && out.len() < count {
+                let t = (step - walked) / seg;
+                let interpolated = Vec2::new(previous.x + (point.x - previous.x) * t, previous.y + (point.y - previous.y) * t);
+                out.push(interpolated);
+                previous = interpolated;
+                walked = 0.0;
+                seg = previous.distance_f64(point);
+            }
+            walked += seg;
+            previous = *point;
+        }
+        while out.len() < count {
+            out.push(self.0.last().copied().unwrap_or(previous));
+        }
+        Self::new(out)
+    }
+
+    /// The polyline translated so its first point sits at the
+    /// origin - position-free shape comparison (e.g. stroke
+    /// matching, where a gesture is drawable anywhere).
+    pub fn translated_to_origin(&self) -> Self {
+        let Some(first) = self.0.first() else {
+            return self.clone();
+        };
+        Self::new(self.0.iter().map(|point| *point - *first).collect())
+    }
 }
 
 impl<U> Polyline<U>
@@ -312,6 +364,42 @@ mod tests {
         let offset = polyline.offset(Millimeters::new(2.0));
         assert!((offset[0].y - 2.0).abs() < 1e-9, "left normal of +x is +y");
         assert!((offset[0].x).abs() < 1e-9);
+    }
+
+    /// Resampling emits `count` evenly spaced points on the course -
+    /// a bent path puts samples into both legs.
+    #[test]
+    fn resampled_spaces_points_along_the_arc() {
+        let polyline = Polyline::<Millimeters>::new(vec![Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0), Vec2::new(10.0, 10.0)]);
+        let resampled = polyline.resampled(3);
+        assert_eq!(resampled.len(), 3);
+        assert_eq!(resampled[0], Vec2::new(0.0, 0.0));
+        assert_eq!(resampled[1], Vec2::new(10.0, 0.0));
+        assert_eq!(resampled[2], Vec2::new(10.0, 10.0));
+    }
+
+    /// Fewer than two points or a zero-length course come back
+    /// unchanged; `count == 0` is empty.
+    #[test]
+    fn resampled_edge_cases() {
+        let single = Polyline::<Millimeters>::new(vec![Vec2::new(1.0, 2.0)]);
+        assert_eq!(single.resampled(8), single);
+        let flat = Polyline::<Millimeters>::new(vec![Vec2::new(1.0, 1.0), Vec2::new(1.0, 1.0)]);
+        assert_eq!(flat.resampled(8), flat);
+        let polyline = Polyline::<Millimeters>::new(vec![Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)]);
+        assert!(polyline.resampled(0).is_empty());
+        assert_eq!(polyline.resampled(1).points(), &[Vec2::new(0.0, 0.0)]);
+    }
+
+    /// The first point lands on the origin; the shape is unchanged.
+    #[test]
+    fn translated_to_origin_anchors_the_first_point() {
+        let polyline = Polyline::<Millimeters>::new(vec![Vec2::new(5.0, 7.0), Vec2::new(8.0, 7.0), Vec2::new(8.0, 11.0)]);
+        let translated = polyline.translated_to_origin();
+        assert_eq!(translated[0], Vec2::ZERO);
+        assert_eq!(translated[1], Vec2::new(3.0, 0.0));
+        assert_eq!(translated[2], Vec2::new(3.0, 4.0));
+        assert!(Polyline::<Millimeters>::new(vec![]).translated_to_origin().is_empty());
     }
 
     #[test]
