@@ -72,6 +72,28 @@ impl Seat {
         Self::center(TableSide::nearest(rotation))
     }
 
+    /// The seat a position inside `bounds` marks: [`TableSide::nearest_edge`]
+    /// picks the edge, `offset` is the position's projection onto that
+    /// edge's axis, clamped to `0.0..=1.0` - the inverse of the anchor
+    /// math in [`Self::placement`].
+    ///
+    /// Used to derive a seat from a physical marker position (see
+    /// [`crate::SeatPose`]). Degenerate (zero-extent) bounds pin the
+    /// seat to the edge's center.
+    pub fn from_position<U>(position: Vec2<U>, bounds: Rect<U>) -> Self {
+        let side = TableSide::nearest_edge(position, bounds);
+        let (coordinate, start, extent) = match side {
+            TableSide::Bottom | TableSide::Top => (position.x, bounds.min.x, bounds.size.x),
+            TableSide::Left | TableSide::Right => (position.y, bounds.min.y, bounds.size.y),
+        };
+        let offset = if extent > 0.0 {
+            Fraction::new((coordinate - start) / extent).clamped()
+        } else {
+            Fraction::HALF
+        };
+        Self::at(side, offset)
+    }
+
     /// The seat's position along the table perimeter, clockwise in
     /// edge-length units `0.0..4.0`: the bottom edge spans `0..1`
     /// (right-to-left, `offset` decreases), the left edge `1..2`
@@ -493,6 +515,52 @@ mod tests {
     #[test]
     fn nearest_is_centered() {
         assert_eq!(Seat::nearest(RotationRad::from_degrees(100.0)), Seat::center(TableSide::Left));
+    }
+
+    /// `from_position` derives side and offset from a marker position -
+    /// the inverse of `placement`'s edge anchoring.
+    #[test]
+    fn from_position_derives_seat() {
+        let cases = [
+            // Quarter along the bottom edge, near it -> Bottom at 0.25.
+            (Vec2::new(100.0, 290.0), Seat::at(TableSide::Bottom, Fraction::new(0.25))),
+            // Three-quarters down the left edge -> Left at 0.75.
+            (Vec2::new(10.0, 225.0), Seat::at(TableSide::Left, Fraction::new(0.75))),
+            // Edge centers.
+            (Vec2::new(200.0, 10.0), Seat::at(TableSide::Top, Fraction::new(0.5))),
+            (Vec2::new(395.0, 150.0), Seat::at(TableSide::Right, Fraction::new(0.5))),
+        ];
+        for (position, expected) in cases {
+            assert_eq!(Seat::from_position(position, bounds()), expected, "{position:?}");
+        }
+    }
+
+    /// Positions projecting past an edge's end clamp the offset into
+    /// `0.0..=1.0` instead of extrapolating. `nearest_edge` picks a
+    /// side whose span contains the projection, so clamping only
+    /// bites on outside-corner ties and barely-outside positions.
+    #[test]
+    fn from_position_clamps_offset() {
+        // Left of and above the corner: Left wins the Left/Top
+        // distance tie (ALL order), the y-projection past the edge
+        // start clamps to 0.
+        assert_eq!(Seat::from_position(Vec2::new(-1.0, -1.0), bounds()), Seat::at(TableSide::Left, Fraction::ZERO));
+        // Outside-corner tie: Bottom and Right equally near - Bottom
+        // wins ALL order, the x-projection past the edge end clamps
+        // to 1.
+        assert_eq!(Seat::from_position(Vec2::new(450.0, 350.0), bounds()), Seat::at(TableSide::Bottom, Fraction::ONE));
+    }
+
+    /// Zero-extent bounds cannot divide - the seat pins to the
+    /// nearest edge's center (Left wins the Left/Right distance tie
+    /// by `ALL` order) instead of producing `NaN`.
+    #[test]
+    fn from_position_handles_degenerate_bounds() {
+        let flat: Rect<Pixels> = Rect {
+            min: Vec2::new(0.0, 0.0),
+            size: Vec2::new(0.0, 300.0),
+        };
+        assert_eq!(Seat::from_position(Vec2::new(0.0, 150.0), flat), Seat::at(TableSide::Left, Fraction::HALF));
     }
 
     /// Serde round-trips a seat with and without a pinned offset.
