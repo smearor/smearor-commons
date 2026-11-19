@@ -2,6 +2,7 @@ use crate::AnchorWeights;
 use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_geometry::QuarterTurn;
+use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::RotationRad;
 use smearor_commons_geometry::Vec2;
 use std::fmt;
@@ -108,6 +109,32 @@ impl TableSide {
         }
     }
 
+    /// The side whose edge is nearest to `position` inside `bounds`,
+    /// by perpendicular distance to each of the four edges. Positions
+    /// outside `bounds` yield negative distances, so the closest edge
+    /// still wins; exact ties resolve to the first side in
+    /// [`Self::ALL`] order (`Bottom` first).
+    ///
+    /// The positional counterpart of [`Self::nearest`], which snaps a
+    /// rotation to a side: here a *location* picks its edge - e.g.
+    /// deriving a [`crate::Seat`] from a marker's physical position.
+    pub fn nearest_edge<U>(position: Vec2<U>, bounds: Rect<U>) -> Self {
+        let mut best = Self::Bottom;
+        let mut best_distance = f64::MAX;
+        for (side, distance) in [
+            (Self::Bottom, bounds.min.y + bounds.size.y - position.y),
+            (Self::Left, position.x - bounds.min.x),
+            (Self::Top, position.y - bounds.min.y),
+            (Self::Right, bounds.min.x + bounds.size.x - position.x),
+        ] {
+            if distance < best_distance {
+                best = side;
+                best_distance = distance;
+            }
+        }
+        best
+    }
+
     /// The side's edge-center anchor inside bounds: `Bottom`
     /// anchors `BOTTOM_CENTER` - bottom edge, horizontally centered.
     pub fn anchor_weights(&self) -> AnchorWeights {
@@ -169,7 +196,10 @@ impl FromStr for TableSide {
 #[cfg(test)]
 mod tests {
     use super::TableSide;
+    use smearor_commons_geometry::Pixels;
+    use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::RotationRad;
+    use smearor_commons_geometry::Vec2;
 
     /// Four clockwise steps return to the start and visit every side.
     #[test]
@@ -233,6 +263,51 @@ mod tests {
     fn nearest_normalizes_free_angles() {
         assert_eq!(TableSide::nearest(RotationRad::from_degrees(-90.0)), TableSide::Right);
         assert_eq!(TableSide::nearest(RotationRad::from_degrees(450.0)), TableSide::Left);
+    }
+
+    /// `nearest_edge` picks the edge with the smallest perpendicular
+    /// distance, for points on each side and for off-center points.
+    #[test]
+    fn nearest_edge_picks_closest_edge() {
+        let bounds: Rect<Pixels> = Rect {
+            min: Vec2::new(0.0, 0.0),
+            size: Vec2::new(400.0, 300.0),
+        };
+        let cases = [
+            (Vec2::<Pixels>::new(200.0, 280.0), TableSide::Bottom),
+            (Vec2::<Pixels>::new(10.0, 150.0), TableSide::Left),
+            (Vec2::<Pixels>::new(200.0, 15.0), TableSide::Top),
+            (Vec2::<Pixels>::new(390.0, 150.0), TableSide::Right),
+            // Off-center but still nearer the bottom edge than the sides.
+            (Vec2::<Pixels>::new(390.0, 295.0), TableSide::Bottom),
+            // Corner: closer to the right edge than to the bottom.
+            (Vec2::<Pixels>::new(395.0, 290.0), TableSide::Right),
+        ];
+        for (position, expected) in cases {
+            assert_eq!(TableSide::nearest_edge(position, bounds), expected, "{position:?}");
+        }
+    }
+
+    /// Positions outside the bounds still snap to the nearest edge.
+    #[test]
+    fn nearest_edge_handles_outside_positions() {
+        let bounds: Rect<Pixels> = Rect {
+            min: Vec2::new(0.0, 0.0),
+            size: Vec2::new(400.0, 300.0),
+        };
+        assert_eq!(TableSide::nearest_edge(Vec2::new(-10.0, 150.0), bounds), TableSide::Left);
+        assert_eq!(TableSide::nearest_edge(Vec2::new(200.0, 400.0), bounds), TableSide::Bottom);
+    }
+
+    /// Exactly centered points tie on both axes - the first side in
+    /// `ALL` order (`Bottom`) wins.
+    #[test]
+    fn nearest_edge_tie_goes_to_first_in_order() {
+        let square: Rect<Pixels> = Rect {
+            min: Vec2::new(0.0, 0.0),
+            size: Vec2::new(100.0, 100.0),
+        };
+        assert_eq!(TableSide::nearest_edge(Vec2::new(50.0, 50.0), square), TableSide::Bottom);
     }
 
     /// Each side anchors the correct edge, centered on the other axis.
