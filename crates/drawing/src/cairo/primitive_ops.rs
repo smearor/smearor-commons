@@ -11,56 +11,45 @@ use smearor_commons_geometry::Circle;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Rect;
 use std::f64::consts::TAU;
-use tracing::debug;
 
 impl DrawPrimitiveOps for CairoTarget {
     /// Fill the entire surface with `color`, preserving its alpha like
     /// the buffer `fill`: `Operator::Source` replaces destination pixels
-    /// instead of compositing over them.
-    fn fill_background(&mut self, color: impl Into<Color<u8>>) {
+    /// instead of compositing over them. `restore` runs even when
+    /// `paint` fails so the context state stays balanced.
+    fn fill_background(&mut self, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
         let color: Color<u8> = color.into();
         color.apply_alpha(&self.ctx, Alpha::from(color.a));
-        if let Err(err) = self.ctx.save() {
-            debug!("cairo save failed: {err}");
-        }
+        self.ctx.save()?;
         self.ctx.set_operator(cairo::Operator::Source);
-        if let Err(err) = self.ctx.paint() {
-            debug!("cairo paint failed: {err}");
-        }
-        if let Err(err) = self.ctx.restore() {
-            debug!("cairo restore failed: {err}");
-        }
+        let result = self.ctx.paint();
+        self.ctx.restore()?;
+        result
     }
 
-    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) {
+    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
         color.apply_alpha(&self.ctx, alpha);
         self.ctx.rectangle(rect.min.x, rect.min.y, rect.width(), rect.height());
-        if let Err(err) = self.ctx.fill() {
-            debug!("cairo fill failed: {err}");
-        }
+        self.ctx.fill()
     }
 
     /// Stroke centered on the rect edge — cairo already centers strokes
     /// on the path, so the rectangle is emitted at `rect` itself (the
     /// buffer impl needs the `inset(±w/2)` ring for its pixel scan).
-    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) {
+    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
         if line_width.as_raw() <= 0.0 {
-            return;
+            return Ok(());
         }
         color.apply_alpha(&self.ctx, alpha);
         self.ctx.rectangle(rect.min.x, rect.min.y, rect.width(), rect.height());
         self.ctx.set_line_width(f64::from(line_width.as_raw()));
-        if let Err(err) = self.ctx.stroke() {
-            debug!("cairo stroke failed: {err}");
-        }
+        self.ctx.stroke()
     }
 
-    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) {
+    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
         color.apply_alpha(&self.ctx, alpha);
         self.ctx.arc(circle.center.x, circle.center.y, circle.radius, 0.0, TAU);
-        if let Err(err) = self.ctx.fill() {
-            debug!("cairo fill failed: {err}");
-        }
+        self.ctx.fill()
     }
 }
 
@@ -75,12 +64,12 @@ mod tests {
 
     /// Render through a `CairoTarget` onto a fresh `ImageSurface` and
     /// return the raw surface bytes (ARgb32 = BGRA, premultiplied).
-    fn render(size: Size<u32>, draw: impl FnOnce(&mut CairoTarget)) -> Vec<u8> {
+    fn render(size: Size<u32>, draw: impl FnOnce(&mut CairoTarget) -> Result<(), cairo::Error>) -> Vec<u8> {
         let mut surface = ImageSurface::create(Format::ARgb32, size.x as i32, size.y as i32).expect("image surface");
         {
             let ctx = Context::new(&surface).expect("context");
             let mut target = CairoTarget::new(&ctx, size);
-            draw(&mut target);
+            draw(&mut target).expect("draw operation");
         }
         surface.flush();
         surface.data().expect("surface data").to_vec()

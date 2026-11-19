@@ -44,33 +44,37 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
     /// = 4 bytes = one `u32` in little-endian) and use `slice::fill()` for
     /// SIMD-vectorized writes. Strided views fill each row's pixel bytes
     /// and leave row padding untouched.
-    fn fill_background(&mut self, color: impl Into<Color<u8>>) {
+    fn fill_background(&mut self, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
         let bytes: [u8; 4] = color.into().into();
         self.fill(&bytes);
+        Ok(())
     }
 
-    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) {
+    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
         let bounds = rect.to_i32_ceil();
         blend_scanned(self, bounds, color, alpha, |p| rect.contains(p));
+        Ok(())
     }
 
     /// Stroke centered on the rect edge like cairo: the stroke region is
     /// `rect ± line_width/2` minus the interior — implemented as the
     /// expanded outline minus the shrunken one.
-    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) {
+    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
         if line_width.as_raw() <= 0.0 {
-            return;
+            return Ok(());
         }
         let half = Pixels::new(f64::from(line_width.as_raw()) / 2.0);
         let outer = rect.inset(-half);
         let inner = rect.inset(half);
         let bounds = outer.to_i32_ceil();
         blend_scanned(self, bounds, color, alpha, |p| outer.contains(p) && !inner.contains(p));
+        Ok(())
     }
 
-    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) {
+    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
         let bounds = circle.bounding_box().to_i32_ceil();
         blend_scanned(self, bounds, color, alpha, |p| circle.contains(p));
+        Ok(())
     }
 }
 
@@ -87,7 +91,7 @@ mod tests {
         let mut buf = PixelBuffer::new(Size::new(4, 3));
         let color = Color::<f64>::new(10.0 / 255.0, 20.0 / 255.0, 30.0 / 255.0);
         let expected: [u8; 4] = Color::<u8>::from(color).into();
-        buf.view_mut().fill_background(color);
+        buf.view_mut().fill_background(color).unwrap();
 
         for px in buf.pixels().as_chunks::<4>().0.iter() {
             assert_eq!(px, &expected);
@@ -99,7 +103,7 @@ mod tests {
         let mut buf = PixelBuffer::new(Size::new(1, 1));
         let color = Color::<f64>::new_rgba(1.0, 0.0, 128.0 / 255.0, 200.0 / 255.0);
         let expected: [u8; 4] = Color::<u8>::from(color).into();
-        buf.view_mut().fill_background(color);
+        buf.view_mut().fill_background(color).unwrap();
         assert_eq!(buf.pixels(), &expected[..]);
     }
 
@@ -110,7 +114,7 @@ mod tests {
         let mut data = vec![0u8; 32];
         let metadata = BufferMetadata::new(Pixels::new(2u32), Pixels::new(2u32), Stride::new(16));
         let color = Color::<u8>::new(255, 128, 64);
-        BufferViewMut::<Rgba>::from_raw(&mut data, metadata).unwrap().fill_background(color);
+        BufferViewMut::<Rgba>::from_raw(&mut data, metadata).unwrap().fill_background(color).unwrap();
 
         let bytes: [u8; 4] = color.into();
         assert_eq!(&data[0..8], &[bytes, bytes].concat()[..]);
@@ -124,7 +128,7 @@ mod tests {
         let mut buf = PixelBuffer::new(Size::new(2, 2));
         let color = Color::<f64>::new_rgba(0xAB as f64 / 255.0, 0xCD as f64 / 255.0, 0xEF as f64 / 255.0, 0x12 as f64 / 255.0);
         let expected_bytes: [u8; 4] = Color::<u8>::from(color).into();
-        buf.view_mut().fill_background(color);
+        buf.view_mut().fill_background(color).unwrap();
 
         let expected = u32::from_le_bytes(expected_bytes);
         for &px in buf.pixels().as_chunks::<4>().0 {
@@ -150,7 +154,7 @@ mod tests {
     #[test]
     fn fill_rect_blends_alpha_over_background() {
         let mut buf = PixelBuffer::new(Size::new(4, 4));
-        buf.fill_background(Color::<u8>::new(0, 0, 255));
+        buf.fill_background(Color::<u8>::new(0, 0, 255)).unwrap();
         buf.fill_rect(Rect::<Pixels>::from_xywh(0.0, 0.0, 4.0, 4.0), Color::<f64>::new(1.0, 0.0, 0.0), 0.5);
 
         let [r, _g, b, a] = px(&buf, 1, 1);

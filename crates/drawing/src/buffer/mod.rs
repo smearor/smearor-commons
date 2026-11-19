@@ -11,16 +11,27 @@ mod progress_ops;
 mod raster;
 mod text_ops;
 
+use crate::ops::DrawBackend;
 use crate::ops::DrawTarget;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::PixelBuffer;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_geometry::Size;
 
+impl DrawBackend for BufferViewMut<'_, Rgba> {
+    /// Slice writes cannot fail — the raster backend is infallible.
+    type Error = std::convert::Infallible;
+}
+
 impl DrawTarget for BufferViewMut<'_, Rgba> {
     fn size(&self) -> Size<u32> {
         BufferViewMut::size(self)
     }
+}
+
+impl DrawBackend for PixelBuffer<Rgba> {
+    /// Delegates to the packed view — infallible.
+    type Error = std::convert::Infallible;
 }
 
 impl DrawTarget for PixelBuffer<Rgba> {

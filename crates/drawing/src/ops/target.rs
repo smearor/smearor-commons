@@ -29,6 +29,17 @@ pub trait DrawTarget: DrawOps {
             Color::<u8>::new_rgba(240, 240, 240, 255)
         }
     }
+
+    /// The target's deferred error state, if the backend has one.
+    ///
+    /// Draw methods already propagate `Self::Error` per call; this is
+    /// the optional end-of-pass check for backends whose errors are
+    /// sticky — a failed cairo surface keeps reporting the same error
+    /// through `status()` while subsequent draws no-op. The raster
+    /// target is infallible and always reports `Ok`.
+    fn status(&self) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }
 
 impl<T: DrawTarget + ?Sized> DrawTarget for &mut T {
@@ -38,6 +49,10 @@ impl<T: DrawTarget + ?Sized> DrawTarget for &mut T {
 
     fn default_text_color(&self, is_active: bool) -> Color<u8> {
         (**self).default_text_color(is_active)
+    }
+
+    fn status(&self) -> Result<(), Self::Error> {
+        (**self).status()
     }
 }
 

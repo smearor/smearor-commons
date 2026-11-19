@@ -1,5 +1,6 @@
 //! The [`DrawProgressOps`] capability trait.
 
+use crate::ops::DrawBackend;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Fraction;
 use smearor_commons_geometry::Pixels;
@@ -7,9 +8,9 @@ use smearor_commons_geometry::Vec2;
 
 /// Fraction-based indicator drawing operations: progress bars and
 /// circular gauges. Values are clamped to `[0.0, 1.0]`.
-pub trait DrawProgressOps {
+pub trait DrawProgressOps: DrawBackend {
     /// Draw a horizontal progress bar at the bottom of the view.
-    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>);
+    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) -> Result<(), Self::Error>;
 
     /// Draw a circular gauge: a faint `track` ring plus a `color` arc
     /// starting at 12 o'clock and sweeping `value` of a full turn
@@ -29,12 +30,12 @@ pub trait DrawProgressOps {
         value: Fraction,
         color: impl Into<Color<f64>>,
         track: impl Into<Color<f64>>,
-    );
+    ) -> Result<(), Self::Error>;
 }
 
 impl<T: DrawProgressOps + ?Sized> DrawProgressOps for &mut T {
-    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) {
-        (**self).draw_progress_bar(value, color);
+    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
+        (**self).draw_progress_bar(value, color)
     }
 
     fn draw_gauge(
@@ -45,7 +46,7 @@ impl<T: DrawProgressOps + ?Sized> DrawProgressOps for &mut T {
         value: Fraction,
         color: impl Into<Color<f64>>,
         track: impl Into<Color<f64>>,
-    ) {
-        (**self).draw_gauge(center, radius, line_width, value, color, track);
+    ) -> Result<(), Self::Error> {
+        (**self).draw_gauge(center, radius, line_width, value, color, track)
     }
 }

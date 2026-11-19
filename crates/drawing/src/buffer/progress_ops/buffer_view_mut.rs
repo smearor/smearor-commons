@@ -16,7 +16,7 @@ use smearor_commons_geometry::Vec2;
 
 impl DrawProgressOps for BufferViewMut<'_, Rgba> {
     /// Draw a horizontal progress bar at the bottom of the image.
-    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) {
+    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
         let size = self.size();
         let stride = self.stride().as_usize();
         let pixels = self.data_mut();
@@ -36,6 +36,7 @@ impl DrawProgressOps for BufferViewMut<'_, Rgba> {
                 }
             }
         }
+        Ok(())
     }
 
     /// Raster gauge: per-pixel `Annulus` membership plus `Arc` direction
@@ -49,10 +50,10 @@ impl DrawProgressOps for BufferViewMut<'_, Rgba> {
         value: Fraction,
         color: impl Into<Color<f64>>,
         track: impl Into<Color<f64>>,
-    ) {
+    ) -> Result<(), Self::Error> {
         let (center, radius, half_width) = (center.to_f64(), f64::from(radius.as_raw()), f64::from(line_width.as_raw()) / 2.0);
         if half_width <= 0.0 || radius <= half_width {
-            return;
+            return Ok(());
         }
         let annulus = Annulus::<Pixels>::new(center, radius - half_width, radius + half_width);
         let arc = Arc::new(
@@ -77,6 +78,7 @@ impl DrawProgressOps for BufferViewMut<'_, Rgba> {
                 }
             }
         }
+        Ok(())
     }
 }
 
@@ -91,7 +93,7 @@ mod tests {
         let size = Size::new(8, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 0, 0);
-        buf.view_mut().draw_progress_bar(Fraction::new(1.0), color);
+        buf.view_mut().draw_progress_bar(Fraction::new(1.0), color).unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -110,7 +112,7 @@ mod tests {
         let size = Size::new(8, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 0, 0);
-        buf.view_mut().draw_progress_bar(Fraction::new(0.5), color);
+        buf.view_mut().draw_progress_bar(Fraction::new(0.5), color).unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -135,7 +137,7 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(100, 200, 50);
-        buf.view_mut().draw_progress_bar(Fraction::new(0.0), color);
+        buf.view_mut().draw_progress_bar(Fraction::new(0.0), color).unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -155,7 +157,7 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 255, 255);
-        buf.view_mut().draw_progress_bar(Fraction::new(2.0), color);
+        buf.view_mut().draw_progress_bar(Fraction::new(2.0), color).unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -174,7 +176,7 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 255, 255);
-        buf.view_mut().draw_progress_bar(Fraction::new(-1.0), color);
+        buf.view_mut().draw_progress_bar(Fraction::new(-1.0), color).unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -192,7 +194,7 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color_f64 = Color::<f64>::new(1.0, 0.0, 0.0);
-        buf.view_mut().draw_progress_bar(Fraction::new(1.0), color_f64);
+        buf.view_mut().draw_progress_bar(Fraction::new(1.0), color_f64).unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -234,7 +236,8 @@ mod gauge_tests {
             Fraction::ONE,
             Color::<f64>::new(0.0, 1.0, 0.0),
             Color::<f64>::new(0.2, 0.2, 0.2),
-        );
+        )
+        .unwrap();
 
         // Full turn: every ring pixel is the value color - top, right, bottom, left.
         for (x, y) in [(20, 6), (34, 20), (20, 34), (6, 20)] {
@@ -255,7 +258,8 @@ mod gauge_tests {
             Fraction::HALF,
             Color::<f64>::new(0.0, 1.0, 0.0),
             Color::<f64>::new(0.2, 0.2, 0.2),
-        );
+        )
+        .unwrap();
 
         // 12 o'clock and 3 o'clock are inside the first half-turn; 9 o'clock is track.
         let [r, g, _, _] = px(&buf, 20, 6);
@@ -277,7 +281,8 @@ mod gauge_tests {
             Fraction::new(2.5),
             Color::<f64>::new(0.0, 1.0, 0.0),
             Color::<f64>::new(0.2, 0.2, 0.2),
-        );
+        )
+        .unwrap();
 
         // value > 1 clamps to a full turn.
         let [r, g, _, _] = px(&buf, 6, 20);

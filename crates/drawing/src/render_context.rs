@@ -51,9 +51,9 @@ use tracing::debug;
 ///     .background(Color::<f64>::new(0.12, 0.12, 0.12))
 ///     .icon_color(Color::<f64>::new(0.4, 0.7, 1.0))
 ///     .active(true);
-/// ctx.fill_background();
-/// ctx.draw_icon('\u{F11B}');
-/// ctx.draw_label("gamepad");
+/// ctx.fill_background().unwrap();
+/// ctx.draw_icon('\u{F11B}').unwrap();
+/// ctx.draw_label("gamepad").unwrap();
 /// ```
 pub struct RenderContext<'a, T: DrawTarget> {
     /// The render target this context draws into.
@@ -147,10 +147,11 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
     /// Fills the entire pixel buffer with the configured background color.
     ///
     /// Does nothing if no background color was set.
-    pub fn fill_background(&mut self) {
+    pub fn fill_background(&mut self) -> Result<(), T::Error> {
         if let Some(color) = self.background {
-            self.target.fill_background(color);
+            self.target.fill_background(color)?;
         }
+        Ok(())
     }
 
     /// Draws an icon by its Unicode codepoint, centered in the upper
@@ -158,10 +159,10 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
     ///
     /// Uses the configured `icon_font` and `icon_color`. Does nothing when
     /// no icon font is configured.
-    pub fn draw_icon(&mut self, codepoint: char) {
+    pub fn draw_icon(&mut self, codepoint: char) -> Result<(), T::Error> {
         let Some(font) = self.icon_font else {
             debug!("no icon font configured, skipping draw_icon");
-            return;
+            return Ok(());
         };
         let size = self.target.size();
         let icon_size = Pixels::new(size.x.min(size.y) as f32 * 0.6);
@@ -171,7 +172,7 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
             .map(|c| c.into())
             .unwrap_or_else(|| self.target.default_text_color(self.is_active));
         self.target
-            .draw_codepoint(font, codepoint, Vec2::<Pixels, f32>::new(size_f.half().x, size_f.y * 0.4), icon_size, color);
+            .draw_codepoint(font, codepoint, Vec2::<Pixels, f32>::new(size_f.half().x, size_f.y * 0.4), icon_size, color)
     }
 
     /// Draws an icon by name using the configured `icon_font`, resolving
@@ -180,9 +181,9 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
     /// Uses the configured `icon_color` and `is_active` state. Falls back
     /// to a placeholder if no icon font is configured or the icon is
     /// unavailable.
-    pub fn draw_icon_by_name(&mut self, icon_name: &str, resolve_codepoint: impl Fn(&str) -> Option<char>) {
+    pub fn draw_icon_by_name(&mut self, icon_name: &str, resolve_codepoint: impl Fn(&str) -> Option<char>) -> Result<(), T::Error> {
         self.target
-            .draw_icon(self.icon_font, icon_name, self.is_active, resolve_codepoint, self.icon_color);
+            .draw_icon(self.icon_font, icon_name, self.is_active, resolve_codepoint, self.icon_color)
     }
 
     /// Draws a text label at the bottom of the buffer using the configured
@@ -190,45 +191,45 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
     /// renderer).
     ///
     /// Uses the configured `text_color` and `is_active` state.
-    pub fn draw_label(&mut self, text: &str) {
+    pub fn draw_label(&mut self, text: &str) -> Result<(), T::Error> {
         self.target
-            .draw_label(self.label_font.or(self.icon_font), text, self.is_active, self.text_color);
+            .draw_label(self.label_font.or(self.icon_font), text, self.is_active, self.text_color)
     }
 
     /// Draws text centered horizontally at the given y-baseline.
     ///
     /// Uses the configured `text_color`. The font size is derived from the
     /// buffer height unless overridden.
-    pub fn draw_text(&mut self, text: &str, baseline_y: Pixels<f32>) {
+    pub fn draw_text(&mut self, text: &str, baseline_y: Pixels<f32>) -> Result<(), T::Error> {
         let font_size = Pixels::new((self.target.size().y as f32 * 0.22).max(8.0));
         let color: Color<u8> = self
             .text_color
             .map(|c| c.into())
             .unwrap_or_else(|| self.target.default_text_color(self.is_active));
         self.target
-            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color);
+            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color)
     }
 
     /// Draws text centered horizontally at the given y-baseline with a
     /// custom font size.
-    pub fn draw_text_sized(&mut self, text: &str, baseline_y: Pixels<f32>, font_size: Pixels<f32>) {
+    pub fn draw_text_sized(&mut self, text: &str, baseline_y: Pixels<f32>, font_size: Pixels<f32>) -> Result<(), T::Error> {
         let color: Color<u8> = self
             .text_color
             .map(|c| c.into())
             .unwrap_or_else(|| self.target.default_text_color(self.is_active));
         self.target
-            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color);
+            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color)
     }
 
     /// Draws a horizontal progress bar at the bottom of the buffer.
     ///
     /// `value` is clamped to `[0.0, 1.0]`. Uses the configured `icon_color`.
-    pub fn draw_progress_bar(&mut self, value: Fraction) {
+    pub fn draw_progress_bar(&mut self, value: Fraction) -> Result<(), T::Error> {
         let color: Color<u8> = self
             .icon_color
             .map(|c| c.into())
             .unwrap_or_else(|| self.target.default_text_color(self.is_active));
-        self.target.draw_progress_bar(value, color);
+        self.target.draw_progress_bar(value, color)
     }
 
     /// Draws a grid of icons by name using the configured `icon_font`,
@@ -236,12 +237,12 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
     ///
     /// Uses the configured `is_active` state for default color selection.
     /// Does nothing when no icon font is configured.
-    pub fn draw_icon_grid(&mut self, icons: &[&str], grid: Grid, resolve_codepoint: impl Fn(&str) -> Option<char>) {
+    pub fn draw_icon_grid(&mut self, icons: &[&str], grid: Grid, resolve_codepoint: impl Fn(&str) -> Option<char>) -> Result<(), T::Error> {
         let Some(font) = self.icon_font else {
             debug!("no icon font configured, skipping draw_icon_grid");
-            return;
+            return Ok(());
         };
-        self.target.draw_icon_grid(font, icons, grid, self.is_active, resolve_codepoint);
+        self.target.draw_icon_grid(font, icons, grid, self.is_active, resolve_codepoint)
     }
 
     /// Returns the target width in pixels.
@@ -280,7 +281,7 @@ mod tests {
         let expected: [u8; 4] = Color::<u8>::from(color).into();
 
         let mut ctx = RenderContext::new(&mut buf).background(color);
-        ctx.fill_background();
+        ctx.fill_background().unwrap();
 
         for px in buf.pixels().as_chunks::<4>().0.iter() {
             assert_eq!(px, &expected);
@@ -293,7 +294,7 @@ mod tests {
         buf.pixels_mut().fill(10);
 
         let mut ctx = RenderContext::new(&mut buf);
-        ctx.fill_background();
+        ctx.fill_background().unwrap();
 
         assert!(buf.pixels().iter().all(|&p| p == 10));
     }
@@ -326,7 +327,7 @@ mod tests {
     fn render_context_draw_icon_by_name_renders() {
         let mut buf = PixelBuffer::new(Size::new(64, 64));
         let mut ctx = RenderContext::new(&mut buf).icon_font(nerd_font()).active(true);
-        ctx.draw_icon_by_name("nf-fa-gamepad", resolve_codepoint);
+        ctx.draw_icon_by_name("nf-fa-gamepad", resolve_codepoint).unwrap();
 
         let non_zero = buf.pixels().as_chunks::<4>().0.iter().filter(|px| px.iter().any(|&b| b != 0)).count();
         assert!(non_zero > 0, "icon should render pixels");
@@ -336,7 +337,7 @@ mod tests {
     fn render_context_draw_label_renders() {
         let mut buf = PixelBuffer::new(Size::new(96, 96));
         let mut ctx = RenderContext::new(&mut buf).label_font(label_font().or_else(nerd_font));
-        ctx.draw_label("hello");
+        ctx.draw_label("hello").unwrap();
 
         let non_zero = buf.pixels().as_chunks::<4>().0.iter().filter(|px| px.iter().any(|&b| b != 0)).count();
         assert!(non_zero > 0, "label should render pixels");
@@ -355,7 +356,7 @@ mod generic_target_tests {
         let color = Color::<f64>::new(1.0, 0.0, 0.0);
         {
             let mut ctx = RenderContext::new(buf.view_mut()).background(color);
-            ctx.fill_background();
+            ctx.fill_background().unwrap();
             assert_eq!(ctx.size(), Size::new(8, 8));
             assert_eq!(ctx.width(), 8);
         }
@@ -371,7 +372,7 @@ mod generic_target_tests {
         let color = Color::<f64>::new(0.0, 1.0, 0.0);
         {
             let mut ctx = RenderContext::new(&mut buf).background(color);
-            ctx.fill_background();
+            ctx.fill_background().unwrap();
         }
         let expected: [u8; 4] = Color::<u8>::from(color).into();
         assert!(buf.pixels().iter().all(|&b| expected.contains(&b)));

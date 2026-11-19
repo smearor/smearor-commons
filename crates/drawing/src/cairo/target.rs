@@ -1,6 +1,7 @@
 //! The cairo render target: an owned [`cairo::Context`] handle plus a
 //! declared pixel extent.
 
+use crate::ops::DrawBackend;
 use cairo::Context;
 use smearor_commons_geometry::Size;
 
@@ -43,4 +44,19 @@ impl CairoTarget {
     pub fn size(&self) -> Size<u32> {
         self.size
     }
+
+    /// The deferred cairo status of the wrapped context.
+    ///
+    /// cairo reports errors lazily: once a surface or context fails,
+    /// every subsequent operation is a no-op and `status()` keeps
+    /// reporting the sticky error. Draw methods already propagate
+    /// `Self::Error`; this is the optional end-of-pass check.
+    pub fn status(&self) -> Result<(), cairo::Error> {
+        self.ctx.status()
+    }
+}
+
+impl DrawBackend for CairoTarget {
+    /// cairo errors — deferred/sticky by cairo's own error model.
+    type Error = cairo::Error;
 }

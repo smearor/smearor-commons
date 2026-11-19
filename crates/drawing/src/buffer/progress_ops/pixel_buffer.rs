@@ -10,8 +10,8 @@ use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Vec2;
 
 impl DrawProgressOps for PixelBuffer<Rgba> {
-    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) {
-        self.view_mut().draw_progress_bar(value, color);
+    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
+        self.view_mut().draw_progress_bar(value, color)
     }
 
     fn draw_gauge(
@@ -22,7 +22,7 @@ impl DrawProgressOps for PixelBuffer<Rgba> {
         value: Fraction,
         color: impl Into<Color<f64>>,
         track: impl Into<Color<f64>>,
-    ) {
-        self.view_mut().draw_gauge(center, radius, line_width, value, color, track);
+    ) -> Result<(), Self::Error> {
+        self.view_mut().draw_gauge(center, radius, line_width, value, color, track)
     }
 }

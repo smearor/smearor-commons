@@ -20,14 +20,14 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
     /// Draw a text label at the bottom of the image using the injected font.
     ///
     /// Falls back to the built-in bitmap renderer when `font` is `None`.
-    fn draw_label(&mut self, font: Option<&FontVec>, text: &str, is_active: bool, text_color_override: Option<Color<f64>>) {
+    fn draw_label(&mut self, font: Option<&FontVec>, text: &str, is_active: bool, text_color_override: Option<Color<f64>>) -> Result<(), Self::Error> {
         let size = self.size();
         let font = match font {
             Some(f) => f,
             None => {
                 debug!("no label font provided, using bitmap fallback");
                 self.draw_text_bitmap(text, is_active);
-                return;
+                return Ok(());
             }
         };
 
@@ -40,7 +40,7 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
         let max_width = Pixels::new(size.x as f32 * 0.9);
         let truncated = truncate_text_to_width(text, &scaled_font, max_width);
         if truncated.is_empty() {
-            return;
+            return Ok(());
         }
 
         let total_width = Pixels::new(truncated.chars().map(|c| scaled_font.h_advance(font.glyph_id(c))).sum::<f32>());
@@ -54,19 +54,27 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
             self.draw_glyph(font, &glyph, color);
             pen.x += scaled_font.h_advance(glyph_id);
         }
+        Ok(())
     }
 
     /// Draw text centered horizontally at a given y-baseline with a configurable font size.
     ///
     /// Falls back to the built-in bitmap renderer when `font` is `None`.
-    fn draw_text_centered(&mut self, font: Option<&FontVec>, text: &str, baseline_y: Pixels<f32>, font_size: Pixels<f32>, color: impl Into<Color<u8>>) {
+    fn draw_text_centered(
+        &mut self,
+        font: Option<&FontVec>,
+        text: &str,
+        baseline_y: Pixels<f32>,
+        font_size: Pixels<f32>,
+        color: impl Into<Color<u8>>,
+    ) -> Result<(), Self::Error> {
         let size = self.size();
         let font = match font {
             Some(f) => f,
             None => {
                 debug!("no text font provided, using bitmap fallback");
                 self.draw_text_bitmap(text, false);
-                return;
+                return Ok(());
             }
         };
 
@@ -75,7 +83,7 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
         let max_width = Pixels::new(size.x as f32 * 0.9);
         let truncated = truncate_text_to_width(text, &scaled_font, max_width);
         if truncated.is_empty() {
-            return;
+            return Ok(());
         }
 
         let total_width = Pixels::new(truncated.chars().map(|c| scaled_font.h_advance(font.glyph_id(c))).sum::<f32>());
@@ -90,6 +98,7 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
             self.draw_glyph(font, &glyph, color);
             pen.x += scaled_font.h_advance(glyph_id);
         }
+        Ok(())
     }
 }
 
@@ -135,7 +144,7 @@ mod tests {
     fn draw_label_without_font_uses_bitmap_fallback() {
         let size = Size::new(64, 16);
         let mut buf = PixelBuffer::new(size);
-        buf.view_mut().draw_label(None, "AB", false, None);
+        buf.view_mut().draw_label(None, "AB", false, None).unwrap();
 
         let non_zero = buf.pixels().as_chunks::<4>().0.iter().filter(|px| px.iter().any(|&b| b != 0)).count();
         assert!(non_zero > 0, "bitmap fallback should render some pixels when no font is provided");
