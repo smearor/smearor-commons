@@ -10,7 +10,7 @@ homepage.workspace = true
 description = "Shared rendering vocabulary for the Smearor ecosystem: icons, text, progress bars and highlights on pixel buffers (software raster) and, behind feature gates, cairo and GTK targets."
 
 [features]
-cairo = ["dep:cairo-rs"]
+cairo = ["dep:cairo-rs", "smearor-commons-color/cairo"]
 gtk4 = ["dep:gtk4", "cairo"]
 
 [dependencies]

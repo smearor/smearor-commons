@@ -1,0 +1,158 @@
+//! The [`DrawPrimitiveOps`] implementation for `CairoTarget`.
+//!
+//! One impl for the single cairo target type — unlike the buffer
+//! backend there is no second packed-view target to delegate to.
+
+use crate::cairo::CairoTarget;
+use crate::ops::DrawPrimitiveOps;
+use smearor_commons_color::Alpha;
+use smearor_commons_color::Color;
+use smearor_commons_geometry::Circle;
+use smearor_commons_geometry::Pixels;
+use smearor_commons_geometry::Rect;
+use std::f64::consts::TAU;
+use tracing::debug;
+
+impl DrawPrimitiveOps for CairoTarget {
+    /// Fill the entire surface with `color`, preserving its alpha like
+    /// the buffer `fill`: `Operator::Source` replaces destination pixels
+    /// instead of compositing over them.
+    fn fill_background(&mut self, color: impl Into<Color<u8>>) {
+        let color: Color<u8> = color.into();
+        color.apply_alpha(&self.ctx, Alpha::from(color.a));
+        if let Err(err) = self.ctx.save() {
+            debug!("cairo save failed: {err}");
+        }
+        self.ctx.set_operator(cairo::Operator::Source);
+        if let Err(err) = self.ctx.paint() {
+            debug!("cairo paint failed: {err}");
+        }
+        if let Err(err) = self.ctx.restore() {
+            debug!("cairo restore failed: {err}");
+        }
+    }
+
+    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) {
+        color.apply_alpha(&self.ctx, alpha);
+        self.ctx.rectangle(rect.min.x, rect.min.y, rect.width(), rect.height());
+        if let Err(err) = self.ctx.fill() {
+            debug!("cairo fill failed: {err}");
+        }
+    }
+
+    /// Stroke centered on the rect edge — cairo already centers strokes
+    /// on the path, so the rectangle is emitted at `rect` itself (the
+    /// buffer impl needs the `inset(±w/2)` ring for its pixel scan).
+    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) {
+        if line_width.as_raw() <= 0.0 {
+            return;
+        }
+        color.apply_alpha(&self.ctx, alpha);
+        self.ctx.rectangle(rect.min.x, rect.min.y, rect.width(), rect.height());
+        self.ctx.set_line_width(f64::from(line_width.as_raw()));
+        if let Err(err) = self.ctx.stroke() {
+            debug!("cairo stroke failed: {err}");
+        }
+    }
+
+    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) {
+        color.apply_alpha(&self.ctx, alpha);
+        self.ctx.arc(circle.center.x, circle.center.y, circle.radius, 0.0, TAU);
+        if let Err(err) = self.ctx.fill() {
+            debug!("cairo fill failed: {err}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cairo::Context;
+    use cairo::Format;
+    use cairo::ImageSurface;
+    use smearor_commons_geometry::Size;
+    use smearor_commons_geometry::Vec2;
+
+    /// Render through a `CairoTarget` onto a fresh `ImageSurface` and
+    /// return the raw surface bytes (ARgb32 = BGRA, premultiplied).
+    fn render(size: Size<u32>, draw: impl FnOnce(&mut CairoTarget)) -> Vec<u8> {
+        let mut surface = ImageSurface::create(Format::ARgb32, size.x as i32, size.y as i32).expect("image surface");
+        {
+            let ctx = Context::new(&surface).expect("context");
+            let mut target = CairoTarget::new(&ctx, size);
+            draw(&mut target);
+        }
+        surface.flush();
+        surface.data().expect("surface data").to_vec()
+    }
+
+    fn px(data: &[u8], size: Size<u32>, x: u32, y: u32) -> [u8; 4] {
+        let idx = (y * size.x + x) as usize * 4;
+        data[idx..idx + 4].try_into().expect("pixel")
+    }
+
+    #[test]
+    fn fill_background_paints_all_pixels() {
+        let size = Size::new(8, 8);
+        let data = render(size, |t| t.fill_background(Color::<u8>::new_rgba(255, 0, 0, 255)));
+        // ARgb32 stores BGRA premultiplied: red = [B=0, G=0, R=255, A=255]
+        assert_eq!(px(&data, size, 0, 0), [0, 0, 255, 255]);
+        assert_eq!(px(&data, size, 7, 7), [0, 0, 255, 255]);
+    }
+
+    #[test]
+    fn fill_background_preserves_alpha() {
+        let size = Size::new(4, 4);
+        let data = render(size, |t| t.fill_background(Color::<u8>::new_rgba(255, 0, 0, 128)));
+        let pixel = px(&data, size, 1, 1);
+        assert_eq!(pixel[3], 128, "alpha channel should be replaced, not composited");
+        assert!((pixel[2] as i32 - 128).abs() <= 1, "premultiplied red should be ~128, got {}", pixel[2]);
+    }
+
+    #[test]
+    fn fill_rect_covers_interior_only() {
+        let size = Size::new(16, 16);
+        let rect = Rect::<Pixels>::new(Vec2::new(4.0, 4.0), Vec2::new(8.0, 8.0));
+        let data = render(size, |t| t.fill_rect(rect, Color::<f64>::new(0.0, 1.0, 0.0), Alpha::OPAQUE));
+        assert_eq!(px(&data, size, 8, 8), [0, 255, 0, 255], "interior pixel");
+        assert_eq!(px(&data, size, 0, 0), [0, 0, 0, 0], "outside corner");
+        assert_eq!(px(&data, size, 15, 15), [0, 0, 0, 0], "outside edge");
+    }
+
+    #[test]
+    fn stroke_rect_covers_edges_only() {
+        let size = Size::new(16, 16);
+        let rect = Rect::<Pixels>::new(Vec2::new(4.0, 4.0), Vec2::new(8.0, 8.0));
+        let data = render(size, |t| t.stroke_rect(rect, Color::<f64>::new(1.0, 1.0, 1.0), Pixels::new(2.0), Alpha::OPAQUE));
+        assert_eq!(px(&data, size, 4, 8)[3], 255, "left edge should be stroked");
+        assert_eq!(px(&data, size, 8, 8), [0, 0, 0, 0], "center should be empty");
+        assert_eq!(px(&data, size, 0, 0), [0, 0, 0, 0], "outside should be empty");
+    }
+
+    #[test]
+    fn stroke_rect_zero_width_is_noop() {
+        let size = Size::new(8, 8);
+        let rect = Rect::<Pixels>::new(Vec2::new(1.0, 1.0), Vec2::new(6.0, 6.0));
+        let data = render(size, |t| t.stroke_rect(rect, Color::<f64>::new(1.0, 1.0, 1.0), Pixels::new(0.0), Alpha::OPAQUE));
+        assert!(data.iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn fill_circle_covers_center_only() {
+        let size = Size::new(16, 16);
+        let circle = Circle::<Pixels>::new(Vec2::new(8.0, 8.0), 5.0);
+        let data = render(size, |t| t.fill_circle(circle, Color::<f64>::new(0.0, 0.0, 1.0), Alpha::OPAQUE));
+        assert_eq!(px(&data, size, 8, 8), [255, 0, 0, 255], "center pixel");
+        assert_eq!(px(&data, size, 0, 0), [0, 0, 0, 0], "corner outside");
+    }
+
+    #[test]
+    fn fill_rect_alpha_composites() {
+        let size = Size::new(4, 4);
+        let rect = Rect::<Pixels>::new(Vec2::new(0.0, 0.0), Vec2::new(4.0, 4.0));
+        let data = render(size, |t| t.fill_rect(rect, Color::<f64>::new(1.0, 0.0, 0.0), Alpha::new(0.5)));
+        let pixel = px(&data, size, 2, 2);
+        assert!((pixel[3] as i32 - 128).abs() <= 1, "alpha ~128, got {}", pixel[3]);
+        assert!((pixel[2] as i32 - 128).abs() <= 1, "premultiplied red ~128, got {}", pixel[2]);
+    }
+}

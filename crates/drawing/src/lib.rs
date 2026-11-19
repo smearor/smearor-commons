@@ -31,10 +31,14 @@
 //! - [`RenderContext`]: the public facade, generic over [`DrawTarget`].
 
 mod buffer;
+#[cfg(feature = "cairo")]
+pub mod cairo;
 mod ops;
 mod render_context;
 mod tech;
 
+#[cfg(feature = "cairo")]
+pub use cairo::CairoTarget;
 pub use ops::DrawIconOps;
 pub use ops::DrawOps;
 pub use ops::DrawPrimitiveOps;
