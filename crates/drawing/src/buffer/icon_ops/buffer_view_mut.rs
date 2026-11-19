@@ -1,14 +1,13 @@
 //! The [`DrawIconOps`] implementations for the buffer targets.
 
 use crate::buffer::raster::RasterOps;
-use crate::default_color::default_text_color;
-use crate::glyph::glyph_fit_scale;
 use crate::ops::DrawIconOps;
+use crate::ops::DrawTarget;
+use crate::tech::glyph_fit_scale;
 use ab_glyph::Font;
 use ab_glyph::FontVec;
 use ab_glyph::PxScale;
 use smearor_commons_buffer::BufferViewMut;
-use smearor_commons_buffer::PixelBuffer;
 use smearor_commons_buffer::PixelFormat;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
@@ -52,7 +51,7 @@ impl DrawIconOps for BufferViewMut<'_, Rgba> {
             }
         };
 
-        let color: Color<u8> = icon_color.map(|c| c.into()).unwrap_or_else(|| default_text_color(is_active));
+        let color: Color<u8> = icon_color.map(|c| c.into()).unwrap_or_else(|| self.default_text_color(is_active));
 
         let icon_size = Pixels::new(size.x.min(size.y) as f32 * 0.6);
         let glyph_id = font.glyph_id(codepoint);
@@ -69,13 +68,13 @@ impl DrawIconOps for BufferViewMut<'_, Rgba> {
     /// Draw a simple circular placeholder when the font or icon is unavailable.
     fn draw_icon_placeholder(&mut self, is_active: bool, icon_color: Option<Color<f64>>) {
         let size = self.size();
+        let color: Color<u8> = icon_color.map(|c| c.into()).unwrap_or_else(|| self.default_text_color(is_active));
         let stride = self.stride().as_usize();
         let pixels = self.data_mut();
         let size_f = size.to_f64();
         let cx = size_f.half().x;
         let center = Vec2::<Pixels>::new(cx, cx - size_f.y / 6.0);
         let circle = Circle::<Pixels>::new(center, (size.x.min(size.y) / 3).max(8) as f64);
-        let color: Color<u8> = icon_color.map(|c| c.into()).unwrap_or_else(|| default_text_color(is_active));
         let bytes: [u8; 4] = color.into();
 
         for y in 0..size.y as i32 {
@@ -104,7 +103,7 @@ impl DrawIconOps for BufferViewMut<'_, Rgba> {
         let size = self.size();
         let cell_size = grid.cell_size(size);
         let icon_size = Pixels::new(cell_size.x.min(cell_size.y) as f32 * 0.6);
-        let color = default_text_color(is_active);
+        let color = self.default_text_color(is_active);
 
         for (i, icon_name) in icons.iter().enumerate() {
             let codepoint = match resolve_codepoint(icon_name) {
@@ -128,38 +127,12 @@ impl DrawIconOps for BufferViewMut<'_, Rgba> {
     }
 }
 
-/// An owned packed buffer draws icons through its packed view.
-impl DrawIconOps for PixelBuffer<Rgba> {
-    fn draw_icon(
-        &mut self,
-        font: Option<&FontVec>,
-        icon_name: &str,
-        is_active: bool,
-        resolve_codepoint: impl Fn(&str) -> Option<char>,
-        icon_color: Option<Color<f64>>,
-    ) {
-        self.view_mut().draw_icon(font, icon_name, is_active, resolve_codepoint, icon_color);
-    }
-
-    fn draw_icon_placeholder(&mut self, is_active: bool, icon_color: Option<Color<f64>>) {
-        self.view_mut().draw_icon_placeholder(is_active, icon_color);
-    }
-
-    fn draw_codepoint(&mut self, font: &FontVec, codepoint: char, center: Vec2<Pixels, f32>, icon_size: Pixels<f32>, color: impl Into<Color<u8>>) {
-        self.view_mut().draw_codepoint(font, codepoint, center, icon_size, color);
-    }
-
-    fn draw_icon_grid(&mut self, font: &FontVec, icons: &[&str], grid: Grid, is_active: bool, resolve_codepoint: impl Fn(&str) -> Option<char>) {
-        self.view_mut().draw_icon_grid(font, icons, grid, is_active, resolve_codepoint);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::default_color::default_text_color;
     use nerd_fonts_rs::NerdFonts;
     use nerd_fonts_rs::fonts::nerd_font;
+    use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_geometry::Size;
 
     fn resolve_codepoint(name: &str) -> Option<char> {
@@ -172,7 +145,7 @@ mod tests {
         let mut buf = PixelBuffer::new(size);
         buf.view_mut().draw_icon_placeholder(false, None);
 
-        let color = default_text_color(false);
+        let color = buf.default_text_color(false);
         let bytes: [u8; 4] = color.into();
         let center_x = size.x / 2;
         let center_y = size.x / 2;
@@ -196,7 +169,7 @@ mod tests {
         let mut buf = PixelBuffer::new(size);
         buf.view_mut().draw_icon_placeholder(true, None);
 
-        let active_color = default_text_color(true);
+        let active_color = buf.default_text_color(true);
         let bytes: [u8; 4] = active_color.into();
         let center_x = size.x / 2;
         let center_y = size.x / 2;
@@ -254,7 +227,7 @@ mod tests {
         let mut buf = PixelBuffer::new(size);
         buf.view_mut().draw_icon(nerd_font(), "nf-xx-nonexistent", false, resolve_codepoint, None);
 
-        let placeholder_color = default_text_color(false);
+        let placeholder_color = buf.default_text_color(false);
         let bytes: [u8; 4] = placeholder_color.into();
         let center_x = size.x / 2;
         let center_y = size.x / 2;
@@ -270,7 +243,7 @@ mod tests {
         let mut buf = PixelBuffer::new(size);
         buf.view_mut().draw_icon(None, "nf-fa-gamepad", false, resolve_codepoint, None);
 
-        let placeholder_color = default_text_color(false);
+        let placeholder_color = buf.default_text_color(false);
         let bytes: [u8; 4] = placeholder_color.into();
         let center_x = size.x / 2;
         let center_y = size.x / 2;

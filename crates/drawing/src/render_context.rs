@@ -5,13 +5,8 @@
 //! [`DrawOps`] methods on [`PixelBuffer`]. This eliminates the boilerplate
 //! of passing buffers, fonts, and colors to every `draw_*` call.
 
-use crate::ops::DrawIconOps;
-use crate::ops::DrawPrimitiveOps;
-use crate::ops::DrawProgressOps;
-use crate::ops::DrawTextOps;
+use crate::ops::DrawTarget;
 use ab_glyph::FontVec;
-use smearor_commons_buffer::PixelBuffer;
-use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Fraction;
 use smearor_commons_geometry::Grid;
@@ -22,8 +17,15 @@ use std::fmt;
 use std::fmt::Debug;
 use tracing::debug;
 
-/// Builder context for rendering icons, text, and UI elements onto a raw
-/// RGBA pixel buffer.
+/// Builder context for rendering icons, text, and UI elements onto a
+/// [`DrawTarget`].
+///
+/// The context **owns** its target — `T` is typically `&mut PixelBuffer`,
+/// `BufferViewMut`, or a backend target like `CairoTarget` (the capability
+/// traits and [`DrawTarget`] are implemented for `&mut T` as well, so
+/// borrows compose). Owning instead of `&mut T`-borrowing keeps the API
+/// honest across backends: buffer views genuinely need exclusive access
+/// while cairo targets are shared handles.
 ///
 /// Construct with [`RenderContext::new`], chain optional configuration
 /// methods, then call draw methods. Fonts are injected via
@@ -53,9 +55,9 @@ use tracing::debug;
 /// ctx.draw_icon('\u{F11B}');
 /// ctx.draw_label("gamepad");
 /// ```
-pub struct RenderContext<'a> {
-    /// Target pixel buffer (RGBA, row-major).
-    buf: &'a mut PixelBuffer<Rgba>,
+pub struct RenderContext<'a, T: DrawTarget> {
+    /// The render target this context draws into.
+    target: T,
     /// Font for icons (`draw_icon`, `draw_icon_by_name`, `draw_icon_grid`);
     /// also the fallback font for text.
     icon_font: Option<&'a FontVec>,
@@ -64,18 +66,20 @@ pub struct RenderContext<'a> {
     label_font: Option<&'a FontVec>,
     /// Optional background fill color, applied by [`RenderContext::fill_background`].
     background: Option<Color<f64>>,
-    /// Default color for icons and progress bars.
-    icon_color: Color<f64>,
-    /// Default color for text labels.
-    text_color: Color<f64>,
+    /// Default color for icons and progress bars; `None` defers to the
+    /// target's [`DrawTarget::default_text_color`].
+    icon_color: Option<Color<f64>>,
+    /// Default color for text labels; `None` defers to the target's
+    /// [`DrawTarget::default_text_color`].
+    text_color: Option<Color<f64>>,
     /// Whether the rendered element is "active" (affects default colors).
     is_active: bool,
 }
 
-impl Debug for RenderContext<'_> {
+impl<T: DrawTarget> Debug for RenderContext<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RenderContext")
-            .field("buf", &self.buf)
+            .field("target", &"..")
             .field("icon_font", &self.icon_font.map(|_| ".."))
             .field("label_font", &self.label_font.map(|_| ".."))
             .field("background", &self.background)
@@ -86,17 +90,18 @@ impl Debug for RenderContext<'_> {
     }
 }
 
-impl<'a> RenderContext<'a> {
-    /// Creates a new `RenderContext` with default colors, inactive state
-    /// and no fonts configured.
-    pub fn new(buf: &'a mut PixelBuffer<Rgba>) -> Self {
+impl<'a, T: DrawTarget> RenderContext<'a, T> {
+    /// Creates a new `RenderContext` over `target` with no colors
+    /// configured, inactive state and no fonts configured. Colors left
+    /// unset resolve to [`DrawTarget::default_text_color`] of the target.
+    pub fn new(target: T) -> Self {
         Self {
-            buf,
+            target,
             icon_font: None,
             label_font: None,
             background: None,
-            icon_color: Color::<f64>::new(0.94, 0.94, 0.94),
-            text_color: Color::<f64>::new(0.94, 0.94, 0.94),
+            icon_color: None,
+            text_color: None,
             is_active: false,
         }
     }
@@ -123,13 +128,13 @@ impl<'a> RenderContext<'a> {
 
     /// Sets the default icon color (also used for progress bars).
     pub fn icon_color(mut self, color: Color<f64>) -> Self {
-        self.icon_color = color;
+        self.icon_color = Some(color);
         self
     }
 
     /// Sets the default text color for labels and centered text.
     pub fn text_color(mut self, color: Color<f64>) -> Self {
-        self.text_color = color;
+        self.text_color = Some(color);
         self
     }
 
@@ -144,7 +149,7 @@ impl<'a> RenderContext<'a> {
     /// Does nothing if no background color was set.
     pub fn fill_background(&mut self) {
         if let Some(color) = self.background {
-            self.buf.fill_background(color);
+            self.target.fill_background(color);
         }
     }
 
@@ -158,11 +163,15 @@ impl<'a> RenderContext<'a> {
             debug!("no icon font configured, skipping draw_icon");
             return;
         };
-        let size = self.buf.size();
+        let size = self.target.size();
         let icon_size = Pixels::new(size.x.min(size.y) as f32 * 0.6);
         let size_f = size.to_f32();
-        self.buf
-            .draw_codepoint(font, codepoint, Vec2::<Pixels, f32>::new(size_f.half().x, size_f.y * 0.4), icon_size, self.icon_color);
+        let color: Color<u8> = self
+            .icon_color
+            .map(|c| c.into())
+            .unwrap_or_else(|| self.target.default_text_color(self.is_active));
+        self.target
+            .draw_codepoint(font, codepoint, Vec2::<Pixels, f32>::new(size_f.half().x, size_f.y * 0.4), icon_size, color);
     }
 
     /// Draws an icon by name using the configured `icon_font`, resolving
@@ -172,8 +181,8 @@ impl<'a> RenderContext<'a> {
     /// to a placeholder if no icon font is configured or the icon is
     /// unavailable.
     pub fn draw_icon_by_name(&mut self, icon_name: &str, resolve_codepoint: impl Fn(&str) -> Option<char>) {
-        self.buf
-            .draw_icon(self.icon_font, icon_name, self.is_active, resolve_codepoint, Some(self.icon_color));
+        self.target
+            .draw_icon(self.icon_font, icon_name, self.is_active, resolve_codepoint, self.icon_color);
     }
 
     /// Draws a text label at the bottom of the buffer using the configured
@@ -182,8 +191,8 @@ impl<'a> RenderContext<'a> {
     ///
     /// Uses the configured `text_color` and `is_active` state.
     pub fn draw_label(&mut self, text: &str) {
-        self.buf
-            .draw_label(self.label_font.or(self.icon_font), text, self.is_active, Some(self.text_color));
+        self.target
+            .draw_label(self.label_font.or(self.icon_font), text, self.is_active, self.text_color);
     }
 
     /// Draws text centered horizontally at the given y-baseline.
@@ -191,23 +200,35 @@ impl<'a> RenderContext<'a> {
     /// Uses the configured `text_color`. The font size is derived from the
     /// buffer height unless overridden.
     pub fn draw_text(&mut self, text: &str, baseline_y: Pixels<f32>) {
-        let font_size = Pixels::new((self.buf.height().as_raw() as f32 * 0.22).max(8.0));
-        self.buf
-            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, self.text_color);
+        let font_size = Pixels::new((self.target.size().y as f32 * 0.22).max(8.0));
+        let color: Color<u8> = self
+            .text_color
+            .map(|c| c.into())
+            .unwrap_or_else(|| self.target.default_text_color(self.is_active));
+        self.target
+            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color);
     }
 
     /// Draws text centered horizontally at the given y-baseline with a
     /// custom font size.
     pub fn draw_text_sized(&mut self, text: &str, baseline_y: Pixels<f32>, font_size: Pixels<f32>) {
-        self.buf
-            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, self.text_color);
+        let color: Color<u8> = self
+            .text_color
+            .map(|c| c.into())
+            .unwrap_or_else(|| self.target.default_text_color(self.is_active));
+        self.target
+            .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color);
     }
 
     /// Draws a horizontal progress bar at the bottom of the buffer.
     ///
     /// `value` is clamped to `[0.0, 1.0]`. Uses the configured `icon_color`.
     pub fn draw_progress_bar(&mut self, value: Fraction) {
-        self.buf.draw_progress_bar(value, self.icon_color);
+        let color: Color<u8> = self
+            .icon_color
+            .map(|c| c.into())
+            .unwrap_or_else(|| self.target.default_text_color(self.is_active));
+        self.target.draw_progress_bar(value, color);
     }
 
     /// Draws a grid of icons by name using the configured `icon_font`,
@@ -220,22 +241,22 @@ impl<'a> RenderContext<'a> {
             debug!("no icon font configured, skipping draw_icon_grid");
             return;
         };
-        self.buf.draw_icon_grid(font, icons, grid, self.is_active, resolve_codepoint);
+        self.target.draw_icon_grid(font, icons, grid, self.is_active, resolve_codepoint);
     }
 
-    /// Returns the buffer width in pixels.
+    /// Returns the target width in pixels.
     pub fn width(&self) -> u32 {
-        self.buf.width().as_raw()
+        self.target.size().x
     }
 
-    /// Returns the buffer height in pixels.
+    /// Returns the target height in pixels.
     pub fn height(&self) -> u32 {
-        self.buf.height().as_raw()
+        self.target.size().y
     }
 
     /// Returns the buffer dimensions.
     pub fn size(&self) -> Size<u32> {
-        self.buf.size()
+        self.target.size()
     }
 }
 
@@ -245,6 +266,7 @@ mod tests {
     use nerd_fonts_rs::NerdFonts;
     use nerd_fonts_rs::fonts::label_font;
     use nerd_fonts_rs::fonts::nerd_font;
+    use smearor_commons_buffer::PixelBuffer;
 
     fn resolve_codepoint(name: &str) -> Option<char> {
         NerdFonts::codepoint(name).map(|c| c.as_char())
@@ -292,8 +314,8 @@ mod tests {
 
         assert_eq!(ctx.width(), 2);
         assert_eq!(ctx.height(), 2);
-        assert_eq!(ctx.icon_color, ic);
-        assert_eq!(ctx.text_color, tc);
+        assert_eq!(ctx.icon_color, Some(ic));
+        assert_eq!(ctx.text_color, Some(tc));
         assert!(ctx.icon_font.is_some());
         assert!(ctx.label_font.is_some());
         assert!(ctx.is_active);
@@ -318,5 +340,40 @@ mod tests {
 
         let non_zero = buf.pixels().as_chunks::<4>().0.iter().filter(|px| px.iter().any(|&b| b != 0)).count();
         assert!(non_zero > 0, "label should render pixels");
+    }
+}
+
+#[cfg(test)]
+mod generic_target_tests {
+    use super::*;
+    use smearor_commons_buffer::PixelBuffer;
+
+    #[test]
+    fn render_context_works_over_owned_view_target() {
+        // T = BufferViewMut: the context owns the view, no &mut buffer borrow.
+        let mut buf = PixelBuffer::new(Size::new(8, 8));
+        let color = Color::<f64>::new(1.0, 0.0, 0.0);
+        {
+            let mut ctx = RenderContext::new(buf.view_mut()).background(color);
+            ctx.fill_background();
+            assert_eq!(ctx.size(), Size::new(8, 8));
+            assert_eq!(ctx.width(), 8);
+        }
+        let expected: [u8; 4] = Color::<u8>::from(color).into();
+        assert!(buf.pixels().as_chunks::<4>().0.iter().all(|px| px == &expected));
+    }
+
+    #[test]
+    fn render_context_works_over_mut_reference_target() {
+        // T = &mut PixelBuffer: the &mut-T forwarding impls keep the
+        // original constructor shape working.
+        let mut buf = PixelBuffer::new(Size::new(4, 4));
+        let color = Color::<f64>::new(0.0, 1.0, 0.0);
+        {
+            let mut ctx = RenderContext::new(&mut buf).background(color);
+            ctx.fill_background();
+        }
+        let expected: [u8; 4] = Color::<u8>::from(color).into();
+        assert!(buf.pixels().iter().all(|&b| expected.contains(&b)));
     }
 }

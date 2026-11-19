@@ -1,7 +1,7 @@
 //! The [`DrawTextOps`] implementations for the buffer targets.
 
 use crate::buffer::raster::RasterOps;
-use crate::default_color::default_text_color;
+use crate::ops::DrawTarget;
 use crate::ops::DrawTextOps;
 use ab_glyph::Font;
 use ab_glyph::FontVec;
@@ -9,7 +9,6 @@ use ab_glyph::Glyph;
 use ab_glyph::PxScale;
 use ab_glyph::ScaleFont;
 use smearor_commons_buffer::BufferViewMut;
-use smearor_commons_buffer::PixelBuffer;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
 use smearor_commons_font::truncate_text_to_width;
@@ -32,7 +31,7 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
             }
         };
 
-        let color: Color<u8> = text_color_override.map(|c| c.into()).unwrap_or_else(|| default_text_color(is_active));
+        let color: Color<u8> = text_color_override.map(|c| c.into()).unwrap_or_else(|| self.default_text_color(is_active));
 
         let font_size = Pixels::new((size.y as f32 * 0.22).max(8.0));
         let scale = PxScale::from(font_size.as_raw());
@@ -94,22 +93,12 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
     }
 }
 
-/// An owned packed buffer draws text through its packed view.
-impl DrawTextOps for PixelBuffer<Rgba> {
-    fn draw_label(&mut self, font: Option<&FontVec>, text: &str, is_active: bool, text_color_override: Option<Color<f64>>) {
-        self.view_mut().draw_label(font, text, is_active, text_color_override);
-    }
-
-    fn draw_text_centered(&mut self, font: Option<&FontVec>, text: &str, baseline_y: Pixels<f32>, font_size: Pixels<f32>, color: impl Into<Color<u8>>) {
-        self.view_mut().draw_text_centered(font, text, baseline_y, font_size, color);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use nerd_fonts_rs::fonts::label_font;
     use nerd_fonts_rs::fonts::nerd_font;
+    use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_geometry::Size;
 
     #[test]

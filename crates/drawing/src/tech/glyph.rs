@@ -1,4 +1,8 @@
 //! Glyph rendering support: scale-fit cache for repeated icon renders.
+//!
+//! Adapter over `smearor_commons_font`/`ab_glyph` — the glyph metric
+//! itself lives in `smearor_commons_font`; this module adds the
+//! thread-local cache policy used by icon rendering.
 
 use ab_glyph::FontVec;
 use ab_glyph::GlyphId;
@@ -15,7 +19,7 @@ thread_local! {
 /// [`smearor_commons_font::glyph_fit_scale`] behind a thread-local
 /// cache — avoids redundant glyph probing on repeated renders of the
 /// same icon. The cache policy lives here; the metric itself is generic.
-pub(super) fn glyph_fit_scale(font: &FontVec, glyph_id: GlyphId, target_px: Pixels<f32>) -> Pixels<f32> {
+pub(crate) fn glyph_fit_scale(font: &FontVec, glyph_id: GlyphId, target_px: Pixels<f32>) -> Pixels<f32> {
     let key = (glyph_id, target_px.as_raw().to_bits());
 
     let cached = GLYPH_SCALE_CACHE.with(|c| c.borrow().get(&key).copied());

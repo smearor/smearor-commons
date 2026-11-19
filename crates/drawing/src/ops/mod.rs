@@ -13,15 +13,21 @@
 //! use it as a bound when a consumer needs the full vocabulary. Method
 //! calls still require the declaring trait in scope; importing
 //! [`crate::prelude`] brings in all capability traits at once.
+//!
+//! Every capability trait is also implemented for `&mut T` where `T`
+//! implements it, so mutable references compose transparently — e.g.
+//! `&mut PixelBuffer` can serve as a [`DrawTarget`].
 
 mod icon;
 mod primitive;
 mod progress;
+mod target;
 mod text;
 
 pub use icon::DrawIconOps;
 pub use primitive::DrawPrimitiveOps;
 pub use progress::DrawProgressOps;
+pub use target::DrawTarget;
 pub use text::DrawTextOps;
 
 /// Umbrella trait bundling all drawing capability traits.

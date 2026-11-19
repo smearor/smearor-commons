@@ -18,17 +18,28 @@
 //! bitmap renderer.
 //!
 //! Import [`prelude`] to bring all capability traits into scope at once.
+//!
+//! # Internal layering
+//!
+//! - [`ops`]: the public, backend-neutral vocabulary (capability traits).
+//! - [`tech`]: render-technology adapters — crate-internal wrappers over
+//!   external rendering tech (e.g. `ab_glyph` glyph metrics) that any
+//!   backend may use; not a backend itself.
+//! - [`buffer`]: the software-raster backend — one directory module per
+//!   capability (`buffer_view_mut` works, `pixel_buffer` delegates) plus
+//!   its private machinery in `buffer/raster`.
+//! - [`RenderContext`]: the public facade, generic over [`DrawTarget`].
 
 mod buffer;
-mod default_color;
-mod glyph;
 mod ops;
 mod render_context;
+mod tech;
 
 pub use ops::DrawIconOps;
 pub use ops::DrawOps;
 pub use ops::DrawPrimitiveOps;
 pub use ops::DrawProgressOps;
+pub use ops::DrawTarget;
 pub use ops::DrawTextOps;
 pub use render_context::RenderContext;
 
@@ -40,5 +51,6 @@ pub mod prelude {
     pub use crate::ops::DrawOps;
     pub use crate::ops::DrawPrimitiveOps;
     pub use crate::ops::DrawProgressOps;
+    pub use crate::ops::DrawTarget;
     pub use crate::ops::DrawTextOps;
 }

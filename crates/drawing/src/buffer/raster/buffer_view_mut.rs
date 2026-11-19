@@ -1,11 +1,7 @@
-//! Internal raster primitives for the buffer backend.
-//!
-//! `draw_glyph` rasterizes one `ab_glyph` glyph with alpha blending;
-//! `draw_text_bitmap` is the fontless bitmap fallback. Kept private so
-//! they stay out of the public API surface — other backends implement
-//! the capability traits with their own machinery instead.
+//! The `RasterOps` implementation for `BufferViewMut`.
 
-use crate::default_color::default_text_color;
+use crate::buffer::raster::RasterOps;
+use crate::ops::DrawTarget;
 use ab_glyph::Font;
 use ab_glyph::FontVec;
 use ab_glyph::Glyph;
@@ -17,15 +13,6 @@ use smearor_commons_color::Color;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::Vec2;
-
-/// Internal raster primitives shared by the buffer implementations of
-/// the capability traits.
-pub(super) trait RasterOps {
-    /// Draw a single glyph onto the view with alpha blending.
-    fn draw_glyph(&mut self, font: &FontVec, glyph: &Glyph, color: Color<u8>);
-    /// Simple bitmap text renderer used when no font is available.
-    fn draw_text_bitmap(&mut self, text: &str, is_active: bool);
-}
 
 impl RasterOps for BufferViewMut<'_, Rgba> {
     /// Draw a single glyph onto the view with alpha blending.
@@ -54,11 +41,11 @@ impl RasterOps for BufferViewMut<'_, Rgba> {
     }
 
     /// Simple bitmap text renderer used when no font is available.
-    fn draw_text_bitmap(&mut self, text: &str, _is_active: bool) {
+    fn draw_text_bitmap(&mut self, text: &str, is_active: bool) {
         let size = self.size();
+        let color = self.default_text_color(is_active);
         let stride = self.stride().as_usize();
         let pixels = self.data_mut();
-        let color = default_text_color(false);
         let bytes: [u8; 4] = color.into();
         let char_w = 6u32;
         let char_h = 8u32;
