@@ -4,6 +4,7 @@
 //! backends can implement them incrementally and consumers can bound on
 //! exactly the capabilities they need:
 //!
+//! - [`DrawBackend`]: the per-target error type shared by all capability traits
 //! - [`DrawPrimitiveOps`]: surface fills and shape primitives
 //! - [`DrawIconOps`]: icon and glyph rendering
 //! - [`DrawTextOps`]: label and centered text rendering
@@ -18,12 +19,14 @@
 //! implements it, so mutable references compose transparently — e.g.
 //! `&mut PixelBuffer` can serve as a [`DrawTarget`].
 
+mod backend;
 mod icon;
 mod primitive;
 mod progress;
 mod target;
 mod text;
 
+pub use backend::DrawBackend;
 pub use icon::DrawIconOps;
 pub use primitive::DrawPrimitiveOps;
 pub use progress::DrawProgressOps;

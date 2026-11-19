@@ -39,6 +39,7 @@ mod tech;
 
 #[cfg(feature = "cairo")]
 pub use cairo::CairoTarget;
+pub use ops::DrawBackend;
 pub use ops::DrawIconOps;
 pub use ops::DrawOps;
 pub use ops::DrawPrimitiveOps;
@@ -51,6 +52,7 @@ pub use render_context::RenderContext;
 /// smearor_commons_drawing::prelude::*;` brings the full vocabulary into
 /// scope for method calls.
 pub mod prelude {
+    pub use crate::ops::DrawBackend;
     pub use crate::ops::DrawIconOps;
     pub use crate::ops::DrawOps;
     pub use crate::ops::DrawPrimitiveOps;
