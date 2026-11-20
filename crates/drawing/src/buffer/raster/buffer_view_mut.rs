@@ -1,6 +1,7 @@
 //! The `RasterOps` implementation for `BufferViewMut`.
 
 use crate::buffer::raster::RasterOps;
+use crate::buffer::raster::blend_pixel;
 use crate::ops::DrawTarget;
 use ab_glyph::Font;
 use ab_glyph::FontVec;
@@ -29,12 +30,7 @@ impl RasterOps for BufferViewMut<'_, Rgba> {
                 let p = pos + Vec2::<Pixels, i32>::new(gx as i32, gy as i32);
                 if clip.contains(&p) {
                     let idx = p.y as usize * stride + p.x as usize * Rgba::BYTES_PER_PIXEL;
-                    let alpha = Alpha::from(color.a) * f64::from(coverage);
-                    if !alpha.is_transparent() {
-                        let dst = Color::<u8>::new_rgba(pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]);
-                        let blended: [u8; 4] = color.alpha_over(&dst, alpha).into();
-                        pixels[idx..idx + Rgba::BYTES_PER_PIXEL].copy_from_slice(&blended);
-                    }
+                    blend_pixel(pixels, idx, color, Alpha::new(f64::from(coverage)));
                 }
             });
         }
@@ -46,7 +42,6 @@ impl RasterOps for BufferViewMut<'_, Rgba> {
         let color = self.default_text_color(is_active);
         let stride = self.stride().as_usize();
         let pixels = self.data_mut();
-        let bytes: [u8; 4] = color.into();
         let char_w = 6u32;
         let char_h = 8u32;
         let text_size = Vec2::new(text.len() as u32 * char_w, char_h);
@@ -58,7 +53,7 @@ impl RasterOps for BufferViewMut<'_, Rgba> {
                 for dx in 0..char_w {
                     if x + dx < size.x && start.y + dy < size.y {
                         let idx = (start.y + dy) as usize * stride + (x + dx) as usize * Rgba::BYTES_PER_PIXEL;
-                        pixels[idx..idx + Rgba::BYTES_PER_PIXEL].copy_from_slice(&bytes);
+                        Rgba::write_pixel(&mut pixels[idx..idx + Rgba::BYTES_PER_PIXEL], color.r, color.g, color.b, color.a);
                     }
                 }
             }

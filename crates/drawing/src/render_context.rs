@@ -5,7 +5,11 @@
 //! [`DrawOps`] methods on [`PixelBuffer`]. This eliminates the boilerplate
 //! of passing buffers, fonts, and colors to every `draw_*` call.
 
+use crate::ops::Codepoint;
 use crate::ops::DrawTarget;
+use crate::ops::Icon;
+use crate::ops::IconGrid;
+use crate::ops::ProgressBar;
 use ab_glyph::FontVec;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Fraction;
@@ -172,7 +176,7 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
             .map(|c| c.into())
             .unwrap_or_else(|| self.target.default_text_color(self.is_active));
         self.target
-            .draw_codepoint(font, codepoint, Vec2::<Pixels, f32>::new(size_f.half().x, size_f.y * 0.4), icon_size, color)
+            .draw_codepoint(Codepoint::new(font, codepoint, Vec2::<Pixels, f32>::new(size_f.half().x, size_f.y * 0.4), icon_size, color))
     }
 
     /// Draws an icon by name using the configured `icon_font`, resolving
@@ -183,7 +187,7 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
     /// unavailable.
     pub fn draw_icon_by_name(&mut self, icon_name: &str, resolve_codepoint: impl Fn(&str) -> Option<char>) -> Result<(), T::Error> {
         self.target
-            .draw_icon(self.icon_font, icon_name, self.is_active, resolve_codepoint, self.icon_color)
+            .draw_icon(Icon::new(self.icon_font, icon_name, self.is_active, &resolve_codepoint, self.icon_color))
     }
 
     /// Draws a text label at the bottom of the buffer using the configured
@@ -221,15 +225,13 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
             .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color)
     }
 
-    /// Draws a horizontal progress bar at the bottom of the buffer.
+    /// Draws a horizontal progress bar of the given `height` at the
+    /// bottom of the buffer.
     ///
     /// `value` is clamped to `[0.0, 1.0]`. Uses the configured `icon_color`.
-    pub fn draw_progress_bar(&mut self, value: Fraction) -> Result<(), T::Error> {
-        let color: Color<u8> = self
-            .icon_color
-            .map(|c| c.into())
-            .unwrap_or_else(|| self.target.default_text_color(self.is_active));
-        self.target.draw_progress_bar(value, color)
+    pub fn draw_progress_bar(&mut self, value: Fraction, height: Pixels<f32>) -> Result<(), T::Error> {
+        let color: Color<f64> = self.icon_color.unwrap_or_else(|| self.target.default_text_color(self.is_active).into());
+        self.target.draw_progress_bar(ProgressBar::new(value, color, height))
     }
 
     /// Draws a grid of icons by name using the configured `icon_font`,
@@ -242,7 +244,7 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
             debug!("no icon font configured, skipping draw_icon_grid");
             return Ok(());
         };
-        self.target.draw_icon_grid(font, icons, grid, self.is_active, resolve_codepoint)
+        self.target.draw_icon_grid(IconGrid::new(font, icons, grid, self.is_active, &resolve_codepoint))
     }
 
     /// Returns the target width in pixels.

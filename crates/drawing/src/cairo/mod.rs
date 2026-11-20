@@ -55,6 +55,7 @@ mod tests {
     use cairo::ImageSurface;
     use smearor_commons_color::Color;
     use smearor_commons_geometry::Fraction;
+    use smearor_commons_geometry::Pixels;
 
     /// `RenderContext` owns the cairo target exactly like it owns
     /// `BufferViewMut` — the generic facade works unchanged on both
@@ -67,7 +68,7 @@ mod tests {
         {
             let mut ctx = RenderContext::new(target).background(Color::<f64>::new(1.0, 0.0, 0.0));
             ctx.fill_background().unwrap();
-            ctx.draw_progress_bar(Fraction::new(0.5)).unwrap();
+            ctx.draw_progress_bar(Fraction::new(0.5), Pixels::new(4.0)).unwrap();
         }
 
         let mut surface = surface;

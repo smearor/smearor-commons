@@ -7,11 +7,13 @@
 
 use crate::cairo::CairoTarget;
 use crate::cairo::glyph_path::fill_glyph;
+use crate::ops::Codepoint;
 use crate::ops::DrawIconOps;
 use crate::ops::DrawTarget;
+use crate::ops::Icon;
+use crate::ops::IconGrid;
 use crate::tech::glyph_fit_scale;
 use ab_glyph::Font;
-use ab_glyph::FontVec;
 use ab_glyph::PxScale;
 use smearor_commons_color::Color;
 use smearor_commons_font::centered_glyph;
@@ -23,14 +25,14 @@ impl DrawIconOps for CairoTarget {
     /// Same layout as the raster backend: icon occupying the upper 60%
     /// of the target, circular placeholder on `None` font or unknown
     /// name — but the glyph renders as a filled cairo path.
-    fn draw_icon(
-        &mut self,
-        font: Option<&FontVec>,
-        icon_name: &str,
-        is_active: bool,
-        resolve_codepoint: impl Fn(&str) -> Option<char>,
-        icon_color: Option<Color<f64>>,
-    ) -> Result<(), Self::Error> {
+    fn draw_icon(&mut self, icon: Icon<'_>) -> Result<(), Self::Error> {
+        let Icon {
+            font,
+            name: icon_name,
+            is_active,
+            resolve: resolve_codepoint,
+            color: icon_color,
+        } = icon;
         let size = self.size();
         let font = match font {
             Some(f) => f,
@@ -77,15 +79,15 @@ impl DrawIconOps for CairoTarget {
     }
 
     /// A glyph at a custom position and size, filled as a cairo path.
-    fn draw_codepoint(
-        &mut self,
-        font: &FontVec,
-        codepoint: char,
-        center: Vec2<Pixels, f32>,
-        icon_size: Pixels<f32>,
-        color: impl Into<Color<u8>>,
-    ) -> Result<(), Self::Error> {
-        let color: Color<f64> = color.into().into();
+    fn draw_codepoint(&mut self, glyph: Codepoint<'_>) -> Result<(), Self::Error> {
+        let Codepoint {
+            font,
+            codepoint,
+            center,
+            size: icon_size,
+            color,
+        } = glyph;
+        let color: Color<f64> = color.into();
         color.apply(&self.ctx);
 
         let glyph_id = font.glyph_id(codepoint);
@@ -97,14 +99,14 @@ impl DrawIconOps for CairoTarget {
 
     /// The same grid layout as the raster backend; unknown icon names
     /// are skipped rather than drawing per-cell placeholders.
-    fn draw_icon_grid(
-        &mut self,
-        font: &FontVec,
-        icons: &[&str],
-        grid: smearor_commons_geometry::Grid,
-        is_active: bool,
-        resolve_codepoint: impl Fn(&str) -> Option<char>,
-    ) -> Result<(), Self::Error> {
+    fn draw_icon_grid(&mut self, spec: IconGrid<'_>) -> Result<(), Self::Error> {
+        let IconGrid {
+            font,
+            icons,
+            grid,
+            is_active,
+            resolve: resolve_codepoint,
+        } = spec;
         let size = self.size();
         let cell_size = grid.cell_size(size);
         let icon_size = Pixels::new(cell_size.x.min(cell_size.y) as f32 * 0.6);
@@ -167,7 +169,13 @@ mod tests {
         let font = nerd_font().expect("nerd font should be loaded");
         assert!(renders_pixels(size, |target| {
             target
-                .draw_codepoint(font, '\u{F11B}', Vec2::<Pixels, f32>::new(32.0, 32.0), Pixels::new(48.0), Color::<u8>::new(255, 255, 255))
+                .draw_codepoint(Codepoint::new(
+                    font,
+                    '\u{F11B}',
+                    Vec2::<Pixels, f32>::new(32.0, 32.0),
+                    Pixels::new(48.0),
+                    Color::<u8>::new(255, 255, 255),
+                ))
                 .unwrap();
         }));
     }
@@ -176,7 +184,9 @@ mod tests {
     fn draw_icon_with_valid_name_renders() {
         let size = Size::new(64, 64);
         assert!(renders_pixels(size, |target| {
-            target.draw_icon(nerd_font(), "nf-fa-gamepad", true, resolve_codepoint, None).unwrap();
+            target
+                .draw_icon(Icon::new(nerd_font(), "nf-fa-gamepad", true, &resolve_codepoint, None))
+                .unwrap();
         }));
     }
 
@@ -205,7 +215,9 @@ mod tests {
         let icons = ["nf-fa-gamepad", "nf-fa-star", "nf-fa-heart", "nf-fa-bug"];
         let font = nerd_font().expect("nerd font should be loaded");
         assert!(renders_pixels(size, |target| {
-            target.draw_icon_grid(font, &icons, Grid::for_items(4, 2), true, resolve_codepoint).unwrap();
+            target
+                .draw_icon_grid(IconGrid::new(font, &icons, Grid::for_items(4, 2), true, &resolve_codepoint))
+                .unwrap();
         }));
     }
 
@@ -213,7 +225,7 @@ mod tests {
     fn draw_icon_without_font_draws_placeholder() {
         let size = Size::new(32, 32);
         assert!(renders_pixels(size, |target| {
-            target.draw_icon(None, "nf-fa-gamepad", false, resolve_codepoint, None).unwrap();
+            target.draw_icon(Icon::new(None, "nf-fa-gamepad", false, &resolve_codepoint, None)).unwrap();
         }));
     }
 }

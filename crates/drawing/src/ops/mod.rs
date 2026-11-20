@@ -27,9 +27,18 @@ mod target;
 mod text;
 
 pub use backend::DrawBackend;
+pub use icon::Codepoint;
 pub use icon::DrawIconOps;
+pub use icon::Icon;
+pub use icon::IconGrid;
 pub use primitive::DrawPrimitiveOps;
+pub use primitive::FillCircle;
+pub use primitive::FillRect;
+pub use primitive::StrokeRect;
 pub use progress::DrawProgressOps;
+pub use progress::Gauge;
+pub use progress::PROGRESS_BAR_BOTTOM_MARGIN;
+pub use progress::ProgressBar;
 pub use target::DrawTarget;
 pub use text::DrawTextOps;
 

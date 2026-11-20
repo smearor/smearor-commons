@@ -3,12 +3,14 @@
 
 use crate::buffer::raster::blend_pixel;
 use crate::ops::DrawPrimitiveOps;
+use crate::ops::FillCircle;
+use crate::ops::FillRect;
+use crate::ops::StrokeRect;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::PixelFormat;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
-use smearor_commons_geometry::Circle;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::Vec2;
@@ -45,35 +47,37 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
     /// SIMD-vectorized writes. Strided views fill each row's pixel bytes
     /// and leave row padding untouched.
     fn fill_background(&mut self, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
-        let bytes: [u8; 4] = color.into().into();
-        self.fill(&bytes);
+        let color: Color<u8> = color.into();
+        let mut pixel = [0; Rgba::BYTES_PER_PIXEL];
+        Rgba::write_pixel(&mut pixel, color.r, color.g, color.b, color.a);
+        self.fill(&pixel);
         Ok(())
     }
 
-    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
-        let bounds = rect.to_i32_ceil();
-        blend_scanned(self, bounds, color, alpha, |p| rect.contains(p));
+    fn fill_rect(&mut self, spec: FillRect) -> Result<(), Self::Error> {
+        let bounds = spec.rect.to_i32_ceil();
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| spec.rect.contains(p));
         Ok(())
     }
 
     /// Stroke centered on the rect edge like cairo: the stroke region is
     /// `rect ± line_width/2` minus the interior — implemented as the
     /// expanded outline minus the shrunken one.
-    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
-        if line_width.as_raw() <= 0.0 {
+    fn stroke_rect(&mut self, spec: StrokeRect) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
             return Ok(());
         }
-        let half = Pixels::new(f64::from(line_width.as_raw()) / 2.0);
-        let outer = rect.inset(-half);
-        let inner = rect.inset(half);
+        let half = Pixels::new(f64::from(spec.line_width.as_raw()) / 2.0);
+        let outer = spec.rect.inset(-half);
+        let inner = spec.rect.inset(half);
         let bounds = outer.to_i32_ceil();
-        blend_scanned(self, bounds, color, alpha, |p| outer.contains(p) && !inner.contains(p));
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| outer.contains(p) && !inner.contains(p));
         Ok(())
     }
 
-    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
-        let bounds = circle.bounding_box().to_i32_ceil();
-        blend_scanned(self, bounds, color, alpha, |p| circle.contains(p));
+    fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
+        let bounds = spec.circle.bounding_box().to_i32_ceil();
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| spec.circle.contains(p));
         Ok(())
     }
 }
@@ -84,6 +88,8 @@ mod tests {
     use smearor_commons_buffer::BufferMetadata;
     use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_buffer::Stride;
+    use smearor_commons_geometry::Circle;
+    use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::Size;
 
     #[test]
@@ -144,7 +150,7 @@ mod tests {
     #[test]
     fn fill_rect_fills_only_inside() {
         let mut buf = PixelBuffer::new(Size::new(10, 10));
-        buf.fill_rect(Rect::<Pixels>::from_xywh(2.0, 2.0, 4.0, 4.0), Color::<f64>::new(1.0, 0.0, 0.0), 1.0);
+        buf.fill_rect(FillRect::new(Rect::<Pixels>::from_xywh(2.0, 2.0, 4.0, 4.0), Color::<f64>::new(1.0, 0.0, 0.0), 1.0));
 
         assert_eq!(px(&buf, 3, 3), [255, 0, 0, 255]);
         assert_eq!(px(&buf, 0, 0), [0, 0, 0, 0]);
@@ -155,7 +161,7 @@ mod tests {
     fn fill_rect_blends_alpha_over_background() {
         let mut buf = PixelBuffer::new(Size::new(4, 4));
         buf.fill_background(Color::<u8>::new(0, 0, 255)).unwrap();
-        buf.fill_rect(Rect::<Pixels>::from_xywh(0.0, 0.0, 4.0, 4.0), Color::<f64>::new(1.0, 0.0, 0.0), 0.5);
+        buf.fill_rect(FillRect::new(Rect::<Pixels>::from_xywh(0.0, 0.0, 4.0, 4.0), Color::<f64>::new(1.0, 0.0, 0.0), 0.5));
 
         let [r, _g, b, a] = px(&buf, 1, 1);
         assert!((120..=135).contains(&r), "half alpha red over blue ~127, got {r}");
@@ -166,7 +172,12 @@ mod tests {
     #[test]
     fn stroke_rect_strokes_border_only() {
         let mut buf = PixelBuffer::new(Size::new(10, 10));
-        buf.stroke_rect(Rect::<Pixels>::from_xywh(2.0, 2.0, 6.0, 6.0), Color::<f64>::new(0.0, 1.0, 0.0), Pixels::new(2.0f32), 1.0);
+        buf.stroke_rect(StrokeRect::new(
+            Rect::<Pixels>::from_xywh(2.0, 2.0, 6.0, 6.0),
+            Color::<f64>::new(0.0, 1.0, 0.0),
+            Pixels::new(2.0f32),
+            1.0,
+        ));
 
         assert_eq!(px(&buf, 2, 2), [0, 255, 0, 255], "corner border");
         assert_eq!(px(&buf, 4, 4), [0, 0, 0, 0], "interior untouched");
@@ -176,7 +187,11 @@ mod tests {
     #[test]
     fn fill_circle_fills_inside_not_corners() {
         let mut buf = PixelBuffer::new(Size::new(10, 10));
-        buf.fill_circle(Circle::<Pixels>::new(Vec2::<Pixels>::new(5.0, 5.0), 3.0), Color::<f64>::new(0.0, 0.0, 1.0), 1.0);
+        buf.fill_circle(FillCircle::new(
+            Circle::<Pixels>::new(Vec2::<Pixels>::new(5.0, 5.0), 3.0),
+            Color::<f64>::new(0.0, 0.0, 1.0),
+            1.0,
+        ));
 
         assert_eq!(px(&buf, 5, 5), [0, 0, 255, 255]);
         assert_eq!(px(&buf, 0, 0), [0, 0, 0, 0]);
@@ -190,7 +205,7 @@ mod tests {
         {
             let metadata = BufferMetadata::new(Pixels::new(2u32), Pixels::new(2u32), Stride::new(16));
             let mut view = BufferViewMut::<Rgba>::from_raw(&mut data, metadata).unwrap();
-            view.fill_rect(Rect::<Pixels>::from_xywh(0.0, 0.0, 2.0, 2.0), Color::<f64>::new(1.0, 0.0, 0.0), 1.0);
+            view.fill_rect(FillRect::new(Rect::<Pixels>::from_xywh(0.0, 0.0, 2.0, 2.0), Color::<f64>::new(1.0, 0.0, 0.0), 1.0));
         }
         assert_eq!(&data[8..16], &[0u8; 8], "padding row untouched");
         assert_eq!(&data[24..32], &[0u8; 8], "padding row untouched");

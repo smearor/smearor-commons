@@ -5,11 +5,11 @@
 
 use crate::cairo::CairoTarget;
 use crate::ops::DrawPrimitiveOps;
+use crate::ops::FillCircle;
+use crate::ops::FillRect;
+use crate::ops::StrokeRect;
 use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
-use smearor_commons_geometry::Circle;
-use smearor_commons_geometry::Pixels;
-use smearor_commons_geometry::Rect;
 use std::f64::consts::TAU;
 
 impl DrawPrimitiveOps for CairoTarget {
@@ -27,28 +27,28 @@ impl DrawPrimitiveOps for CairoTarget {
         result
     }
 
-    fn fill_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
-        color.apply_alpha(&self.ctx, alpha);
-        self.ctx.rectangle(rect.min.x, rect.min.y, rect.width(), rect.height());
+    fn fill_rect(&mut self, spec: FillRect) -> Result<(), Self::Error> {
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.ctx.rectangle(spec.rect.min.x, spec.rect.min.y, spec.rect.width(), spec.rect.height());
         self.ctx.fill()
     }
 
     /// Stroke centered on the rect edge — cairo already centers strokes
-    /// on the path, so the rectangle is emitted at `rect` itself (the
+    /// on the path, so the rectangle is emitted at `spec.rect` itself (the
     /// buffer impl needs the `inset(±w/2)` ring for its pixel scan).
-    fn stroke_rect(&mut self, rect: Rect<Pixels>, color: Color<f64>, line_width: Pixels<f32>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
-        if line_width.as_raw() <= 0.0 {
+    fn stroke_rect(&mut self, spec: StrokeRect) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
             return Ok(());
         }
-        color.apply_alpha(&self.ctx, alpha);
-        self.ctx.rectangle(rect.min.x, rect.min.y, rect.width(), rect.height());
-        self.ctx.set_line_width(f64::from(line_width.as_raw()));
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.ctx.rectangle(spec.rect.min.x, spec.rect.min.y, spec.rect.width(), spec.rect.height());
+        self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
         self.ctx.stroke()
     }
 
-    fn fill_circle(&mut self, circle: Circle<Pixels>, color: Color<f64>, alpha: impl Into<Alpha>) -> Result<(), Self::Error> {
-        color.apply_alpha(&self.ctx, alpha);
-        self.ctx.arc(circle.center.x, circle.center.y, circle.radius, 0.0, TAU);
+    fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.ctx.arc(spec.circle.center.x, spec.circle.center.y, spec.circle.radius, 0.0, TAU);
         self.ctx.fill()
     }
 }
@@ -59,6 +59,9 @@ mod tests {
     use cairo::Context;
     use cairo::Format;
     use cairo::ImageSurface;
+    use smearor_commons_geometry::Circle;
+    use smearor_commons_geometry::Pixels;
+    use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::Size;
     use smearor_commons_geometry::Vec2;
 
@@ -102,7 +105,7 @@ mod tests {
     fn fill_rect_covers_interior_only() {
         let size = Size::new(16, 16);
         let rect = Rect::<Pixels>::new(Vec2::new(4.0, 4.0), Vec2::new(8.0, 8.0));
-        let data = render(size, |t| t.fill_rect(rect, Color::<f64>::new(0.0, 1.0, 0.0), Alpha::OPAQUE));
+        let data = render(size, |t| t.fill_rect(FillRect::new(rect, Color::<f64>::new(0.0, 1.0, 0.0), Alpha::OPAQUE)));
         assert_eq!(px(&data, size, 8, 8), [0, 255, 0, 255], "interior pixel");
         assert_eq!(px(&data, size, 0, 0), [0, 0, 0, 0], "outside corner");
         assert_eq!(px(&data, size, 15, 15), [0, 0, 0, 0], "outside edge");
@@ -112,7 +115,9 @@ mod tests {
     fn stroke_rect_covers_edges_only() {
         let size = Size::new(16, 16);
         let rect = Rect::<Pixels>::new(Vec2::new(4.0, 4.0), Vec2::new(8.0, 8.0));
-        let data = render(size, |t| t.stroke_rect(rect, Color::<f64>::new(1.0, 1.0, 1.0), Pixels::new(2.0), Alpha::OPAQUE));
+        let data = render(size, |t| {
+            t.stroke_rect(StrokeRect::new(rect, Color::<f64>::new(1.0, 1.0, 1.0), Pixels::new(2.0), Alpha::OPAQUE))
+        });
         assert_eq!(px(&data, size, 4, 8)[3], 255, "left edge should be stroked");
         assert_eq!(px(&data, size, 8, 8), [0, 0, 0, 0], "center should be empty");
         assert_eq!(px(&data, size, 0, 0), [0, 0, 0, 0], "outside should be empty");
@@ -122,7 +127,9 @@ mod tests {
     fn stroke_rect_zero_width_is_noop() {
         let size = Size::new(8, 8);
         let rect = Rect::<Pixels>::new(Vec2::new(1.0, 1.0), Vec2::new(6.0, 6.0));
-        let data = render(size, |t| t.stroke_rect(rect, Color::<f64>::new(1.0, 1.0, 1.0), Pixels::new(0.0), Alpha::OPAQUE));
+        let data = render(size, |t| {
+            t.stroke_rect(StrokeRect::new(rect, Color::<f64>::new(1.0, 1.0, 1.0), Pixels::new(0.0), Alpha::OPAQUE))
+        });
         assert!(data.iter().all(|&b| b == 0));
     }
 
@@ -130,7 +137,7 @@ mod tests {
     fn fill_circle_covers_center_only() {
         let size = Size::new(16, 16);
         let circle = Circle::<Pixels>::new(Vec2::new(8.0, 8.0), 5.0);
-        let data = render(size, |t| t.fill_circle(circle, Color::<f64>::new(0.0, 0.0, 1.0), Alpha::OPAQUE));
+        let data = render(size, |t| t.fill_circle(FillCircle::new(circle, Color::<f64>::new(0.0, 0.0, 1.0), Alpha::OPAQUE)));
         assert_eq!(px(&data, size, 8, 8), [255, 0, 0, 255], "center pixel");
         assert_eq!(px(&data, size, 0, 0), [0, 0, 0, 0], "corner outside");
     }
@@ -139,7 +146,7 @@ mod tests {
     fn fill_rect_alpha_composites() {
         let size = Size::new(4, 4);
         let rect = Rect::<Pixels>::new(Vec2::new(0.0, 0.0), Vec2::new(4.0, 4.0));
-        let data = render(size, |t| t.fill_rect(rect, Color::<f64>::new(1.0, 0.0, 0.0), Alpha::new(0.5)));
+        let data = render(size, |t| t.fill_rect(FillRect::new(rect, Color::<f64>::new(1.0, 0.0, 0.0), Alpha::new(0.5))));
         let pixel = px(&data, size, 2, 2);
         assert!((pixel[3] as i32 - 128).abs() <= 1, "alpha ~128, got {}", pixel[3]);
         assert!((pixel[2] as i32 - 128).abs() <= 1, "premultiplied red ~128, got {}", pixel[2]);

@@ -230,7 +230,7 @@ fn build_icon_rendering_section() -> Frame {
     for (i, icon_name) in GALLERY_ICONS.iter().enumerate() {
         let mut buf = PixelBuffer::new(icon_size);
         buf.fill_background(Color::<f64>::new(30.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0)).unwrap();
-        buf.draw_icon(nerd_font(), icon_name, true, resolve_codepoint, Some(Color::<f64>::new(0.4, 0.7, 1.0)));
+        buf.draw_icon(Icon::new(nerd_font(), icon_name, true, &resolve_codepoint, Some(Color::<f64>::new(0.4, 0.7, 1.0))));
         buf.draw_label(label_font().or_else(nerd_font), &icon_name.replace("nf-", ""), false, None);
 
         let texture = pixels_to_texture(&buf);
@@ -289,13 +289,13 @@ fn build_codepoint_section() -> Frame {
     let mut buf = PixelBuffer::new(size);
     buf.fill_background(Color::<f64>::new(25.0 / 255.0, 25.0 / 255.0, 35.0 / 255.0)).unwrap();
     if let Some(font) = nerd_font() {
-        buf.draw_codepoint(
+        buf.draw_codepoint(Codepoint::new(
             font,
             '\u{F11B}',
             Vec2::<Pixels, f32>::new(size.x as f32 / 2.0, size.y as f32 / 2.0),
             Pixels::new(48.0),
             Color::<u8>::new(100, 180, 255),
-        )
+        ))
         .unwrap();
     }
 
@@ -338,7 +338,7 @@ fn build_icon_grid_section() -> Frame {
     let mut buf = PixelBuffer::new(size);
     buf.fill_background(Color::<f64>::new(20.0 / 255.0, 20.0 / 255.0, 25.0 / 255.0)).unwrap();
     if let Some(font) = nerd_font() {
-        buf.draw_icon_grid(font, GALLERY_ICONS, Grid::for_items(GALLERY_ICONS.len() as u32, 2), true, resolve_codepoint);
+        buf.draw_icon_grid(IconGrid::new(font, GALLERY_ICONS, Grid::for_items(GALLERY_ICONS.len() as u32, 2), true, &resolve_codepoint));
     }
 
     let texture = pixels_to_texture(&buf);
@@ -381,7 +381,8 @@ fn build_progress_bar_section() -> Frame {
     let render_progress = move |value: Fraction| -> gtk4::gdk::MemoryTexture {
         let mut buf = PixelBuffer::new(progress_size);
         buf.fill_background(Color::<f64>::new(20.0 / 255.0, 20.0 / 255.0, 20.0 / 255.0)).unwrap();
-        buf.draw_progress_bar(value, Color::<f64>::new(0.4, 0.7, 1.0)).unwrap();
+        buf.draw_progress_bar(ProgressBar::new(value, Color::<f64>::new(0.4, 0.7, 1.0), Pixels::new(4.0)))
+            .unwrap();
         pixels_to_texture(&buf)
     };
 
@@ -445,7 +446,7 @@ fn build_text_section() -> Frame {
     let label_size = Size::new(96, 96);
     let mut label_buf = PixelBuffer::new(label_size);
     label_buf.fill_background(Color::<f64>::new(30.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0)).unwrap();
-    label_buf.draw_icon(nerd_font(), "nf-fa-star", true, resolve_codepoint, Some(Color::<f64>::new(1.0, 0.8, 0.2)));
+    label_buf.draw_icon(Icon::new(nerd_font(), "nf-fa-star", true, &resolve_codepoint, Some(Color::<f64>::new(1.0, 0.8, 0.2))));
     label_buf.draw_label(label_font().or_else(nerd_font), "star", true, None);
 
     let label_texture = pixels_to_texture(&label_buf);

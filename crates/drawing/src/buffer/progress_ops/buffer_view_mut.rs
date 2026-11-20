@@ -2,6 +2,9 @@
 
 use crate::buffer::raster::blend_pixel;
 use crate::ops::DrawProgressOps;
+use crate::ops::Gauge;
+use crate::ops::PROGRESS_BAR_BOTTOM_MARGIN;
+use crate::ops::ProgressBar;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::PixelFormat;
 use smearor_commons_buffer::Rgba;
@@ -9,31 +12,30 @@ use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Annulus;
 use smearor_commons_geometry::Arc;
-use smearor_commons_geometry::Fraction;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::RotationRad;
 use smearor_commons_geometry::Vec2;
 
 impl DrawProgressOps for BufferViewMut<'_, Rgba> {
-    /// Draw a horizontal progress bar at the bottom of the image.
-    fn draw_progress_bar(&mut self, value: Fraction, color: impl Into<Color<u8>>) -> Result<(), Self::Error> {
+    /// Draw `bar`'s strip at the bottom of the image.
+    fn draw_progress_bar(&mut self, bar: ProgressBar) -> Result<(), Self::Error> {
+        let ProgressBar { value, color, height } = bar;
         let size = self.size();
         let stride = self.stride().as_usize();
         let pixels = self.data_mut();
-        let bar_height = 4u32;
+        let bar_height = height.as_raw().ceil().max(0.0) as u32;
         let color: Color<u8> = color.into();
-        let bar_y = size.y.saturating_sub(bar_height + 2);
+        let bar_y = size.y.saturating_sub(bar_height + PROGRESS_BAR_BOTTOM_MARGIN as u32);
         let fill_width = ((size.x as f64 * value.clamped().as_f64()) as u32).min(size.x);
-        let bytes: [u8; 4] = color.into();
+        let mut pixel = [0; Rgba::BYTES_PER_PIXEL];
+        let mut track = [0; Rgba::BYTES_PER_PIXEL];
+        Rgba::write_pixel(&mut pixel, color.r, color.g, color.b, color.a);
+        Rgba::write_pixel(&mut track, color.r / 3, color.g / 3, color.b / 3, 255);
 
-        for y in bar_y..bar_y + bar_height {
+        for y in bar_y..(bar_y + bar_height).min(size.y) {
             for x in 0..size.x {
                 let idx = y as usize * stride + x as usize * Rgba::BYTES_PER_PIXEL;
-                if x < fill_width {
-                    pixels[idx..idx + Rgba::BYTES_PER_PIXEL].copy_from_slice(&bytes);
-                } else {
-                    pixels[idx..idx + Rgba::BYTES_PER_PIXEL].copy_from_slice(&[bytes[0] / 3, bytes[1] / 3, bytes[2] / 3, 255]);
-                }
+                pixels[idx..idx + Rgba::BYTES_PER_PIXEL].copy_from_slice(if x < fill_width { &pixel } else { &track });
             }
         }
         Ok(())
@@ -42,16 +44,16 @@ impl DrawProgressOps for BufferViewMut<'_, Rgba> {
     /// Raster gauge: per-pixel `Annulus` membership plus `Arc` direction
     /// test. `RotationRad::new` measures from +x clockwise in screen
     /// coordinates (y-down), so `-PI/2` starts the sweep at 12 o'clock.
-    fn draw_gauge(
-        &mut self,
-        center: Vec2<Pixels, f32>,
-        radius: Pixels<f32>,
-        line_width: Pixels<f32>,
-        value: Fraction,
-        color: impl Into<Color<f64>>,
-        track: impl Into<Color<f64>>,
-    ) -> Result<(), Self::Error> {
-        let (center, radius, half_width) = (center.to_f64(), f64::from(radius.as_raw()), f64::from(line_width.as_raw()) / 2.0);
+    fn draw_gauge(&mut self, gauge: Gauge) -> Result<(), Self::Error> {
+        let Gauge {
+            center,
+            radius,
+            line_width,
+            value,
+            color,
+            track,
+        } = gauge;
+        let (center, radius, half_width) = (center.to_f64(), radius.as_f64(), line_width.as_f64() / 2.0);
         if half_width <= 0.0 || radius <= half_width {
             return Ok(());
         }
@@ -60,7 +62,7 @@ impl DrawProgressOps for BufferViewMut<'_, Rgba> {
             RotationRad::new(-std::f64::consts::FRAC_PI_2),
             RotationRad::new(value.clamped().as_f64() * std::f64::consts::TAU),
         );
-        let (color, track): (Color<u8>, Color<u8>) = (color.into().into(), track.into().into());
+        let (color, track): (Color<u8>, Color<u8>) = (color.into(), track.into());
         let size = self.size();
         let stride = self.stride().as_usize();
         let pixels = self.data_mut();
@@ -86,6 +88,7 @@ impl DrawProgressOps for BufferViewMut<'_, Rgba> {
 mod tests {
     use super::*;
     use smearor_commons_buffer::PixelBuffer;
+    use smearor_commons_geometry::Fraction;
     use smearor_commons_geometry::Size;
 
     #[test]
@@ -93,7 +96,9 @@ mod tests {
         let size = Size::new(8, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 0, 0);
-        buf.view_mut().draw_progress_bar(Fraction::new(1.0), color).unwrap();
+        buf.view_mut()
+            .draw_progress_bar(ProgressBar::new(Fraction::new(1.0), color, Pixels::new(4.0)))
+            .unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -112,7 +117,9 @@ mod tests {
         let size = Size::new(8, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 0, 0);
-        buf.view_mut().draw_progress_bar(Fraction::new(0.5), color).unwrap();
+        buf.view_mut()
+            .draw_progress_bar(ProgressBar::new(Fraction::new(0.5), color, Pixels::new(4.0)))
+            .unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -137,7 +144,9 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(100, 200, 50);
-        buf.view_mut().draw_progress_bar(Fraction::new(0.0), color).unwrap();
+        buf.view_mut()
+            .draw_progress_bar(ProgressBar::new(Fraction::new(0.0), color, Pixels::new(4.0)))
+            .unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -157,7 +166,9 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 255, 255);
-        buf.view_mut().draw_progress_bar(Fraction::new(2.0), color).unwrap();
+        buf.view_mut()
+            .draw_progress_bar(ProgressBar::new(Fraction::new(2.0), color, Pixels::new(4.0)))
+            .unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -176,7 +187,9 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color = Color::<u8>::new(255, 255, 255);
-        buf.view_mut().draw_progress_bar(Fraction::new(-1.0), color).unwrap();
+        buf.view_mut()
+            .draw_progress_bar(ProgressBar::new(Fraction::new(-1.0), color, Pixels::new(4.0)))
+            .unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -194,7 +207,9 @@ mod tests {
         let size = Size::new(4, 8);
         let mut buf = PixelBuffer::new(size);
         let color_f64 = Color::<f64>::new(1.0, 0.0, 0.0);
-        buf.view_mut().draw_progress_bar(Fraction::new(1.0), color_f64).unwrap();
+        buf.view_mut()
+            .draw_progress_bar(ProgressBar::new(Fraction::new(1.0), color_f64, Pixels::new(4.0)))
+            .unwrap();
 
         let bar_height = 4u32;
         let bar_y = size.y.saturating_sub(bar_height + 2);
@@ -219,6 +234,7 @@ mod tests {
 mod gauge_tests {
     use super::*;
     use smearor_commons_buffer::PixelBuffer;
+    use smearor_commons_geometry::Fraction;
     use smearor_commons_geometry::Size;
 
     fn px(buf: &PixelBuffer<Rgba>, x: u32, y: u32) -> [u8; 4] {
@@ -229,14 +245,14 @@ mod gauge_tests {
     #[test]
     fn draw_gauge_renders_ring() {
         let mut buf = PixelBuffer::new(Size::new(40, 40));
-        buf.draw_gauge(
+        buf.draw_gauge(Gauge::new(
             Vec2::<Pixels, f32>::new(20.0, 20.0),
             Pixels::new(14.0f32),
             Pixels::new(6.0f32),
             Fraction::ONE,
             Color::<f64>::new(0.0, 1.0, 0.0),
             Color::<f64>::new(0.2, 0.2, 0.2),
-        )
+        ))
         .unwrap();
 
         // Full turn: every ring pixel is the value color - top, right, bottom, left.
@@ -251,14 +267,14 @@ mod gauge_tests {
     #[test]
     fn draw_gauge_half_turn_splits_arc_and_track() {
         let mut buf = PixelBuffer::new(Size::new(40, 40));
-        buf.draw_gauge(
+        buf.draw_gauge(Gauge::new(
             Vec2::<Pixels, f32>::new(20.0, 20.0),
             Pixels::new(14.0f32),
             Pixels::new(6.0f32),
             Fraction::HALF,
             Color::<f64>::new(0.0, 1.0, 0.0),
             Color::<f64>::new(0.2, 0.2, 0.2),
-        )
+        ))
         .unwrap();
 
         // 12 o'clock and 3 o'clock are inside the first half-turn; 9 o'clock is track.
@@ -274,14 +290,14 @@ mod gauge_tests {
     #[test]
     fn draw_gauge_clamps_out_of_range_values() {
         let mut buf = PixelBuffer::new(Size::new(40, 40));
-        buf.draw_gauge(
+        buf.draw_gauge(Gauge::new(
             Vec2::<Pixels, f32>::new(20.0, 20.0),
             Pixels::new(14.0f32),
             Pixels::new(6.0f32),
             Fraction::new(2.5),
             Color::<f64>::new(0.0, 1.0, 0.0),
             Color::<f64>::new(0.2, 0.2, 0.2),
-        )
+        ))
         .unwrap();
 
         // value > 1 clamps to a full turn.
