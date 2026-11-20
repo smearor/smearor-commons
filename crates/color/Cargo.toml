@@ -31,5 +31,9 @@ zvariant = { workspace = true, optional = true }
 serde_json = "1.0"
 
 [[example]]
+name = "fan"
+required-features = ["gtk4"]
+
+[[example]]
 name = "palette"
 required-features = ["gtk4"]
