@@ -5,8 +5,8 @@ mod icon_grid;
 mod named_icon;
 
 pub use codepoint::Codepoint;
-pub use named_icon::Icon;
 pub use icon_grid::IconGrid;
+pub use named_icon::Icon;
 
 use crate::ops::DrawBackend;
 use smearor_commons_color::Color;
