@@ -29,6 +29,7 @@ tracing.workspace = true
 [dev-dependencies]
 glib.workspace = true
 gtk4.workspace = true
+cairo-rs = { workspace = true, features = ["png"] }
 miette = "7.4"
 nerd-fonts-rs = { git = "https://github.com/smearor/fonts-rs.git", default-features = false, features = ["render", "embed-fonts", "gtk"] }
 

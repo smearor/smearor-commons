@@ -33,6 +33,7 @@ use smearor_commons_geometry::Size;
 
 pub use error::DrawingError;
 pub use surface::ViewSurface;
+pub use surface::image_surface_from_buffer;
 pub use surface::pixel_buffer_from_surface;
 pub use target::CairoTarget;
 

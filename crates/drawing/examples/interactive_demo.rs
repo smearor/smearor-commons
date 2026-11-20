@@ -40,12 +40,6 @@ use smearor_commons_geometry::Size;
 use smearor_commons_geometry::Vec2;
 
 #[cfg(feature = "cairo")]
-use smearor_commons_buffer::BgraPremultiplied;
-#[cfg(feature = "cairo")]
-use smearor_commons_buffer::PixelFormat;
-#[cfg(feature = "cairo")]
-use smearor_commons_buffer::Rgba;
-#[cfg(feature = "cairo")]
 use smearor_commons_drawing::CairoTarget;
 #[cfg(feature = "cairo")]
 use smearor_commons_drawing::pixel_buffer_from_surface;
@@ -177,19 +171,7 @@ fn cairo_texture<E: std::fmt::Debug>(size: Size<u32>, draw: impl FnOnce(&mut Cai
         draw(&mut target).unwrap();
     }
     let buf = pixel_buffer_from_surface(&mut surface).expect("surface readback");
-    pixels_to_texture(&unpremultiply(&buf))
-}
-
-/// Convert a premultiplied BGRA buffer to straight-alpha RGBA via the
-/// `PixelFormat` read/write channel interface.
-#[cfg(feature = "cairo")]
-fn unpremultiply(src: &PixelBuffer<BgraPremultiplied>) -> PixelBuffer<Rgba> {
-    let mut dst = PixelBuffer::<Rgba>::new(src.size());
-    for (s, d) in src.pixels().as_chunks::<4>().0.iter().zip(dst.pixels_mut().as_chunks_mut::<4>().0.iter_mut()) {
-        let [r, g, b, a] = BgraPremultiplied::read_pixel(s);
-        Rgba::write_pixel(d, r, g, b, a);
-    }
-    dst
+    pixels_to_texture(&buf.into_unpremultiplied().into_rgba())
 }
 
 /// One backend column: a labeled image.
@@ -216,6 +198,16 @@ fn backend_row_with_cairo(raster: &gtk4::gdk::MemoryTexture, cairo: &gtk4::gdk::
     row
 }
 
+/// Uploads a raster buffer — through the `gtk` bridge when the
+/// `gtk4` feature is on (dogfooding `texture_from_buffer`), else the
+/// inline equivalent so the demo builds without it.
+#[cfg(feature = "gtk4")]
+fn pixels_to_texture(buf: &PixelBuffer) -> gtk4::gdk::MemoryTexture {
+    smearor_commons_drawing::texture_from_buffer(buf)
+}
+
+/// Inline fallback of `texture_from_buffer` for builds without `gtk4`.
+#[cfg(not(feature = "gtk4"))]
 fn pixels_to_texture(buf: &PixelBuffer) -> gtk4::gdk::MemoryTexture {
     let size = buf.size();
     let bytes = glib::Bytes::from(buf.pixels());

@@ -126,6 +126,33 @@ pub fn pixel_buffer_from_surface(surface: &mut ImageSurface) -> Result<PixelBuff
     Ok(buffer)
 }
 
+/// Copies a [`PixelBuffer`]'s pixels into a fresh `ARgb32`
+/// [`ImageSurface`] — the inverse of [`pixel_buffer_from_surface`].
+/// Channels are converted through the [`PixelFormat`] interface:
+/// whatever the source format, each pixel is re-encoded as
+/// premultiplied BGRA (the ARgb32 memory layout).
+///
+/// This is the surface upload consumers need for cairo path helpers
+/// like `tile_fill` (e.g. a decoded texture tile).
+pub fn image_surface_from_buffer<F: PixelFormat>(buffer: &PixelBuffer<F>) -> Result<ImageSurface, DrawingError> {
+    let size = buffer.size();
+    let mut surface = ImageSurface::create(Format::ARgb32, size.x as i32, size.y as i32)?;
+    let stride = surface.stride() as usize;
+    let row_bytes = size.x as usize * BgraPremultiplied::BYTES_PER_PIXEL;
+    {
+        let mut data = surface.data().map_err(|_| DrawingError::SurfaceBorrowed)?;
+        for (y, row) in buffer.pixels().chunks_exact(size.x as usize * F::BYTES_PER_PIXEL).enumerate() {
+            let dst = &mut data[y * stride..y * stride + row_bytes];
+            for (s, d) in row.chunks_exact(F::BYTES_PER_PIXEL).zip(dst.as_chunks_mut::<4>().0.iter_mut()) {
+                let [r, g, b, a] = F::read_pixel(s);
+                BgraPremultiplied::write_pixel(d, r, g, b, a);
+            }
+        }
+    }
+    surface.mark_dirty();
+    Ok(surface)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
