@@ -39,6 +39,12 @@ mod tech;
 
 #[cfg(feature = "cairo")]
 pub use cairo::CairoTarget;
+#[cfg(feature = "cairo")]
+pub use cairo::DrawingError;
+#[cfg(feature = "cairo")]
+pub use cairo::ViewSurface;
+#[cfg(feature = "cairo")]
+pub use cairo::pixel_buffer_from_surface;
 pub use ops::DrawBackend;
 pub use ops::DrawIconOps;
 pub use ops::DrawOps;
