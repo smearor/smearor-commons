@@ -4,7 +4,10 @@
 use crate::buffer::raster::blend_pixel;
 use crate::ops::DrawPrimitiveOps;
 use crate::ops::FillCircle;
+use crate::ops::FillPolygon;
 use crate::ops::FillRect;
+use crate::ops::FillSector;
+use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::PixelFormat;
@@ -80,6 +83,38 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
         blend_scanned(self, bounds, spec.color, spec.alpha, |p| spec.circle.contains(p));
         Ok(())
     }
+
+    fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {
+        let Some(bounds) = spec.polygon.bounding_box() else {
+            return Ok(());
+        };
+        blend_scanned(self, bounds.to_i32_ceil(), spec.color, spec.alpha, |p| spec.polygon.contains(p));
+        Ok(())
+    }
+
+    /// Stroke centered on each segment like cairo: a segment's stroke
+    /// region is every point within `line_width/2` of it.
+    fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error> {
+        let half = f64::from(spec.line_width.as_raw()) / 2.0;
+        if half <= 0.0 {
+            return Ok(());
+        }
+        for segment in spec.polyline.segments() {
+            let bounds = segment.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+            blend_scanned(self, bounds, spec.color, spec.alpha, |p| segment.distance(p).as_raw() <= half);
+        }
+        Ok(())
+    }
+
+    /// The sector is `annulus ∩ arc`, sampled like the other shapes.
+    fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
+        let bounds = spec.annulus.outer_circle().bounding_box().to_i32_ceil();
+        let center = spec.annulus.center;
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| {
+            spec.annulus.contains(p) && spec.arc.contains((*p - center).direction())
+        });
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -88,7 +123,11 @@ mod tests {
     use smearor_commons_buffer::BufferMetadata;
     use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_buffer::Stride;
+    use smearor_commons_geometry::Annulus;
+    use smearor_commons_geometry::Arc;
     use smearor_commons_geometry::Circle;
+    use smearor_commons_geometry::Polygon;
+    use smearor_commons_geometry::Polyline;
     use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::Size;
 
@@ -182,6 +221,43 @@ mod tests {
         assert_eq!(px(&buf, 2, 2), [0, 255, 0, 255], "corner border");
         assert_eq!(px(&buf, 4, 4), [0, 0, 0, 0], "interior untouched");
         assert_eq!(px(&buf, 0, 0), [0, 0, 0, 0], "outside untouched");
+    }
+
+    #[test]
+    fn fill_polygon_fills_interior() {
+        let mut buf = PixelBuffer::new(Size::new(10, 10));
+        let triangle = Polygon::new(vec![Vec2::<Pixels>::new(2.0, 2.0), Vec2::<Pixels>::new(8.0, 2.0), Vec2::<Pixels>::new(5.0, 8.0)]);
+        buf.fill_polygon(FillPolygon::new(triangle, Color::<f64>::new(1.0, 0.0, 0.0), 1.0));
+
+        assert_eq!(px(&buf, 5, 4), [255, 0, 0, 255], "inside the triangle");
+        assert_eq!(px(&buf, 2, 6), [0, 0, 0, 0], "below the triangle edge");
+        assert_eq!(px(&buf, 0, 0), [0, 0, 0, 0], "outside");
+    }
+
+    #[test]
+    fn stroke_polyline_marks_segment_band() {
+        let mut buf = PixelBuffer::new(Size::new(10, 10));
+        let line = Polyline::new(vec![Vec2::<Pixels>::new(1.0, 5.0), Vec2::<Pixels>::new(9.0, 5.0)]);
+        buf.stroke_polyline(StrokePolyline::new(line, Color::<f64>::new(0.0, 0.0, 1.0), Pixels::new(2.0f32), 1.0));
+
+        assert_eq!(px(&buf, 5, 5), [0, 0, 255, 255], "on the segment");
+        assert_eq!(px(&buf, 5, 8), [0, 0, 0, 0], "beyond half the line width");
+    }
+
+    #[test]
+    fn fill_sector_fills_ring_interval_only() {
+        use smearor_commons_geometry::RotationRad;
+        use std::f64::consts::FRAC_PI_2;
+
+        let mut buf = PixelBuffer::new(Size::new(16, 16));
+        let annulus = Annulus::<Pixels>::new(Vec2::<Pixels>::new(8.0, 8.0), 3.0, 6.0);
+        let arc = Arc::spanning(RotationRad::new(0.0), RotationRad::new(FRAC_PI_2));
+        buf.fill_sector(FillSector::new(annulus, arc, Color::<f64>::new(0.0, 1.0, 0.0), 1.0));
+
+        assert_eq!(px(&buf, 11, 9), [0, 255, 0, 255], "in the sector");
+        assert_eq!(px(&buf, 8, 8), [0, 0, 0, 0], "inside the hole");
+        assert_eq!(px(&buf, 11, 5), [0, 0, 0, 0], "in the ring but outside the arc");
+        assert_eq!(px(&buf, 15, 8), [0, 0, 0, 0], "beyond the outer radius");
     }
 
     #[test]

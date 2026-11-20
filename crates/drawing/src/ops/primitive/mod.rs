@@ -1,11 +1,17 @@
 //! The [`DrawPrimitiveOps`] capability trait and its draw specs.
 
 mod fill_circle;
+mod fill_polygon;
 mod fill_rect;
+mod fill_sector;
+mod stroke_polyline;
 mod stroke_rect;
 
 pub use fill_circle::FillCircle;
+pub use fill_polygon::FillPolygon;
 pub use fill_rect::FillRect;
+pub use fill_sector::FillSector;
+pub use stroke_polyline::StrokePolyline;
 pub use stroke_rect::StrokeRect;
 
 use crate::ops::DrawBackend;
@@ -36,6 +42,18 @@ pub trait DrawPrimitiveOps: DrawBackend {
     /// Fill `spec`'s circle (chess `target_dot` lineage — legal-target
     /// dots, indicators).
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error>;
+
+    /// Fill `spec`'s polygon, even-odd (gamut outlines, Ostwald/NCS
+    /// triangle cells).
+    fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error>;
+
+    /// Stroke `spec`'s polyline segments — the path stays open
+    /// (spectral and Planckian loci, wireframe edges).
+    fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error>;
+
+    /// Fill `spec`'s annulus sector (pie-ring pieces: color-wheel
+    /// wedges, fan chips).
+    fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error>;
 }
 
 impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
@@ -53,5 +71,17 @@ impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
 
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
         (**self).fill_circle(spec)
+    }
+
+    fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {
+        (**self).fill_polygon(spec)
+    }
+
+    fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error> {
+        (**self).stroke_polyline(spec)
+    }
+
+    fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
+        (**self).fill_sector(spec)
     }
 }

@@ -225,6 +225,16 @@ impl<'a, T: DrawTarget> RenderContext<'a, T> {
             .draw_text_centered(self.label_font.or(self.icon_font), text, baseline_y, font_size, color)
     }
 
+    /// Draws `text` with its baseline starting at `position` using
+    /// the configured font and `text_color`.
+    pub fn draw_text_at(&mut self, position: Vec2<Pixels, f32>, text: &str, font_size: Pixels<f32>) -> Result<(), T::Error> {
+        let color: Color<u8> = self
+            .text_color
+            .map(|c| c.into())
+            .unwrap_or_else(|| self.target.default_text_color(self.is_active));
+        self.target.draw_text(self.label_font.or(self.icon_font), position, text, font_size, color)
+    }
+
     /// Draws a horizontal progress bar of the given `height` at the
     /// bottom of the buffer.
     ///

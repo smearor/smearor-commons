@@ -26,6 +26,8 @@ use ab_glyph::FontVec;
 use ab_glyph::Glyph;
 use ab_glyph::PxScale;
 use ab_glyph::ScaleFont;
+use cairo::FontSlant;
+use cairo::FontWeight;
 use smearor_commons_color::Color;
 use smearor_commons_font::truncate_text_to_width;
 use smearor_commons_geometry::Pixels;
@@ -109,6 +111,45 @@ impl DrawTextOps for CairoTarget {
 
         let mut pen = Vec2::<Pixels, f32>::new(start_x.as_raw(), baseline_y.as_raw());
         for ch in truncated.chars() {
+            let glyph_id = font.glyph_id(ch);
+            let glyph: Glyph = glyph_id.with_scale_and_position(scale, pen);
+            fill_glyph(&self.ctx, font, &glyph)?;
+            pen.x += scaled_font.h_advance(glyph_id);
+        }
+        Ok(())
+    }
+
+    /// Free-standing text at an explicit baseline anchor. With an
+    /// injected `FontVec` glyphs are laid out from `position` onward;
+    /// without one cairo's toy text API draws a system `Sans` — the
+    /// asymmetry to the metric methods is deliberate: free text is
+    /// exactly where the toy path has a consumer (GTK examples).
+    fn draw_text(
+        &mut self,
+        font: Option<&FontVec>,
+        position: Vec2<Pixels, f32>,
+        text: &str,
+        font_size: Pixels<f32>,
+        color: impl Into<Color<u8>>,
+    ) -> Result<(), Self::Error> {
+        let color: Color<f64> = color.into().into();
+        let font = match font {
+            Some(f) => f,
+            None => {
+                color.apply(&self.ctx);
+                self.ctx.select_font_face("Sans", FontSlant::Normal, FontWeight::Normal);
+                self.ctx.set_font_size(f64::from(font_size.as_raw()));
+                self.ctx.move_to(f64::from(position.x), f64::from(position.y));
+                self.ctx.show_text(text)?;
+                return Ok(());
+            }
+        };
+
+        let scale = PxScale::from(font_size.as_raw());
+        let scaled_font = font.as_scaled(scale);
+        color.apply(&self.ctx);
+        let mut pen = position;
+        for ch in text.chars() {
             let glyph_id = font.glyph_id(ch);
             let glyph: Glyph = glyph_id.with_scale_and_position(scale, pen);
             fill_glyph(&self.ctx, font, &glyph)?;

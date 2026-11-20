@@ -56,12 +56,15 @@ pub use ops::DrawProgressOps;
 pub use ops::DrawTarget;
 pub use ops::DrawTextOps;
 pub use ops::FillCircle;
+pub use ops::FillPolygon;
 pub use ops::FillRect;
+pub use ops::FillSector;
 pub use ops::Gauge;
 pub use ops::Icon;
 pub use ops::IconGrid;
 pub use ops::PROGRESS_BAR_BOTTOM_MARGIN;
 pub use ops::ProgressBar;
+pub use ops::StrokePolyline;
 pub use ops::StrokeRect;
 pub use render_context::RenderContext;
 
@@ -78,11 +81,14 @@ pub mod prelude {
     pub use crate::ops::DrawTarget;
     pub use crate::ops::DrawTextOps;
     pub use crate::ops::FillCircle;
+    pub use crate::ops::FillPolygon;
     pub use crate::ops::FillRect;
+    pub use crate::ops::FillSector;
     pub use crate::ops::Gauge;
     pub use crate::ops::Icon;
     pub use crate::ops::IconGrid;
     pub use crate::ops::PROGRESS_BAR_BOTTOM_MARGIN;
     pub use crate::ops::ProgressBar;
+    pub use crate::ops::StrokePolyline;
     pub use crate::ops::StrokeRect;
 }

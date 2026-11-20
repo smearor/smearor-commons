@@ -3,7 +3,10 @@
 
 use crate::ops::DrawPrimitiveOps;
 use crate::ops::FillCircle;
+use crate::ops::FillPolygon;
 use crate::ops::FillRect;
+use crate::ops::FillSector;
+use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
 use smearor_commons_buffer::PixelBuffer;
 use smearor_commons_buffer::Rgba;
@@ -24,5 +27,17 @@ impl DrawPrimitiveOps for PixelBuffer<Rgba> {
 
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
         self.view_mut().fill_circle(spec)
+    }
+
+    fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {
+        self.view_mut().fill_polygon(spec)
+    }
+
+    fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error> {
+        self.view_mut().stroke_polyline(spec)
+    }
+
+    fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
+        self.view_mut().fill_sector(spec)
     }
 }

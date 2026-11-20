@@ -4,9 +4,13 @@
 //! backend there is no second packed-view target to delegate to.
 
 use crate::cairo::CairoTarget;
+use crate::cairo::path::polyline_path;
 use crate::ops::DrawPrimitiveOps;
 use crate::ops::FillCircle;
+use crate::ops::FillPolygon;
 use crate::ops::FillRect;
+use crate::ops::FillSector;
+use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
 use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
@@ -49,6 +53,38 @@ impl DrawPrimitiveOps for CairoTarget {
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
         spec.color.apply_alpha(&self.ctx, spec.alpha);
         self.ctx.arc(spec.circle.center.x, spec.circle.center.y, spec.circle.radius, 0.0, TAU);
+        self.ctx.fill()
+    }
+
+    fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        polyline_path(&self.ctx, &spec.polygon);
+        self.ctx.close_path();
+        self.ctx.fill()
+    }
+
+    /// Stroke centered on the segments like cairo — the open path
+    /// gets `line_width` symmetric around the vertex polyline.
+    fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
+            return Ok(());
+        }
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        polyline_path(&self.ctx, spec.polyline.points());
+        self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
+        self.ctx.stroke()
+    }
+
+    /// The annulus sector as outer arc swept forward (`arc`) and
+    /// inner arc swept back — `arc_negative` handles the wrap across
+    /// the full turn through the un-normalized end direction.
+    fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        let center = spec.annulus.center;
+        let (start, end) = (spec.arc.start.as_f64(), spec.arc.start.as_f64() + spec.arc.width.as_f64());
+        self.ctx.arc(center.x, center.y, spec.annulus.outer, start, end);
+        self.ctx.arc_negative(center.x, center.y, spec.annulus.inner, end, start);
+        self.ctx.close_path();
         self.ctx.fill()
     }
 }

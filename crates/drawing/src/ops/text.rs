@@ -4,6 +4,7 @@ use crate::ops::DrawBackend;
 use ab_glyph::FontVec;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Pixels;
+use smearor_commons_geometry::Vec2;
 
 /// Text drawing operations: bottom labels and centered text.
 ///
@@ -23,6 +24,20 @@ pub trait DrawTextOps: DrawBackend {
         font_size: Pixels<f32>,
         color: impl Into<Color<u8>>,
     ) -> Result<(), Self::Error>;
+
+    /// Draw a text run with its baseline starting at `position`, using
+    /// the injected `font`. A `None` font falls back to cairo's toy
+    /// text API on the cairo backend (system `Sans`) and to the
+    /// built-in bitmap renderer on the raster backend (which keeps
+    /// its own layout, ignoring `position`).
+    fn draw_text(
+        &mut self,
+        font: Option<&FontVec>,
+        position: Vec2<Pixels, f32>,
+        text: &str,
+        font_size: Pixels<f32>,
+        color: impl Into<Color<u8>>,
+    ) -> Result<(), Self::Error>;
 }
 
 impl<T: DrawTextOps + ?Sized> DrawTextOps for &mut T {
@@ -39,5 +54,16 @@ impl<T: DrawTextOps + ?Sized> DrawTextOps for &mut T {
         color: impl Into<Color<u8>>,
     ) -> Result<(), Self::Error> {
         (**self).draw_text_centered(font, text, baseline_y, font_size, color)
+    }
+
+    fn draw_text(
+        &mut self,
+        font: Option<&FontVec>,
+        position: Vec2<Pixels, f32>,
+        text: &str,
+        font_size: Pixels<f32>,
+        color: impl Into<Color<u8>>,
+    ) -> Result<(), Self::Error> {
+        (**self).draw_text(font, position, text, font_size, color)
     }
 }

@@ -100,6 +100,39 @@ impl DrawTextOps for BufferViewMut<'_, Rgba> {
         }
         Ok(())
     }
+
+    /// Free-standing text at an explicit baseline anchor: glyphs are
+    /// rasterized from `position` onward; the `None`-font bitmap
+    /// fallback keeps its own layout and ignores `position`.
+    fn draw_text(
+        &mut self,
+        font: Option<&FontVec>,
+        position: Vec2<Pixels, f32>,
+        text: &str,
+        font_size: Pixels<f32>,
+        color: impl Into<Color<u8>>,
+    ) -> Result<(), Self::Error> {
+        let font = match font {
+            Some(f) => f,
+            None => {
+                debug!("no text font provided, using bitmap fallback");
+                self.draw_text_bitmap(text, false);
+                return Ok(());
+            }
+        };
+
+        let scale = PxScale::from(font_size.as_raw());
+        let scaled_font = font.as_scaled(scale);
+        let color: Color<u8> = color.into();
+        let mut pen = position;
+        for ch in text.chars() {
+            let glyph_id = font.glyph_id(ch);
+            let glyph: Glyph = glyph_id.with_scale_and_position(scale, pen);
+            self.draw_glyph(font, &glyph, color);
+            pen.x += scaled_font.h_advance(glyph_id);
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
