@@ -33,8 +33,6 @@
 mod buffer;
 #[cfg(feature = "cairo")]
 pub mod cairo;
-#[cfg(feature = "gtk4")]
-pub mod gtk;
 mod ops;
 mod render_context;
 mod tech;
@@ -49,14 +47,6 @@ pub use cairo::ViewSurface;
 pub use cairo::image_surface_from_buffer;
 #[cfg(feature = "cairo")]
 pub use cairo::pixel_buffer_from_surface;
-#[cfg(feature = "gtk4")]
-pub use gtk::TextureError;
-#[cfg(feature = "gtk4")]
-pub use gtk::buffer_from_texture;
-#[cfg(feature = "gtk4")]
-pub use gtk::decode_image;
-#[cfg(feature = "gtk4")]
-pub use gtk::texture_from_buffer;
 pub use ops::Codepoint;
 pub use ops::DrawBackend;
 pub use ops::DrawIconOps;

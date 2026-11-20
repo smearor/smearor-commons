@@ -13,6 +13,8 @@
 
 mod error;
 mod formats;
+#[cfg(feature = "gtk4")]
+pub mod gtk;
 mod metadata;
 mod pixel_buffer;
 mod stride;
@@ -31,6 +33,8 @@ pub use formats::Rgb;
 pub use formats::Rgba;
 pub use formats::RgbaPremultiplied;
 pub use formats::Rgbx;
+#[cfg(feature = "gtk4")]
+pub use gtk::TextureError;
 pub use metadata::BufferMetadata;
 pub use pixel_buffer::PixelBuffer;
 pub use stride::Stride;

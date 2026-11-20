@@ -2179,6 +2179,7 @@ dependencies = [
 name = "smearor-commons-buffer"
 version = "0.1.0"
 dependencies = [
+ "gtk4",
  "serde",
  "smearor-commons-geometry",
  "thiserror 2.0.21",

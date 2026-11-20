@@ -13,10 +13,11 @@ description = "Pixel and graphics buffer types for the Smearor ecosystem: format
 # ui / backend bridges (added with the ported code in later phases)
 # image = ["dep:image"]
 # cairo = ["dep:cairo-rs"]
-# gtk4 = ["dep:gtk4"]
+gtk4 = ["dep:gtk4"]
 # smithay = ["dep:smithay"]
 
 [dependencies]
+gtk4 = { workspace = true, optional = true }
 smearor-commons-geometry.workspace = true
 serde.workspace = true
 thiserror.workspace = true

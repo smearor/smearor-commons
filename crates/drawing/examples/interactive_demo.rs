@@ -203,7 +203,7 @@ fn backend_row_with_cairo(raster: &gtk4::gdk::MemoryTexture, cairo: &gtk4::gdk::
 /// inline equivalent so the demo builds without it.
 #[cfg(feature = "gtk4")]
 fn pixels_to_texture(buf: &PixelBuffer) -> gtk4::gdk::MemoryTexture {
-    smearor_commons_drawing::texture_from_buffer(buf)
+    buf.to_memory_texture()
 }
 
 /// Inline fallback of `texture_from_buffer` for builds without `gtk4`.
