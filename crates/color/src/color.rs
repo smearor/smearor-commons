@@ -1,4 +1,6 @@
 use crate::Alpha;
+use crate::CssNamedColor;
+use crate::HexColor;
 use crate::Luminance;
 use crate::LuminanceWeights;
 use crate::ParseColorError;
@@ -17,9 +19,11 @@ use std::str::FromStr;
 /// pixel-native channel values in `[0, 255]` (software rendering).
 ///
 /// Conversions between the instantiations are provided via `From`/`Into`.
-/// Parsing and formatting use `FromStr`/`Display` and accept all common
-/// hex forms: `#RGB`, `#RGBA`, `#RRGGBB` and `#RRGGBBAA` (with or
-/// without the leading `#`).
+/// Parsing and formatting use `FromStr`/`Display`. Parsing accepts all
+/// common hex forms (`#RGB`, `#RGBA`, `#RRGGBB` and `#RRGGBBAA` - the
+/// leading `#` is mandatory, see [`HexColor`]) and the CSS Color Level 4
+/// named colors (`"red"`, `"rebeccapurple"`, `"transparent"`, ASCII
+/// case-insensitive, see [`CssNamedColor`]).
 ///
 /// Semantic color types (`FigureColor`, `LineColor`, `PawnColor`, ...)
 /// stay in consumer crates as thin newtype wrappers around `Color<T>`.
@@ -33,55 +37,6 @@ pub struct Color<T> {
     pub b: T,
     /// Alpha component.
     pub a: T,
-}
-
-// ---------------------------------------------------------------------------
-// Hex parsing / formatting (shared helpers)
-// ---------------------------------------------------------------------------
-
-/// Parses a hex color string into `[r, g, b, a]` byte components.
-///
-/// Accepts `#RGB`, `#RGBA`, `#RRGGBB` and `#RRGGBBAA` (with or without
-/// the leading `#`); shorthand digits are doubled (`#F0A` = `#FF00AA`).
-fn parse_hex_components(hex: &str) -> Result<[u8; 4], ParseColorError> {
-    let hex = hex.strip_prefix('#').unwrap_or(hex);
-    let invalid = |input: &str| ParseColorError::new(input, "contains non-hex characters");
-    match hex.len() {
-        3 => Ok([
-            u8::from_str_radix(&hex[0..1].repeat(2), 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[1..2].repeat(2), 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[2..3].repeat(2), 16).map_err(|_| invalid(hex))?,
-            255,
-        ]),
-        4 => Ok([
-            u8::from_str_radix(&hex[0..1].repeat(2), 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[1..2].repeat(2), 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[2..3].repeat(2), 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[3..4].repeat(2), 16).map_err(|_| invalid(hex))?,
-        ]),
-        6 => Ok([
-            u8::from_str_radix(&hex[0..2], 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[2..4], 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[4..6], 16).map_err(|_| invalid(hex))?,
-            255,
-        ]),
-        8 => Ok([
-            u8::from_str_radix(&hex[0..2], 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[2..4], 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[4..6], 16).map_err(|_| invalid(hex))?,
-            u8::from_str_radix(&hex[6..8], 16).map_err(|_| invalid(hex))?,
-        ]),
-        _ => Err(ParseColorError::new(hex, "expected 3, 4, 6, or 8 hex digits")),
-    }
-}
-
-/// Formats byte components as `#RRGGBB` when opaque, `#RRGGBBAA` otherwise.
-fn format_hex_components(r: u8, g: u8, b: u8, a: u8) -> String {
-    if a == 255 {
-        format!("#{r:02x}{g:02x}{b:02x}")
-    } else {
-        format!("#{r:02x}{g:02x}{b:02x}{a:02X}")
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -423,6 +378,18 @@ impl Color<u8> {
     pub fn with_min_luminance(&self, min: impl Into<Luminance>) -> Self {
         Self::from(Color::<f64>::from(*self).with_min_luminance(min))
     }
+
+    /// The squared Euclidean distance to `other` over the RGB
+    /// channels (alpha ignored).
+    ///
+    /// Squared distances are monotone with true distances - suitable
+    /// for nearest-color comparisons without a square root.
+    pub const fn squared_rgb_distance(&self, other: &Self) -> u32 {
+        let r = self.r as i32 - other.r as i32;
+        let g = self.g as i32 - other.g as i32;
+        let b = self.b as i32 - other.b as i32;
+        (r * r + g * g + b * b) as u32
+    }
 }
 
 impl Default for Color<f64> {
@@ -454,7 +421,7 @@ impl FromStr for Color<f64> {
     type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Color::<u8>::from(parse_hex_components(s)?).into())
+        Ok(Color::<u8>::from_str(s)?.into())
     }
 }
 
@@ -462,35 +429,39 @@ impl FromStr for Color<f32> {
     type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Color::<u8>::from(parse_hex_components(s)?).into())
+        Ok(Color::<u8>::from_str(s)?.into())
     }
 }
 
+/// Parses a `#`-prefixed hex color or a CSS named color.
 impl FromStr for Color<u8> {
     type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::from(parse_hex_components(s)?))
+        if s.starts_with('#') {
+            return s.parse::<HexColor>().map(HexColor::into_color);
+        }
+        s.parse::<CssNamedColor>()
+            .map(Self::from)
+            .map_err(|_| ParseColorError::InvalidColor { input: s.into() })
     }
 }
 
 impl Display for Color<f64> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let c = Color::<u8>::from(*self);
-        f.write_str(&format_hex_components(c.r, c.g, c.b, c.a))
+        HexColor::from(Color::<u8>::from(*self)).fmt(f)
     }
 }
 
 impl Display for Color<f32> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let c = Color::<u8>::from(*self);
-        f.write_str(&format_hex_components(c.r, c.g, c.b, c.a))
+        HexColor::from(Color::<u8>::from(*self)).fmt(f)
     }
 }
 
 impl Display for Color<u8> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format_hex_components(self.r, self.g, self.b, self.a))
+        HexColor::from(*self).fmt(f)
     }
 }
 
@@ -743,10 +714,8 @@ mod tests {
     }
 
     #[test]
-    fn from_str_without_hash() {
-        let with: Color<f64> = "#FF6B4A".parse().unwrap();
-        let without: Color<f64> = "FF6B4A".parse().unwrap();
-        assert_eq!(with, without);
+    fn from_str_without_hash_is_rejected() {
+        assert!("FF6B4A".parse::<Color<f64>>().is_err());
     }
 
     #[test]
@@ -762,10 +731,29 @@ mod tests {
     }
 
     #[test]
+    fn from_str_named_color() {
+        let color: Color<f64> = "rebeccapurple".parse().unwrap();
+        assert_eq!(color, Color::<f64>::new(0x66 as f64 / 255.0, 0x33 as f64 / 255.0, 0x99 as f64 / 255.0));
+        assert_eq!("darkkhaki".parse::<Color<u8>>().unwrap(), Color::<u8>::new(0xBD, 0xB7, 0x6B));
+    }
+
+    #[test]
+    fn from_str_named_color_case_insensitive() {
+        assert_eq!("DarkKhaki".parse::<Color<u8>>().unwrap(), Color::<u8>::new(0xBD, 0xB7, 0x6B));
+        assert_eq!("DARKSLATEGREY".parse::<Color<u8>>().unwrap(), "darkslategray".parse().unwrap());
+    }
+
+    #[test]
+    fn from_str_transparent() {
+        assert_eq!("transparent".parse::<Color<u8>>().unwrap(), Color::<u8>::new_rgba(0, 0, 0, 0));
+    }
+
+    #[test]
     fn from_str_invalid() {
         assert!(Color::<f64>::from_str("#FF").is_err());
         assert!(Color::<f64>::from_str("#FFGGFF").is_err());
         assert!(Color::<f64>::from_str("invalid").is_err());
+        assert!(Color::<f64>::from_str("currentcolor").is_err());
     }
 
     #[test]
@@ -814,6 +802,16 @@ mod tests {
     fn lerp_clamps_t() {
         assert_eq!(Color::<f64>::BLACK.lerp(&Color::<f64>::WHITE, 2.0), Color::<f64>::WHITE);
         assert_eq!(Color::<f64>::BLACK.lerp(&Color::<f64>::WHITE, -1.0), Color::<f64>::BLACK);
+    }
+
+    #[test]
+    fn squared_rgb_distance_measures_rgb_only() {
+        let black = Color::<u8>::new(0, 0, 0);
+        let white = Color::<u8>::new(255, 255, 255);
+        assert_eq!(black.squared_rgb_distance(&white), 3 * 255 * 255);
+        assert_eq!(black.squared_rgb_distance(&black), 0);
+        // Alpha does not count toward the distance.
+        assert_eq!(Color::<u8>::new_rgba(1, 2, 3, 0).squared_rgb_distance(&Color::<u8>::new_rgba(1, 2, 3, 255)), 0);
     }
 
     #[test]

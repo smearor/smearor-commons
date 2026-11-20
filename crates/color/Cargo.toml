@@ -7,7 +7,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Generic color types for the Smearor ecosystem: channel-generic `Color<T>`, hex parsing and color operations."
+description = "Generic color types for the Smearor ecosystem: channel-generic `Color<T>`, hex and CSS named-color parsing and color operations."
 
 [features]
 # transport / schema
@@ -29,3 +29,7 @@ zvariant = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"
+
+[[example]]
+name = "palette"
+required-features = ["gtk4"]
