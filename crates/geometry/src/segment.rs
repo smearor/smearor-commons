@@ -3,6 +3,7 @@
 use crate::Fraction;
 use crate::Polygon;
 use crate::Projection;
+use crate::Rect;
 use crate::RotationRad;
 use crate::Vec2;
 
@@ -25,6 +26,13 @@ impl<U> Segment<U> {
 }
 
 impl<U: Copy> Segment<U> {
+    /// The axis-aligned bounding box of both endpoints.
+    pub fn bounding_box(&self) -> Rect<U> {
+        let min = Vec2::new(self.from.x.min(self.to.x), self.from.y.min(self.to.y));
+        let max = Vec2::new(self.from.x.max(self.to.x), self.from.y.max(self.to.y));
+        min.rect(max - min)
+    }
+
     /// The segment's center point.
     pub fn midpoint(&self) -> Vec2<U> {
         Vec2::new((self.from.x + self.to.x) / 2.0, (self.from.y + self.to.y) / 2.0)

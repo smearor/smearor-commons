@@ -2,6 +2,7 @@
 
 use crate::Line;
 use crate::Millimeters;
+use crate::Rect;
 use crate::Segment;
 use crate::SquareMillimeters;
 use crate::Vec2;
@@ -42,6 +43,19 @@ impl<U: Copy> Polygon<U> {
     pub fn centroid(&self) -> Vec2<U> {
         let count = self.0.len().max(1) as f64;
         Vec2::new(self.0.iter().map(|p| p.x).sum::<f64>() / count, self.0.iter().map(|p| p.y).sum::<f64>() / count)
+    }
+
+    /// The axis-aligned bounding box of the vertex ring, or `None`
+    /// for an empty ring.
+    pub fn bounding_box(&self) -> Option<Rect<U>> {
+        let mut iter = self.0.iter();
+        let first = iter.next()?;
+        let (mut min, mut max) = (*first, *first);
+        for point in iter {
+            min = Vec2::new(min.x.min(point.x), min.y.min(point.y));
+            max = Vec2::new(max.x.max(point.x), max.y.max(point.y));
+        }
+        Some(min.rect(max - min))
     }
 
     /// Whether `point` lies strictly inside the ring (even-odd
