@@ -36,6 +36,7 @@ mod rectangle;
 mod scanline;
 mod segment;
 mod size;
+mod sphere;
 mod transforms;
 mod units;
 mod vec2;
@@ -69,6 +70,7 @@ pub use segment::Segment;
 pub use size::Size;
 #[cfg(feature = "gtk4")]
 pub use size::WidgetSizeExt;
+pub use sphere::Sphere;
 #[cfg(feature = "gtk4")]
 pub use transforms::CenteredTransform;
 pub use transforms::RigidTransform;
