@@ -40,12 +40,27 @@ impl Pixels<u32> {
     pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
+
+    /// The count as `f32` for `f32`-based framework APIs - may lose
+    /// precision beyond 2^24.
+    pub fn as_f32(self) -> f32 {
+        self.0 as f32
+    }
+}
+
+impl<T: Copy + Into<f64>> Pixels<T> {
+    /// The numeric value widened to `f64` for vector-math consumers
+    /// (cairo paths, arc geometry).
+    pub fn as_f64(self) -> f64 {
+        self.0.into()
+    }
 }
 
 impl Pixels<f64> {
-    /// The numeric value in pixels.
-    pub const fn as_f64(self) -> f64 {
-        self.0
+    /// The value as `f32` for `f32`-based framework APIs (ab_glyph
+    /// scales and pen positions, GTK4) - may lose precision.
+    pub fn as_f32(self) -> f32 {
+        self.0 as f32
     }
 
     /// Absolute value.
