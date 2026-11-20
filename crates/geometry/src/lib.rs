@@ -22,6 +22,7 @@
 
 mod annulus;
 mod arc;
+mod camera;
 mod circle;
 mod corners;
 mod grid;
@@ -44,6 +45,7 @@ mod vec3;
 
 pub use annulus::Annulus;
 pub use arc::Arc;
+pub use camera::Camera;
 pub use circle::Circle;
 pub use corners::Corners;
 pub use grid::Cell;
