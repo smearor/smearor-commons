@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["BufferError","PixelFormatId"],"struct":["Bgr","Bgra","Bgrx","BufferMetadata","BufferView","BufferViewMut","Gray","PixelBuffer","Rgb","Rgba","Rgbx","Stride"],"trait":["PixelFormat"]};
+window.SIDEBAR_ITEMS = {"enum":["BufferError","PixelFormatId"],"mod":["gtk"],"struct":["Bgr","Bgra","BgraPremultiplied","Bgrx","BufferMetadata","BufferView","BufferViewMut","Gray","PixelBuffer","Rgb","Rgba","RgbaPremultiplied","Rgbx","Stride"],"trait":["PixelFormat"]};

@@ -11,5 +11,13 @@
 <a href=#11 id=11 data-nosnippet>11</a>    <span class="kw">const </span>BYTES_PER_PIXEL: usize = <span class="number">4</span>;
 <a href=#12 id=12 data-nosnippet>12</a>    <span class="kw">const </span>HAS_ALPHA: bool = <span class="bool-val">false</span>;
 <a href=#13 id=13 data-nosnippet>13</a>    <span class="kw">const </span>ID: PixelFormatId = PixelFormatId::Rgbx;
-<a href=#14 id=14 data-nosnippet>14</a>}
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a>    <span class="kw">fn </span>write_pixel(dst: <span class="kw-2">&amp;mut </span>[u8], r: u8, g: u8, b: u8, _a: u8) {
+<a href=#16 id=16 data-nosnippet>16</a>        dst.copy_from_slice(<span class="kw-2">&amp;</span>[r, g, b, <span class="number">255</span>]);
+<a href=#17 id=17 data-nosnippet>17</a>    }
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a>    <span class="kw">fn </span>read_pixel(src: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">4</span>] {
+<a href=#20 id=20 data-nosnippet>20</a>        [src[<span class="number">0</span>], src[<span class="number">1</span>], src[<span class="number">2</span>], <span class="number">255</span>]
+<a href=#21 id=21 data-nosnippet>21</a>    }
+<a href=#22 id=22 data-nosnippet>22</a>}
 </code></pre></div></section></main></body></html>
