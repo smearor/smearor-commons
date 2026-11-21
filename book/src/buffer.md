@@ -44,6 +44,6 @@ classDiagram
     PixelBuffer ..> PixelFormat : F
 ```
 
-Drawing operations live downstream (`pixel-drawing`); framework bridges
+Drawing operations live downstream (`smearor-commons-drawing`); framework bridges
 (`image`, `cairo`, `gtk4`, `smithay`) are added behind dependency-named
 features. See the crate's rustdoc for the full API.

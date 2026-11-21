@@ -13,6 +13,9 @@ crates.io with a common version.
   scale fitting, bounds centering and text truncation.
 - `smearor-commons-buffer` — format-tagged pixel buffers, strided
   views and metadata.
+- `smearor-commons-drawing` — shared rendering vocabulary: primitives,
+  icons, text and progress bars on pixel buffers (software raster) and
+  cairo/GTK targets behind feature gates.
 - `smearor-commons-animation` — `Interpolate`/`Trajectory`/
   `TimedAnimation` machinery with easing and a GTK4 frame-clock driver.
 - `smearor-commons-layout` — headless tabletop layouting: `TableSide`/
@@ -28,16 +31,21 @@ graph LR
     color[smearor-commons-color]
     font[smearor-commons-font]
     buffer[smearor-commons-buffer]
+    drawing[smearor-commons-drawing]
     animation[smearor-commons-animation]
     layout[smearor-commons-layout]
     layer[smearor-commons-layer]
 
     font --> geometry
     buffer --> geometry
+    drawing --> geometry
+    drawing --> color
+    drawing --> font
+    drawing --> buffer
     animation --> geometry
     layout --> geometry
     layer --> geometry
-    layer -.->|optional `layout` feature| layout
+    layer -.->|optional layout feature| layout
 ```
 
 ## Design
