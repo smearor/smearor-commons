@@ -40,23 +40,26 @@ flowchart LR
 
 ## What's inside
 
-- **Shapes**: `Line`, `Segment`, `Circle`, `Annulus`, `Arc`, `Polyline`,
-  `Polygon` — `Circle` e.g. rasterizes itself into 1-px `Rect<U, i32>`
-  strips (`region_rects`) or a cairo `Region` behind the `cairo` feature.
-- **Quantities**: `RotationRad`, `Rotation`, `QuarterTurn`,
-  `RotationDirection`, `Fraction`, `AspectRatio`, `ScaleFactor`,
-  `SmoothingAlpha` — strict newtypes with `FromStr`/`Display` where it
-  fits.
-- **Units**: `Millimeters`, `Pixels`, `SquareMillimeters`,
-  `PixelsPerMm`, `UnitsPerMm`, `Degrees`, `DegreesPerPixel`, `Radians`.
-- **Grid**: `Grid`/`Partition` with `Cell`/`Col`/`Row` for cell-addressed
-  partitions.
-- **Transforms**: `RigidTransform`, `SimilarityTransform` — `gtk4` adds
-  `CenteredTransform` and `WidgetSizeExt`.
+- **[Shapes](geometry/shapes.md)**: `Line`, `Segment`, `Circle`,
+  `Annulus`, `Arc`, `Polyline`, `Polygon`, `Sphere` — `Circle` e.g.
+  rasterizes itself into 1-px `Rect<U, i32>` strips (`region_rects`) or
+  a cairo `Region` behind the `cairo` feature.
+- **[Quantities](geometry/quantities.md)**: `RotationRad`, `Rotation`,
+  `QuarterTurn`, `RotationDirection`, `Fraction`, `AspectRatio`,
+  `ScaleFactor`, `SmoothingAlpha` — strict newtypes with
+  `FromStr`/`Display` where it fits.
+- **[Units](geometry/units.md)**: `Millimeters`, `Pixels`,
+  `SquareMillimeters`, `PixelsPerMm`, `UnitsPerMm`, `Degrees`,
+  `DegreesPerPixel`, `Radians`.
+- **[Grid](geometry/grid.md)**: `Grid` with `Cell`/`Col`/`Row` for
+  cell-addressed partitions.
+- **[Transforms](geometry/transforms.md)**: `RigidTransform`,
+  `SimilarityTransform` — `gtk4` adds `CenteredTransform` and
+  `WidgetSizeExt`.
 - **Serde adapters**: `serde_pair`, `serde_pair_option`, `serde_points`
   serialize `Vec2`s as compact `[x, y]` pairs.
-- **Rasterization**: `Scanline` strips from `Rect::rotated_region_scanlines`
-  and `Circle::region_rects`.
+- **[Rasterization](geometry/rasterization.md)**: `Scanline` strips from
+  `Rect::rotated_region_scanlines` and `Circle::region_rects`.
 
 Feature gates: `async-graphql`, `schemars`, `zbus`, `ab_glyph`, `gtk4`,
 `cairo`, `smithay`. See the crate's rustdoc for the full API.

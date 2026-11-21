@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 340" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="340" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- table -->
+  <rect x="160" y="75" width="340" height="200" rx="16" fill="#10151f" stroke="#1c2433"/>
+  <text x="330" y="270" fill="#3a4560" font-size="10" letter-spacing="2" text-anchor="middle">BOTTOM</text>
+  <text x="330" y="90" fill="#3a4560" font-size="10" letter-spacing="2" text-anchor="middle">TOP</text>
+  <text x="176" y="178" fill="#3a4560" font-size="10" letter-spacing="2" text-anchor="middle" transform="rotate(-90 176 178)">LEFT</text>
+  <text x="484" y="178" fill="#3a4560" font-size="10" letter-spacing="2" text-anchor="middle" transform="rotate(90 484 178)">RIGHT</text>
+
+  <!-- bottom seat: Deg0, upright -->
+  <g transform="rotate(0 330 305)">
+    <rect x="295" y="282" width="70" height="46" rx="8" fill="#0a0e16" stroke="#00a1e4" stroke-width="2"/>
+    <text x="330" y="311" fill="#e8ecf4" font-size="15" text-anchor="middle">OK</text>
+  </g>
+  <text x="330" y="338" fill="#00a1e4" font-size="11" text-anchor="middle" display="none"/>
+
+  <!-- top seat: Deg180 -->
+  <g transform="rotate(180 330 45)">
+    <rect x="295" y="22" width="70" height="46" rx="8" fill="#0a0e16" stroke="#dc0073" stroke-width="2"/>
+    <text x="330" y="51" fill="#e8ecf4" font-size="15" text-anchor="middle">OK</text>
+  </g>
+
+  <!-- left seat: Deg90 -->
+  <g transform="rotate(90 118 175)">
+    <rect x="83" y="152" width="70" height="46" rx="8" fill="#0a0e16" stroke="#f5b700" stroke-width="2"/>
+    <text x="118" y="181" fill="#e8ecf4" font-size="15" text-anchor="middle">OK</text>
+  </g>
+
+  <!-- right seat: Deg270 -->
+  <g transform="rotate(270 542 175)">
+    <rect x="507" y="152" width="70" height="46" rx="8" fill="#0a0e16" stroke="#04e762" stroke-width="2"/>
+    <text x="542" y="181" fill="#e8ecf4" font-size="15" text-anchor="middle">OK</text>
+  </g>
+
+  <!-- variant labels -->
+  <text x="118" y="125" fill="#f5b700" font-size="11" text-anchor="middle">Deg90</text>
+  <text x="542" y="235" fill="#04e762" font-size="11" text-anchor="middle">Deg270</text>
+  <text x="262" y="49" fill="#dc0073" font-size="11" text-anchor="end">Deg180</text>
+  <text x="262" y="309" fill="#00a1e4" font-size="11" text-anchor="end">Deg0</text>
+</svg>
