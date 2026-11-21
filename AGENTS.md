@@ -103,6 +103,14 @@
 - `tracing` - Instrumentation (`debug!`, `info!`, ... with plain imports)
 - `serde` - Serialization
 
+### Git Workflow
+
+- Review own code before requesting review
+- **NEVER `git stash`** - uncommitted changes must never be stashed, not even temporarily
+- **NEVER `git add`**
+- **NEVER `git commit`**
+- **NEVER `git push`**
+
 ---
 
 *This guide should be updated regularly to reflect best practices and team experience.*
