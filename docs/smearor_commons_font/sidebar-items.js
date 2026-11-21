@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["centered_glyph","glyph_fit_scale","truncate_text_to_width"]};

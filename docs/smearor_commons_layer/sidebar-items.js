@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SmearorLayer"],"struct":["LayerConfig","ParseLayerError"],"trait":["EdgeOf"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DrawingError"],"fn":["image_surface_from_buffer","pixel_buffer_from_surface"],"mod":["path"],"struct":["CairoTarget","ViewSurface"]};

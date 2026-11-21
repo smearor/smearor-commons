@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["band_path","polyline_path","rounded_rect_path","smooth_path","tile_fill","wavy_path"]};

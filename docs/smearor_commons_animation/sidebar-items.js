@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["EasingFunction"],"fn":["drive"],"struct":["RotationSnap","SnapUpdate","Span","ThreePhaseSpan","TimedAnimation"],"trait":["Interpolate","Trajectory"],"type":["PulseAnimation","RotationAnimation","RotationZoomAnimation","Vec2Animation","ZoomAnimation"]};
