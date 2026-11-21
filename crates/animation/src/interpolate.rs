@@ -6,6 +6,7 @@ use smearor_commons_geometry::Radians;
 use smearor_commons_geometry::RotationRad;
 use smearor_commons_geometry::ScaleFactor;
 use smearor_commons_geometry::Vec2;
+use smearor_commons_geometry::Vec3;
 
 /// A value that can be interpolated between two endpoints along a
 /// normalized progress `t` (`0` = `self`, `1` = `target`).
@@ -85,6 +86,13 @@ impl<U, T: Interpolate + Copy> Interpolate for Vec2<U, T> {
 
 /// Pair-wise interpolation - two animated values on one clock,
 /// e.g. `(RotationRad, ScaleFactor)` for a rotation-zoom composite.
+/// Component-wise interpolation in three dimensions.
+impl<U, T: Interpolate + Copy> Interpolate for Vec3<U, T> {
+    fn interpolate(self, target: Self, t: Fraction) -> Self {
+        Self::new(self.x.interpolate(target.x, t), self.y.interpolate(target.y, t), self.z.interpolate(target.z, t))
+    }
+}
+
 impl<A: Interpolate, B: Interpolate> Interpolate for (A, B) {
     fn interpolate(self, target: Self, t: Fraction) -> Self {
         (self.0.interpolate(target.0, t), self.1.interpolate(target.1, t))

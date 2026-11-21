@@ -11,29 +11,65 @@
 //! `serde` is unconditional; `schemars` schema derives live behind
 //! their feature gate.
 
+mod bezier;
+mod catmull_rom;
+mod delay;
+mod eased;
 mod easing;
+mod figure8;
 #[cfg(feature = "gtk4")]
 mod frame_driver;
+mod helix;
 mod interpolate;
+mod keyframes;
+mod lemniskate;
+mod lissajous;
+mod mirror;
+mod orbit;
+mod polygon_path;
+mod repeat;
 mod rotation_snap;
 mod snap_update;
 mod span;
+mod spherical_orbit;
+mod spiral;
+mod steps;
 mod three_phase_span;
 mod timed_animation;
+mod torus_knot;
 mod trajectory;
 
+pub use bezier::BezierPath;
+pub use catmull_rom::CatmullRom;
+pub use delay::Delay;
+pub use eased::Eased;
 pub use easing::EasingFunction;
+pub use easing::StepsJump;
+pub use figure8::Figure8;
 #[cfg(feature = "gtk4")]
 pub use frame_driver::drive;
+pub use helix::Helix;
 pub use interpolate::Interpolate;
+pub use keyframes::Keyframes;
+pub use lemniskate::Lemniskate;
+pub use lissajous::Lissajous;
+pub use mirror::Mirror;
+pub use orbit::Orbit;
+pub use polygon_path::PolygonPath;
+pub use repeat::Repeat;
 pub use rotation_snap::RotationSnap;
 use smearor_commons_geometry::RotationRad;
 use smearor_commons_geometry::ScaleFactor;
 use smearor_commons_geometry::Vec2;
 pub use snap_update::SnapUpdate;
 pub use span::Span;
+pub use spherical_orbit::SphericalOrbit;
+pub use spiral::Spiral;
+pub use steps::Steps;
+pub use three_phase_span::HoldMode;
 pub use three_phase_span::ThreePhaseSpan;
 pub use timed_animation::TimedAnimation;
+pub use torus_knot::TorusKnot;
 pub use trajectory::Trajectory;
 
 /// An eased, timed rotation animation - the shortest-arc lerp

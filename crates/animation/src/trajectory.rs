@@ -26,3 +26,14 @@ impl<A: Trajectory, B: Trajectory> Trajectory for (A, B) {
         (self.0.value_at(t), self.1.value_at(t))
     }
 }
+
+/// A boxed trajectory stays a trajectory - runtime-selectable
+/// animation shapes (e.g. a UI picking the trajectory) work on the
+/// same clock.
+impl<S: Trajectory + ?Sized> Trajectory for Box<S> {
+    type Value = S::Value;
+
+    fn value_at(&self, t: Fraction) -> S::Value {
+        self.as_ref().value_at(t)
+    }
+}

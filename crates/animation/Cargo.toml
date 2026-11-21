@@ -22,4 +22,11 @@ serde.workspace = true
 smearor-commons-geometry.workspace = true
 
 [dev-dependencies]
+cairo-rs = { workspace = true, features = ["png"] }
 serde_json.workspace = true
+smearor-commons-drawing = { workspace = true, features = ["cairo"] }
+smearor-commons-color.workspace = true
+
+[[example]]
+name = "playground"
+required-features = ["gtk4"]
