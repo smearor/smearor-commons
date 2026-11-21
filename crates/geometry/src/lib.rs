@@ -22,6 +22,7 @@
 
 mod annulus;
 mod arc;
+mod barycentric;
 mod camera;
 mod circle;
 mod corners;
@@ -45,6 +46,7 @@ mod vec3;
 
 pub use annulus::Annulus;
 pub use arc::Arc;
+pub use barycentric::Barycentric;
 pub use camera::Camera;
 pub use circle::Circle;
 pub use corners::Corners;
