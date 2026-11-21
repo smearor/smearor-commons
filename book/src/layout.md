@@ -5,6 +5,17 @@ semantics. Consumers map "player", "card" or "note" onto these
 primitives; what a placed item *is* stays downstream. Everything is
 unit-generic over the `U` marker of `Vec2`/`Rect`.
 
+## What's inside
+
+- [TableSides & Seats](./layout/seats.md) — `TableSide`, `Seat`,
+  perimeter navigation, seat placement, `SeatPose`
+- [Items & Placements](./layout/items.md) — `LayoutItem`,
+  `Placement`, `footprint_for` axis swaps
+- [Strategies](./layout/strategies.md) — `LayoutStrategy`,
+  `FlowLayout`, `SeatLayout`, `AnchorWeights`, `DoesNotFit`
+- [Workspace & View](./layout/view.md) — `WorkspaceSize`, the `View`
+  camera, `physical_zoom`
+
 ## TableSide and Seat
 
 `TableSide` names the four edges of a rectangular surface. Each side
