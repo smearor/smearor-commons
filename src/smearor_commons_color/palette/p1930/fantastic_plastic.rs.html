@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/color/src/palette/p1930/fantastic_plastic.rs`."><title>fantastic_plastic.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="smearor_commons_color" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">smearor_commons_color/palette/p1930/</div>fantastic_plastic.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::PantoneFhiNamedColor;
+<a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::StaticPalette;
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::palette_definition;
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::static_palette;
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="macro">palette_definition!</span> {
+<a href=#7 id=7 data-nosnippet>7</a>    <span class="doccomment">/// The "Fantastic Plastic" palette - 1930s chapter of "Pantone: The
+<a href=#8 id=8 data-nosnippet>8</a>    /// Twentieth Century in Color" (Eiseman &amp; Recker, 2011).
+<a href=#9 id=9 data-nosnippet>9</a>    </span><span class="kw">pub enum </span>FantasticPlasticColor {
+<a href=#10 id=10 data-nosnippet>10</a>        <span class="doccomment">/// PANTONE 19-4305 TCX `Pirate Black`.
+<a href=#11 id=11 data-nosnippet>11</a>        </span>PirateBlack =&gt; <span class="string">"pirate-black"</span>,
+<a href=#12 id=12 data-nosnippet>12</a>        <span class="doccomment">/// PANTONE 14-0847 TCX `Buff Yellow`.
+<a href=#13 id=13 data-nosnippet>13</a>        </span>BuffYellow =&gt; <span class="string">"buff-yellow"</span>,
+<a href=#14 id=14 data-nosnippet>14</a>        <span class="doccomment">/// PANTONE 15-1058 TCX `Radiant Yellow`. Caption spells `Radient Yellow`.
+<a href=#15 id=15 data-nosnippet>15</a>        </span>RadiantYellow =&gt; <span class="string">"radiant-yellow"</span>,
+<a href=#16 id=16 data-nosnippet>16</a>        <span class="doccomment">/// PANTONE 17-1558 TCX `Grenadine`.
+<a href=#17 id=17 data-nosnippet>17</a>        </span>Grenadine =&gt; <span class="string">"grenadine"</span>,
+<a href=#18 id=18 data-nosnippet>18</a>        <span class="doccomment">/// PANTONE 17-1464 TCX `Red Orange`.
+<a href=#19 id=19 data-nosnippet>19</a>        </span>RedOrange =&gt; <span class="string">"red-orange"</span>,
+<a href=#20 id=20 data-nosnippet>20</a>        <span class="doccomment">/// PANTONE 18-6320 TCX `Fairway`.
+<a href=#21 id=21 data-nosnippet>21</a>        </span>Fairway =&gt; <span class="string">"fairway"</span>,
+<a href=#22 id=22 data-nosnippet>22</a>        <span class="doccomment">/// PANTONE 19-1230 TCX `Friar Brown`.
+<a href=#23 id=23 data-nosnippet>23</a>        </span>FriarBrown =&gt; <span class="string">"friar-brown"</span>,
+<a href=#24 id=24 data-nosnippet>24</a>        <span class="doccomment">/// PANTONE 19-3022 TCX `Gloxinia`.
+<a href=#25 id=25 data-nosnippet>25</a>        </span>Gloxinia =&gt; <span class="string">"gloxinia"
+<a href=#26 id=26 data-nosnippet>26</a>    </span>}
+<a href=#27 id=27 data-nosnippet>27</a>}
+<a href=#28 id=28 data-nosnippet>28</a>
+<a href=#29 id=29 data-nosnippet>29</a><span class="doccomment">/// The sRGB values of the [`FantasticPlasticColor`] slots.
+<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub static </span>FANTASTIC_PLASTIC: StaticPalette&lt;FantasticPlasticColor, u8&gt; = <span class="macro">static_palette!</span> {
+<a href=#31 id=31 data-nosnippet>31</a>    FantasticPlasticColor::PirateBlack =&gt; PantoneFhiNamedColor::PirateBlack.to_color(),
+<a href=#32 id=32 data-nosnippet>32</a>    FantasticPlasticColor::BuffYellow =&gt; PantoneFhiNamedColor::BuffYellow.to_color(),
+<a href=#33 id=33 data-nosnippet>33</a>    FantasticPlasticColor::RadiantYellow =&gt; PantoneFhiNamedColor::RadiantYellow.to_color(),
+<a href=#34 id=34 data-nosnippet>34</a>    FantasticPlasticColor::Grenadine =&gt; PantoneFhiNamedColor::Grenadine.to_color(),
+<a href=#35 id=35 data-nosnippet>35</a>    FantasticPlasticColor::RedOrange =&gt; PantoneFhiNamedColor::RedOrange.to_color(),
+<a href=#36 id=36 data-nosnippet>36</a>    FantasticPlasticColor::Fairway =&gt; PantoneFhiNamedColor::Fairway.to_color(),
+<a href=#37 id=37 data-nosnippet>37</a>    FantasticPlasticColor::FriarBrown =&gt; PantoneFhiNamedColor::FriarBrown.to_color(),
+<a href=#38 id=38 data-nosnippet>38</a>    FantasticPlasticColor::Gloxinia =&gt; PantoneFhiNamedColor::Gloxinia.to_color(),
+<a href=#39 id=39 data-nosnippet>39</a>};
+</code></pre></div></section></main></body></html>
