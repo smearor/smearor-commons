@@ -87,6 +87,18 @@ impl Color<f64> {
         }
     }
 
+    /// The color scaled so its largest channel is `1.0` - the
+    /// brightest displayable color at this hue ratio (the gamut
+    /// edge). Black stays black.
+    pub fn normalized(&self) -> Self {
+        let max = self.r.max(self.g).max(self.b);
+        if max <= 0.0 {
+            *self
+        } else {
+            Self::new(self.r / max, self.g / max, self.b / max)
+        }
+    }
+
     /// Lightens the color by blending each channel toward white by
     /// `factor` (0 = unchanged, 1 = white). Alpha is preserved.
     pub fn lighten(&self, factor: f64) -> Self {
@@ -195,6 +207,18 @@ impl Color<f32> {
             g: self.g + (other.g - self.g) * t,
             b: self.b + (other.b - self.b) * t,
             a: self.a + (other.a - self.a) * t,
+        }
+    }
+
+    /// The color scaled so its largest channel is `1.0` - the
+    /// brightest displayable color at this hue ratio (the gamut
+    /// edge). Black stays black.
+    pub fn normalized(&self) -> Self {
+        let max = self.r.max(self.g).max(self.b);
+        if max <= 0.0 {
+            *self
+        } else {
+            Self::new(self.r / max, self.g / max, self.b / max)
         }
     }
 
@@ -789,6 +813,14 @@ mod tests {
         let color = Color::<f64>::new(1.0, 0.0, 0.0);
         assert!((color.luminance_601().as_f64() - 0.299).abs() < 1e-9);
         assert!((Color::<f64>::WHITE.luminance_601().as_f64() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn normalized_scales_the_max_channel_to_one() {
+        let color = Color::<f64>::new(0.2, 0.5, 0.1).normalized();
+        assert!((color.g - 1.0).abs() < 1e-12);
+        assert!((color.r - 0.4).abs() < 1e-12);
+        assert_eq!(Color::<f64>::BLACK.normalized(), Color::<f64>::BLACK);
     }
 
     #[test]

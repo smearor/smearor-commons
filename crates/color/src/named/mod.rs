@@ -16,11 +16,14 @@
 mod css;
 mod fhi;
 mod fhi_suffix;
+mod munsell;
 mod pantone;
 mod pantone_suffix;
 
 pub use css::CssNamedColor;
 pub use fhi::PantoneFhiNamedColor;
 pub use fhi_suffix::PantoneFhiSuffix;
+pub use munsell::MUNSELL_SAMPLES;
+pub use munsell::MunsellSample;
 pub use pantone::PantoneNamedColor;
 pub use pantone_suffix::PantoneSuffix;

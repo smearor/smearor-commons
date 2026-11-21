@@ -10760,6 +10760,19 @@ impl PantoneNamedColor {
         }
     }
 
+    /// The same ink on the other substrate - `C` becomes `U` and
+    /// vice versa - if the catalog contains the counterpart.
+    /// Colors without a coated/uncoated pair (e.g. `M` variants or
+    /// catalog gaps) yield `None`.
+    pub fn counterpart(&self) -> Option<Self> {
+        let name = self.as_str();
+        let swapped = match name.strip_suffix(" C") {
+            Some(base) => format!("{base} U"),
+            None => format!("{} C", name.strip_suffix(" U")?),
+        };
+        Self::from_str(&swapped).ok()
+    }
+
     /// The canonical `Pantone <name> <suffix>` string.
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -17385,6 +17398,12 @@ mod tests {
     fn unknown_names_are_rejected() {
         assert!("Pantone 99999 C".parse::<PantoneNamedColor>().is_err());
         assert_eq!("red".parse::<PantoneNamedColor>().unwrap_err(), ParseColorError::UnknownPantoneColor { input: "red".into() });
+    }
+
+    #[test]
+    fn counterpart_swaps_the_substrate() {
+        assert_eq!(PantoneNamedColor::Pms485C.counterpart(), Some(PantoneNamedColor::Pms485U));
+        assert_eq!(PantoneNamedColor::Pms485U.counterpart(), Some(PantoneNamedColor::Pms485C));
     }
 
     #[test]

@@ -29,11 +29,42 @@ zvariant = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"
+smearor-commons-buffer = { workspace = true }
+smearor-commons-drawing = { workspace = true, features = ["cairo"] }
+smearor-commons-geometry = { workspace = true }
+
+[[example]]
+name = "cie_xy"
+required-features = ["gtk4"]
 
 [[example]]
 name = "fan"
 required-features = ["gtk4"]
 
 [[example]]
+name = "ncs"
+required-features = ["gtk4"]
+
+[[example]]
+name = "gamut"
+required-features = ["gtk4"]
+
+[[example]]
+name = "munsell"
+required-features = ["gtk4"]
+
+[[example]]
+name = "osa"
+required-features = ["gtk4"]
+
+[[example]]
+name = "ostwald"
+required-features = ["gtk4"]
+
+[[example]]
 name = "palette"
+required-features = ["gtk4"]
+
+[[example]]
+name = "runge"
 required-features = ["gtk4"]
