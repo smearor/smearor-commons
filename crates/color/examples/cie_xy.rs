@@ -404,13 +404,13 @@ fn main() -> glib::ExitCode {
                     let t = map_xy(xy, viewport);
                     let _ = target.fill_circle(FillCircle::new(Circle::new(t, 6.5), Color::<f64>::new(1.0, 1.0, 1.0), Alpha::OPAQUE));
                     let inner = if locus_polygon().contains(&xy) {
-                        Color::<u8>::from(chromaticity_color(xy))
+                        chromaticity_color(xy)
                     } else {
                         // Outside the spectral locus there is no real
                         // color - the marker stays hollow gray.
                         Color::<u8>::new(60, 60, 60)
                     };
-                    let _ = target.fill_circle(FillCircle::new(Circle::new(t, 4.5), Color::<u8>::from(inner), Alpha::OPAQUE));
+                    let _ = target.fill_circle(FillCircle::new(Circle::new(t, 4.5), inner, Alpha::OPAQUE));
                 }
                 if let Some(xy) = hover.get() {
                     let _ = target.draw_text(
