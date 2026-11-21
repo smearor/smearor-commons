@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <defs>
+    <clipPath id="rotrect">
+      <rect x="400" y="105" width="140" height="90" transform="rotate(30 470 150)"/>
+    </clipPath>
+  </defs>
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- source rect + rotation -->
+  <rect x="70" y="105" width="140" height="90" fill="none" stroke="#8b98ad" stroke-width="2"/>
+  <g transform="rotate(30 140 150)">
+    <rect x="70" y="105" width="140" height="90" fill="#00a1e4" fill-opacity="0.08" stroke="#00a1e4" stroke-width="2"/>
+  </g>
+  <path d="M226,150 A16 16 0 0 0 220.4,136.6" fill="none" stroke="#f5b700" stroke-width="2"/>
+  <text x="236" y="142" fill="#f5b700" font-size="11">30°</text>
+  <text x="140" y="270" fill="#8b98ad" font-size="11" text-anchor="middle">rect.rotated_region_scanlines(rotation)</text>
+
+  <!-- scanline strips clipped to rotated rect -->
+  <rect x="400" y="105" width="140" height="90" transform="rotate(30 470 150)" fill="none" stroke="#8b98ad" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <g clip-path="url(#rotrect)">
+    <rect x="380" y="96"  width="180" height="22" fill="#dc0073" fill-opacity="0.10" stroke="#dc0073" stroke-width="1.5"/>
+    <rect x="380" y="118" width="180" height="22" fill="#f5b700" fill-opacity="0.10" stroke="#f5b700" stroke-width="1.5"/>
+    <rect x="380" y="140" width="180" height="22" fill="#00a1e4" fill-opacity="0.10" stroke="#00a1e4" stroke-width="1.5"/>
+    <rect x="380" y="162" width="180" height="22" fill="#04e762" fill-opacity="0.10" stroke="#04e762" stroke-width="1.5"/>
+    <rect x="380" y="184" width="180" height="22" fill="#89fc00" fill-opacity="0.10" stroke="#89fc00" stroke-width="1.5"/>
+  </g>
+
+  <!-- scanline annotation -->
+  <line x1="380" y1="129" x2="330" y2="129" stroke="#f5b700" stroke-width="1"/>
+  <text x="322" y="133" fill="#f5b700" font-size="11" text-anchor="end">Scanline {</text>
+  <text x="322" y="147" fill="#f5b700" font-size="11" text-anchor="end">  y, x_start, x_end }</text>
+  <text x="470" y="270" fill="#8b98ad" font-size="11" text-anchor="middle">y / x_start / x_end — relative to rect center</text>
+</svg>

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">THREEPHASESPAN — out, hold, back</text>
+
+  <!-- plot -->
+  <rect x="70" y="60" width="400" height="190" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <!-- axes -->
+  <line x1="90" y1="230" x2="450" y2="230" stroke="#3a4560"/>
+  <line x1="90" y1="80" x2="90" y2="230" stroke="#3a4560"/>
+  <text x="450" y="246" fill="#8b98ad" font-size="9" text-anchor="end">t →</text>
+  <text x="82" y="84" fill="#8b98ad" font-size="9" text-anchor="end">v</text>
+
+  <!-- value curve: from=1.0 at top (y=95), mid=0.5 (y=185), to=1.0 (y=95); lead=0.3 (x=198), trail=0.7 (x=342) -->
+  <path d="M 90 95 L 198 185 L 342 185 L 450 95" fill="none" stroke="#00a1e4" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- phase markers -->
+  <line x1="198" y1="80" x2="198" y2="230" stroke="#f5b700" stroke-dasharray="4 4"/>
+  <line x1="342" y1="80" x2="342" y2="230" stroke="#f5b700" stroke-dasharray="4 4"/>
+
+  <!-- endpoint dots -->
+  <circle cx="90" cy="95" r="4" fill="#00a1e4"/>
+  <circle cx="450" cy="95" r="4" fill="#00a1e4"/>
+  <circle cx="198" cy="185" r="4" fill="#f5b700"/>
+  <circle cx="342" cy="185" r="4" fill="#f5b700"/>
+
+  <!-- labels -->
+  <text x="140" y="132" fill="#00a1e4" font-size="9.5">from → mid</text>
+  <text x="270" y="178" fill="#f5b700" font-size="9.5" text-anchor="middle">hold mid</text>
+  <text x="398" y="132" fill="#00a1e4" font-size="9.5" text-anchor="middle">mid → to</text>
+  <text x="198" y="246" fill="#f5b700" font-size="9" text-anchor="middle">lead</text>
+  <text x="342" y="246" fill="#f5b700" font-size="9" text-anchor="middle">trail</text>
+  <text x="90" y="263" fill="#8b98ad" font-size="9">0</text>
+  <text x="450" y="263" fill="#8b98ad" font-size="9" text-anchor="end">1</text>
+
+  <!-- use case -->
+  <rect x="490" y="60" width="140" height="190" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="560" y="84" fill="#dc0073" font-size="10.5" text-anchor="middle">PulseAnimation</text>
+  <g font-size="9.5" fill="#8b98ad">
+    <text x="502" y="110">ThreePhaseSpan&lt;</text>
+    <text x="502" y="124">  ScaleFactor&gt;</text>
+    <text x="502" y="150">from = to = 1.0</text>
+    <text x="502" y="164">mid = zoom out</text>
+    <text x="502" y="190">zoom out, hold,</text>
+    <text x="502" y="204">zoom back in —</text>
+    <text x="502" y="218">the rotate-tile</text>
+    <text x="502" y="232">signature move</text>
+  </g>
+
+  <text x="330" y="286" fill="#8b98ad" font-size="10.5" text-anchor="middle">value_at(t): interpolate on the leading edge, hold between lead and trail, interpolate home</text>
+</svg>

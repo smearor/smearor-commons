@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">PROGRESS SPECS — bar strip and gauge ring</text>
+
+  <!-- progress bar -->
+  <rect x="40" y="56" width="300" height="96" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="190" y="78" fill="#00a1e4" font-size="11" text-anchor="middle">ProgressBar — bottom-anchored strip</text>
+  <!-- strip -->
+  <rect x="60" y="96" width="260" height="14" fill="#1c2433"/>
+  <rect x="60" y="96" width="176" height="14" fill="#00a1e4"/>
+  <text x="148" y="106" fill="#05070b" font-size="9" text-anchor="middle">value · color</text>
+  <text x="276" y="106" fill="#8b98ad" font-size="9">color/3 track</text>
+  <!-- height bracket -->
+  <line x1="330" y1="96" x2="330" y2="110" stroke="#f5b700" stroke-width="1.2"/>
+  <line x1="326" y1="96" x2="334" y2="96" stroke="#f5b700" stroke-width="1.2"/>
+  <line x1="326" y1="110" x2="334" y2="110" stroke="#f5b700" stroke-width="1.2"/>
+  <text x="336" y="106" fill="#f5b700" font-size="9">height</text>
+  <text x="60" y="132" fill="#8b98ad" font-size="9.5">Fraction clamps to [0,1] · unfilled rest renders at a third of the color</text>
+  <text x="60" y="146" fill="#8b98ad" font-size="9.5">raised PROGRESS_BAR_BOTTOM_MARGIN = 2 px above the target edge</text>
+
+  <!-- gauge -->
+  <rect x="360" y="56" width="260" height="196" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="490" y="78" fill="#f5b700" font-size="11" text-anchor="middle">Gauge — ring around a center</text>
+  <!-- ring: track + arc -->
+  <circle cx="490" cy="152" r="52" fill="none" stroke="#3a4560" stroke-width="10"/>
+  <path d="M 490 100 A 52 52 0 0 1 541 165" fill="none" stroke="#f5b700" stroke-width="10" stroke-linecap="round"/>
+  <!-- center dot + labels -->
+  <circle cx="490" cy="152" r="4" fill="#e8ecf4"/>
+  <text x="490" y="222" fill="#8b98ad" font-size="9.5" text-anchor="middle">center · radius = centerline</text>
+  <text x="490" y="236" fill="#8b98ad" font-size="9.5" text-anchor="middle">ring = radius ± line_width/2</text>
+
+  <!-- legend -->
+  <rect x="40" y="176" width="300" height="76" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="190" y="196" fill="#8b98ad" font-size="10" letter-spacing="1.5" text-anchor="middle">GAUGE FIELDS</text>
+  <g font-size="10" fill="#8b98ad">
+    <text x="56" y="216">center · radius · line_width</text>
+    <text x="56" y="232">value: Fraction → arc portion</text>
+    <text x="56" y="248" display="none"></text>
+    <text x="228" y="216">color → filled arc</text>
+    <text x="228" y="232">track → unfilled ring</text>
+  </g>
+
+  <text x="330" y="282" fill="#8b98ad" font-size="10.5" text-anchor="middle">both specs are plain structs — construct, hand to draw_progress_bar / draw_gauge</text>
+</svg>

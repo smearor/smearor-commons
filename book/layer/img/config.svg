@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">LAYERCONFIG — the quartet every app repeats</text>
+
+  <!-- quartet card -->
+  <rect x="40" y="60" width="230" height="140" rx="10" fill="#10151f" stroke="#00a1e4" stroke-width="1.5"/>
+  <g font-size="10.5" fill="#e8ecf4">
+    <text x="56" y="88">layer: Option&lt;SmearorLayer&gt;</text>
+    <text x="56" y="112">namespace: Option&lt;String&gt;</text>
+    <text x="56" y="136">monitor: Option&lt;u32&gt;</text>
+    <text x="56" y="160">exclusive_zone: Option&lt;Pixels&lt;i32&gt;&gt;</text>
+  </g>
+  <text x="155" y="188" fill="#3a4560" font-size="9" text-anchor="middle">all #[serde(default)] — {} is valid TOML</text>
+
+  <!-- exclusive zone visual -->
+  <rect x="300" y="60" width="330" height="140" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="465" y="82" fill="#8b98ad" font-size="9.5" letter-spacing="1" text-anchor="middle">EXCLUSIVE_ZONE SEMANTICS</text>
+  <!-- screen edge strip -->
+  <rect x="320" y="150" width="140" height="36" rx="4" fill="#0d1119" stroke="#3a4560"/>
+  <rect x="320" y="164" width="140" height="22" fill="#00a1e4" fill-opacity="0.3"/>
+  <line x1="320" y1="164" x2="460" y2="164" stroke="#00a1e4" stroke-dasharray="4 3"/>
+  <text x="390" y="178" fill="#00a1e4" font-size="8.5" text-anchor="middle">64px reserved</text>
+  <text x="326" y="102" fill="#8b98ad" font-size="9">None → auto exclusive zone</text>
+  <text x="326" y="118" fill="#8b98ad" font-size="9">0 → overlay mode</text>
+  <text x="326" y="134" fill="#8b98ad" font-size="9">n → reserve n px at edge</text>
+  <text x="500" y="102" fill="#e8ecf4" font-size="9.5">effective_exclusive_zone()</text>
+  <text x="500" y="120" fill="#8b98ad" font-size="9">→ Some only when</text>
+  <text x="500" y="134" fill="#8b98ad" font-size="9">layer is Some</text>
+
+  <!-- merge -->
+  <rect x="40" y="220" width="590" height="56" rx="10" fill="#10151f" stroke="#f5b700" stroke-width="1.5"/>
+  <text x="335" y="244" fill="#f5b700" font-size="10.5" text-anchor="middle">config.merge(&amp;cli_overrides) — Some fields win, None never clears</text>
+  <text x="335" y="262" fill="#8b98ad" font-size="9.5" text-anchor="middle">the CLI-over-config pattern: Option can't distinguish "unset" from "explicitly unset"</text>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <defs>
+    <linearGradient id="alphaG" x1="0" x2="1"><stop offset="0" stop-color="#00a1e4" stop-opacity="0"/><stop offset="1" stop-color="#00a1e4"/></linearGradient>
+    <linearGradient id="satG" x1="0" x2="1"><stop offset="0" stop-color="#7a8291"/><stop offset="1" stop-color="#04e762"/></linearGradient>
+    <linearGradient id="lightG" x1="0" x2="1"><stop offset="0" stop-color="#000000"/><stop offset="0.5" stop-color="#00a1e4"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <linearGradient id="valG" x1="0" x2="1"><stop offset="0" stop-color="#000000"/><stop offset="1" stop-color="#dc0073"/></linearGradient>
+    <linearGradient id="lumG" x1="0" x2="1"><stop offset="0" stop-color="#000000"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <pattern id="checker" width="10" height="10" patternUnits="userSpaceOnUse">
+      <rect width="10" height="10" fill="#10151f"/><rect width="5" height="5" fill="#1c2433"/><rect x="5" y="5" width="5" height="5" fill="#1c2433"/>
+    </pattern>
+  </defs>
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="42" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">CHANNEL NEWTYPES — one responsibility each</text>
+
+  <!-- Alpha -->
+  <text x="140" y="78" fill="#e8ecf4" font-size="11.5" text-anchor="end">Alpha</text>
+  <rect x="150" y="64" width="360" height="20" rx="5" fill="url(#checker)"/>
+  <rect x="150" y="64" width="360" height="20" rx="5" fill="url(#alphaG)" stroke="#1c2433"/>
+  <text x="520" y="78" fill="#8b98ad" font-size="10">TRANSPARENT → OPAQUE</text>
+
+  <!-- Saturation -->
+  <text x="140" y="116" fill="#e8ecf4" font-size="11.5" text-anchor="end">Saturation</text>
+  <rect x="150" y="102" width="360" height="20" rx="5" fill="url(#satG)" stroke="#1c2433"/>
+  <text x="520" y="116" fill="#8b98ad" font-size="10">MIN → MAX</text>
+
+  <!-- Lightness -->
+  <text x="140" y="154" fill="#e8ecf4" font-size="11.5" text-anchor="end">Lightness</text>
+  <rect x="150" y="140" width="360" height="20" rx="5" fill="url(#lightG)" stroke="#1c2433"/>
+  <text x="520" y="154" fill="#8b98ad" font-size="10">0 black · .5 hue · 1 white</text>
+
+  <!-- Value -->
+  <text x="140" y="192" fill="#e8ecf4" font-size="11.5" text-anchor="end">Value</text>
+  <rect x="150" y="178" width="360" height="20" rx="5" fill="url(#valG)" stroke="#1c2433"/>
+  <text x="520" y="192" fill="#8b98ad" font-size="10">0 black → 1 full</text>
+
+  <!-- Luminance -->
+  <text x="140" y="230" fill="#e8ecf4" font-size="11.5" text-anchor="end">Luminance</text>
+  <rect x="150" y="216" width="360" height="20" rx="5" fill="url(#lumG)" stroke="#1c2433"/>
+  <text x="520" y="230" fill="#8b98ad" font-size="10">perceived brightness</text>
+
+  <text x="330" y="272" fill="#8b98ad" font-size="10.5" text-anchor="middle">AlphaPercent (u8) · LabLightness (0-100) · LuminanceWeights { r, g, b }</text>
+</svg>

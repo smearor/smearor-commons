@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 320" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="320" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="38" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">CAIRO BACKEND — zero-copy surface over buffer memory</text>
+
+  <!-- ViewSurface -->
+  <rect x="40" y="60" width="270" height="110" rx="10" fill="#10151f" stroke="#04e762" stroke-width="2"/>
+  <text x="175" y="84" fill="#04e762" font-size="12.5" text-anchor="middle">ViewSurface&lt;'a&gt;</text>
+  <text x="175" y="104" fill="#e8ecf4" font-size="10" text-anchor="middle">cairo ImageSurface</text>
+  <text x="175" y="120" fill="#8b98ad" font-size="9.5" text-anchor="middle">mapped onto BufferViewMut&lt;BgraPremultiplied&gt;</text>
+  <g font-size="9.5" fill="#8b98ad">
+    <text x="60" y="146">target() → CairoTarget</text>
+    <text x="60" y="160">mark_dirty() · into_view()</text>
+  </g>
+
+  <!-- CairoTarget -->
+  <rect x="350" y="60" width="270" height="110" rx="10" fill="#10151f" stroke="#00a1e4" stroke-width="2"/>
+  <text x="485" y="84" fill="#00a1e4" font-size="12.5" text-anchor="middle">CairoTarget</text>
+  <text x="485" y="104" fill="#e8ecf4" font-size="10" text-anchor="middle">owns Context + declared Size</text>
+  <g font-size="9.5" fill="#8b98ad">
+    <text x="370" y="130">full DrawTarget vocabulary</text>
+    <text x="370" y="146">extras: rotated · halo text,</text>
+    <text x="370" y="160">path helpers, context() escape</text>
+  </g>
+
+  <line x1="310" y1="115" x2="344" y2="115" stroke="#8b98ad" stroke-width="1.5"/>
+  <polygon points="344,115 337,111 337,119" fill="#8b98ad"/>
+  <text x="327" y="108" fill="#8b98ad" font-size="9" text-anchor="middle">target()</text>
+
+  <!-- conversions -->
+  <rect x="40" y="196" width="270" height="86" rx="10" fill="#10151f" stroke="#f5b700" stroke-width="1.5"/>
+  <text x="175" y="218" fill="#f5b700" font-size="11" text-anchor="middle">surface ⇄ buffer</text>
+  <g font-size="9.5" fill="#8b98ad">
+    <text x="56" y="240">image_surface_from_buffer(&amp;PixelBuffer)</text>
+    <text x="56" y="258">pixel_buffer_from_surface(&amp;mut ImageSurface)</text>
+    <text x="56" y="274">→ PixelBuffer&lt;BgraPremultiplied&gt;</text>
+  </g>
+
+  <!-- errors -->
+  <rect x="350" y="196" width="270" height="86" rx="10" fill="#10151f" stroke="#dc0073" stroke-width="1.5"/>
+  <text x="485" y="218" fill="#dc0073" font-size="11" text-anchor="middle">DrawingError</text>
+  <g font-size="9.5" fill="#8b98ad">
+    <text x="366" y="240">Cairo(cairo::Error) — sticky</text>
+    <text x="366" y="258">SurfaceBorrowed — live handle</text>
+    <text x="366" y="274">InvalidSurface — bad stride/extent</text>
+  </g>
+
+  <text x="330" y="308" fill="#8b98ad" font-size="10.5" text-anchor="middle">cairo's deferred errors ride through status() — the raster backend is Infallible</text>
+</svg>

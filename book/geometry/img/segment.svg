@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- segment A -> B -->
+  <line x1="100" y1="225" x2="430" y2="75" stroke="#00a1e4" stroke-width="3"/>
+  <circle cx="100" cy="225" r="4.5" fill="#00a1e4"/>
+  <circle cx="430" cy="75" r="4.5" fill="#00a1e4"/>
+  <text x="84" y="246" fill="#e8ecf4" font-size="13" font-weight="bold">A</text>
+  <text x="446" y="80" fill="#e8ecf4" font-size="13" font-weight="bold">B</text>
+
+  <!-- arrow head at B -->
+  <polygon points="430,75 418.3,88 412.5,75.2" fill="#f5b700"/>
+  <text x="452" y="104" fill="#f5b700" font-size="11">arrow_head()</text>
+  <line x1="450" y1="99" x2="434" y2="84" stroke="#f5b700" stroke-width="1" stroke-dasharray="2 3"/>
+
+  <!-- midpoint -->
+  <circle cx="265" cy="150" r="4" fill="#f5b700"/>
+  <text x="265" y="174" fill="#f5b700" font-size="11" text-anchor="middle">midpoint()</text>
+
+  <!-- direction -->
+  <line x1="100" y1="225" x2="168" y2="225" stroke="#8b98ad" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <path d="M156,225 A56 56 0 0 0 150.6,202.6" fill="none" stroke="#04e762" stroke-width="2"/>
+  <polygon points="150.6,202.6 145,210.5 154.5,211.3" fill="#04e762"/>
+  <text x="128" y="200" fill="#04e762" font-size="11">direction()</text>
+
+  <!-- exterior point + projection -->
+  <circle cx="470" cy="260" r="4.5" fill="#dc0073"/>
+  <text x="486" y="265" fill="#dc0073" font-size="13" font-weight="bold">P</text>
+  <line x1="470" y1="260" x2="393.6" y2="91.6" stroke="#dc0073" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="390" y="94" width="9" height="9" fill="none" stroke="#dc0073" stroke-width="1.5" transform="rotate(-24.4 394.5 98.5)"/>
+  <circle cx="393.6" cy="91.6" r="3" fill="#dc0073"/>
+  <text x="352" y="122" fill="#dc0073" font-size="11" text-anchor="end">interior_projection(P)</text>
+  <text x="352" y="136" fill="#8b98ad" font-size="10" text-anchor="end">point + fraction</text>
+
+  <!-- crossing segment -->
+  <line x1="200" y1="110" x2="320" y2="230" stroke="#8b98ad" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+  <circle cx="247.8" cy="157.8" r="3.5" fill="#89fc00"/>
+  <text x="238" y="140" fill="#89fc00" font-size="11" text-anchor="end">intersection()</text>
+
+  <text x="330" y="284" fill="#8b98ad" font-size="10.5" text-anchor="middle" letter-spacing="1">Segment::new(A, B) — distance, projection, crossing tests</text>
+</svg>

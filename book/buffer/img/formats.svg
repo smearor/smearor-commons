@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 330" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="330" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="30" y="36" fill="#8b98ad" font-size="11" letter-spacing="2.5">PIXEL FORMAT MARKERS — byte order per pixel</text>
+
+  <!-- 4-byte formats -->
+  <g font-size="10.5">
+    <text x="30" y="66" fill="#e8ecf4">Rgba</text>
+    <rect x="110" y="52" width="34" height="24" rx="4" fill="#ef3340" fill-opacity="0.8"/><rect x="144" y="52" width="34" height="24" rx="4" fill="#00ab84" fill-opacity="0.8"/><rect x="178" y="52" width="34" height="24" rx="4" fill="#10069f" fill-opacity="0.8"/><rect x="212" y="52" width="34" height="24" rx="4" fill="none" stroke="#8b98ad" stroke-dasharray="3 3"/>
+    <text x="252" y="68" fill="#8b98ad">r g b a</text>
+
+    <text x="30" y="98" fill="#e8ecf4">Bgra</text>
+    <rect x="110" y="84" width="34" height="24" rx="4" fill="#10069f" fill-opacity="0.8"/><rect x="144" y="84" width="34" height="24" rx="4" fill="#00ab84" fill-opacity="0.8"/><rect x="178" y="84" width="34" height="24" rx="4" fill="#ef3340" fill-opacity="0.8"/><rect x="212" y="84" width="34" height="24" rx="4" fill="none" stroke="#8b98ad" stroke-dasharray="3 3"/>
+    <text x="252" y="100" fill="#8b98ad">b g r a</text>
+
+    <text x="30" y="130" fill="#e8ecf4">RgbaPremultiplied</text>
+    <rect x="110" y="116" width="34" height="24" rx="4" fill="#ef3340" fill-opacity="0.35"/><rect x="144" y="116" width="34" height="24" rx="4" fill="#00ab84" fill-opacity="0.35"/><rect x="178" y="116" width="34" height="24" rx="4" fill="#10069f" fill-opacity="0.35"/><rect x="212" y="116" width="34" height="24" rx="4" fill="none" stroke="#8b98ad" stroke-dasharray="3 3"/>
+    <text x="252" y="132" fill="#8b98ad">r·a g·a b·a a</text>
+
+    <text x="30" y="162" fill="#e8ecf4">BgraPremultiplied</text>
+    <rect x="110" y="148" width="34" height="24" rx="4" fill="#10069f" fill-opacity="0.35"/><rect x="144" y="148" width="34" height="24" rx="4" fill="#00ab84" fill-opacity="0.35"/><rect x="178" y="148" width="34" height="24" rx="4" fill="#ef3340" fill-opacity="0.35"/><rect x="212" y="148" width="34" height="24" rx="4" fill="none" stroke="#8b98ad" stroke-dasharray="3 3"/>
+    <text x="252" y="164" fill="#8b98ad">b·a g·a r·a a</text>
+
+    <text x="30" y="194" fill="#e8ecf4">Rgbx / Bgrx</text>
+    <rect x="110" y="180" width="34" height="24" rx="4" fill="#ef3340" fill-opacity="0.8"/><rect x="144" y="180" width="34" height="24" rx="4" fill="#00ab84" fill-opacity="0.8"/><rect x="178" y="180" width="34" height="24" rx="4" fill="#10069f" fill-opacity="0.8"/><rect x="212" y="180" width="34" height="24" rx="4" fill="#1c2433"/>
+    <text x="252" y="196" fill="#8b98ad">r g b x — padding</text>
+  </g>
+
+  <!-- 3-byte -->
+  <g font-size="10.5">
+    <text x="30" y="226" fill="#e8ecf4">Rgb / Bgr</text>
+    <rect x="110" y="212" width="34" height="24" rx="4" fill="#ef3340" fill-opacity="0.8"/><rect x="144" y="212" width="34" height="24" rx="4" fill="#00ab84" fill-opacity="0.8"/><rect x="178" y="212" width="34" height="24" rx="4" fill="#10069f" fill-opacity="0.8"/>
+    <text x="252" y="228" fill="#8b98ad">3 bytes — opaque</text>
+  </g>
+
+  <!-- 1-byte -->
+  <g font-size="10.5">
+    <text x="30" y="258" fill="#e8ecf4">Gray</text>
+    <rect x="110" y="244" width="34" height="24" rx="4" fill="#8b98ad" fill-opacity="0.8"/>
+    <text x="252" y="260" fill="#8b98ad">luma byte (Rec.601)</text>
+  </g>
+
+  <!-- trait contract -->
+  <rect x="400" y="52" width="230" height="200" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="515" y="76" fill="#8b98ad" font-size="10.5" letter-spacing="1.5" text-anchor="middle">PIXELFORMAT TRAIT</text>
+  <g font-size="11" fill="#e8ecf4">
+    <text x="416" y="104">BYTES_PER_PIXEL: usize</text>
+    <text x="416" y="128">HAS_ALPHA: bool</text>
+    <text x="416" y="152">ID: PixelFormatId</text>
+    <text x="416" y="176" fill="#8b98ad">pixel_bytes(r,g,b,a)</text>
+    <text x="416" y="200" fill="#8b98ad">read_pixel(bytes)</text>
+  </g>
+  <text x="515" y="230" fill="#3a4560" font-size="9.5" text-anchor="middle">zero-sized markers —</text>
+  <text x="515" y="242" fill="#3a4560" font-size="9.5" text-anchor="middle">format lives at the type level</text>
+
+  <text x="30" y="306" fill="#8b98ad" font-size="10.5">all callers think in straight-alpha RGBA — each format maps to its own byte order</text>
+</svg>

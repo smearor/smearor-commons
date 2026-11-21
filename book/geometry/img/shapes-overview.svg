@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 370" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="370" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- Row 1 -->
+  <text x="82" y="48" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">LINE</text>
+  <line x1="44" y1="142" x2="120" y2="86" stroke="#00a1e4" stroke-width="2.5"/>
+  <line x1="33" y1="148" x2="44" y2="142" stroke="#00a1e4" stroke-width="2.5" stroke-dasharray="3 4" opacity="0.45"/>
+  <line x1="120" y1="86" x2="131" y2="80" stroke="#00a1e4" stroke-width="2.5" stroke-dasharray="3 4" opacity="0.45"/>
+
+  <text x="248" y="48" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">SEGMENT</text>
+  <line x1="202" y1="140" x2="294" y2="88" stroke="#dc0073" stroke-width="2.5"/>
+  <polygon points="294,88 286.6,99.1 280.6,88.7" fill="#dc0073"/>
+  <circle cx="202" cy="140" r="4" fill="#dc0073"/>
+  <circle cx="294" cy="88" r="4" fill="#dc0073"/>
+
+  <text x="412" y="48" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">POLYLINE</text>
+  <polyline points="372,142 396,86 426,126 452,78" fill="none" stroke="#f5b700" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="372" cy="142" r="3" fill="#f5b700"/>
+  <circle cx="396" cy="86" r="3" fill="#f5b700"/>
+  <circle cx="426" cy="126" r="3" fill="#f5b700"/>
+  <circle cx="452" cy="78" r="3" fill="#f5b700"/>
+
+  <text x="578" y="48" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">POLYGON</text>
+  <polygon points="578,80 614,98 603,140 553,140 542,98" fill="#04e762" fill-opacity="0.12" stroke="#04e762" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="578" cy="80" r="3" fill="#04e762"/>
+  <circle cx="614" cy="98" r="3" fill="#04e762"/>
+  <circle cx="603" cy="140" r="3" fill="#04e762"/>
+  <circle cx="553" cy="140" r="3" fill="#04e762"/>
+  <circle cx="542" cy="98" r="3" fill="#04e762"/>
+
+  <line x1="20" y1="185" x2="640" y2="185" stroke="#1c2433" stroke-dasharray="2 6"/>
+
+  <!-- Row 2 -->
+  <text x="82" y="226" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">CIRCLE</text>
+  <circle cx="82" cy="298" r="36" fill="none" stroke="#00a1e4" stroke-width="2"/>
+  <circle cx="82" cy="298" r="3" fill="#00a1e4"/>
+  <line x1="82" y1="298" x2="107.5" y2="272.5" stroke="#8b98ad" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <text x="97" y="287" fill="#8b98ad" font-size="11">r</text>
+
+  <text x="248" y="226" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">ANNULUS</text>
+  <circle cx="248" cy="298" r="40" fill="#04e762" fill-opacity="0.10" stroke="#04e762" stroke-width="2"/>
+  <circle cx="248" cy="298" r="20" fill="#0a0e16" stroke="#04e762" stroke-width="2"/>
+  <line x1="248" y1="298" x2="268" y2="298" stroke="#f5b700" stroke-width="1.5"/>
+  <text x="254" y="293" fill="#f5b700" font-size="11">w</text>
+
+  <text x="412" y="226" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">ARC</text>
+  <circle cx="412" cy="298" r="34" fill="none" stroke="#46536b" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>
+  <path d="M444,286.4 A34 34 0 1 1 378,298" fill="none" stroke="#dc0073" stroke-width="3"/>
+  <circle cx="444" cy="286.4" r="3" fill="#dc0073"/>
+  <polygon points="378,298 386,292 386,304" fill="#dc0073"/>
+
+  <text x="578" y="226" fill="#8b98ad" font-size="11" letter-spacing="2.5" text-anchor="middle">SPHERE</text>
+  <circle cx="578" cy="298" r="32" fill="none" stroke="#89fc00" stroke-width="2"/>
+  <ellipse cx="578" cy="298" rx="32" ry="11" fill="none" stroke="#89fc00" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.75"/>
+  <circle cx="578" cy="298" r="2.5" fill="#89fc00"/>
+</svg>

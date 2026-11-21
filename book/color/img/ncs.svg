@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- NCS hue circle: 0=Y(top), 100=R(right), 200=B(bottom), 300=G(left) -->
+  <circle cx="195" cy="150" r="105" fill="none" stroke="#3a4560" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <circle cx="195" cy="45" r="7" fill="#fedd00"/>
+  <circle cx="300" cy="150" r="7" fill="#ef3340"/>
+  <circle cx="195" cy="255" r="7" fill="#10069f"/>
+  <circle cx="90" cy="150" r="7" fill="#00ab84"/>
+  <g fill="#8b98ad" font-size="12" text-anchor="middle">
+    <text x="195" y="32">Y · 0</text>
+    <text x="322" y="154">R · 100</text>
+    <text x="195" y="282">B · 200</text>
+    <text x="68" y="154">G · 300</text>
+  </g>
+
+  <!-- example hue Y90R: position 90 = 81deg -->
+  <line x1="195" y1="150" x2="195" y2="45" stroke="#3a4560" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <line x1="195" y1="150" x2="298.7" y2="133.6" stroke="#e8ecf4" stroke-width="2"/>
+  <circle cx="298.7" cy="133.6" r="5.5" fill="#d9772f" stroke="#e8ecf4" stroke-width="1.5"/>
+  <text x="318" y="130" fill="#e8ecf4" font-size="11">Y90R</text>
+  <path d="M195,104 A46 46 0 0 1 239.6,107.7" fill="none" stroke="#f5b700" stroke-width="2"/>
+  <text x="212" y="98" fill="#f5b700" font-size="10">90</text>
+
+  <!-- notation breakdown -->
+  <text x="420" y="60" fill="#8b98ad" font-size="11" letter-spacing="2">NCS NOTATION</text>
+  <text x="420" y="88" fill="#e8ecf4" font-size="15">S 2030-Y90R</text>
+  <g font-size="11">
+    <text x="420" y="118" fill="#8b98ad">blackness s</text><text x="620" y="118" fill="#e8ecf4" text-anchor="end">20 %</text>
+    <text x="420" y="140" fill="#8b98ad">chromaticness c</text><text x="620" y="140" fill="#e8ecf4" text-anchor="end">30 %</text>
+    <text x="420" y="162" fill="#8b98ad">whiteness (rest)</text><text x="620" y="162" fill="#e8ecf4" text-anchor="end">50 %</text>
+    <text x="420" y="184" fill="#8b98ad">hue</text><text x="620" y="184" fill="#e8ecf4" text-anchor="end">Y with 90 % R</text>
+  </g>
+  <rect x="420" y="200" width="40" height="18" fill="#2d2926"/>
+  <rect x="460" y="200" width="60" height="18" fill="#d9772f"/>
+  <rect x="520" y="200" width="100" height="18" fill="#ded7c8" opacity="0.85"/>
+  <g fill="#3a4560" font-size="9" text-anchor="middle">
+    <text x="440" y="228">s</text><text x="490" y="228">c</text><text x="570" y="228">w = 100 − s − c</text>
+  </g>
+</svg>

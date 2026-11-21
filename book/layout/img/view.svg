@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">VIEW — the camera over the workspace</text>
+
+  <!-- workspace -->
+  <rect x="40" y="64" width="300" height="200" rx="10" fill="#10151f" stroke="#3a4560" stroke-width="1.5"/>
+  <text x="56" y="82" fill="#8b98ad" font-size="10">workspace — Fixed(…) or Infinite</text>
+  <!-- scattered items -->
+  <rect x="70" y="100" width="30" height="20" rx="3" fill="#04e762" fill-opacity="0.3" stroke="#04e762"/>
+  <rect x="280" y="90" width="30" height="20" rx="3" fill="#f5b700" fill-opacity="0.3" stroke="#f5b700"/>
+  <rect x="90" y="230" width="30" height="20" rx="3" fill="#dc0073" fill-opacity="0.3" stroke="#dc0073"/>
+  <rect x="270" y="220" width="30" height="20" rx="3" fill="#00a1e4" fill-opacity="0.3" stroke="#00a1e4"/>
+
+  <!-- view region (grow-only to widget aspect: taller widget = grown region) -->
+  <rect x="120" y="96" width="140" height="140" rx="4" fill="none" stroke="#00a1e4" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="190" y="90" fill="#00a1e4" font-size="9.5" text-anchor="middle">region — grown to match widget aspect</text>
+
+  <!-- arrow to widget -->
+  <line x1="346" y1="164" x2="392" y2="164" stroke="#8b98ad" stroke-width="1.5"/>
+  <polygon points="392,164 385,160 385,168" fill="#8b98ad"/>
+  <text x="369" y="155" fill="#8b98ad" font-size="9" text-anchor="middle">to_widget</text>
+
+  <!-- widget -->
+  <rect x="398" y="100" width="130" height="130" rx="8" fill="#0d1119" stroke="#00a1e4" stroke-width="2"/>
+  <text x="463" y="118" fill="#8b98ad" font-size="9.5" text-anchor="middle">widget</text>
+  <rect x="414" y="126" width="22" height="15" rx="2" fill="#dc0073" fill-opacity="0.3" stroke="#dc0073"/>
+  <rect x="490" y="196" width="22" height="15" rx="2" fill="#00a1e4" fill-opacity="0.3" stroke="#00a1e4"/>
+
+  <!-- ops panel -->
+  <rect x="546" y="64" width="86" height="200" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <g font-size="9" fill="#8b98ad">
+    <text x="556" y="88" fill="#e8ecf4">pan(delta)</text>
+    <text x="556" y="112" fill="#e8ecf4">zoom_at(anchor,</text>
+    <text x="556" y="126" fill="#e8ecf4">  factor)</text>
+    <text x="556" y="150" fill="#e8ecf4">rotate_around(</text>
+    <text x="556" y="164" fill="#e8ecf4">  pivot, delta)</text>
+    <text x="556" y="188">shown_region()</text>
+    <text x="556" y="212">to_widget()</text>
+    <text x="556" y="226">to_workspace()</text>
+    <text x="556" y="250" fill="#3a4560">rotation = walk</text>
+    <text x="556" y="262" fill="#3a4560">around table</text>
+  </g>
+
+  <text x="330" y="286" fill="#8b98ad" font-size="10.5" text-anchor="middle">zoom keeps the anchor fixed (zoom-to-point); shown_region grows, never shrinks</text>
+</svg>
