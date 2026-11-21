@@ -2195,6 +2195,9 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "smearor-commons-buffer",
+ "smearor-commons-drawing",
+ "smearor-commons-geometry",
  "thiserror 2.0.21",
  "zvariant",
 ]
