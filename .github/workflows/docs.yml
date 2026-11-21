@@ -22,6 +22,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgtk4-layer-shell-dev libxkbcommon-dev
       - name: Build docs
         run: cargo doc --workspace --all-features --no-deps
+      # `cargo doc --workspace` emits one index.html per crate but no
+      # page at the docs/ root - add the curated crates index so that
+      # the site's `docs/` link resolves.
+      - name: Install crates index
+        run: cp docs/rustdoc/index.html target/doc/index.html
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
