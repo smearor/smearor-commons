@@ -15,6 +15,21 @@ the `cairo` feature, `CairoTarget` renders the same vocabulary onto
 cairo surfaces (`ViewSurface`, `image_surface_from_buffer`,
 `DrawingError`); `gtk4` builds on top of that.
 
+## What's inside
+
+- [Traits](./drawing/traits.md) — `DrawBackend`'s error-as-property
+  design, the four capability traits, `DrawOps`/`DrawTarget`, prelude
+- [Primitives](./drawing/primitives.md) — the six shape specs plus
+  `fill_background`, source-over blending
+- [Icons](./drawing/icons.md) — `Icon`/`Codepoint`/`IconGrid`, the
+  caller-resolved codepoint design, glyph scale cache
+- [Text & Progress](./drawing/text-progress.md) — label/centered/
+  positioned text, bitmap fallback, `ProgressBar` + `Gauge`
+- [RenderContext](./drawing/render-context.md) — the builder facade:
+  fonts, colors, `is_active`, tile layout conventions
+- [Cairo](./drawing/cairo.md) — `CairoTarget`, zero-copy `ViewSurface`,
+  surface bridges, path helpers, `DrawingError`
+
 ## Draw specs
 
 Every operation takes a plain-data spec:

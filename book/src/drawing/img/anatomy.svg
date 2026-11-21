@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 340" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="340" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">RENDERCONTEXT LAYOUT — where things land on the target</text>
+
+  <!-- target canvas -->
+  <rect x="60" y="56" width="240" height="240" rx="10" fill="#10151f" stroke="#00a1e4" stroke-width="2"/>
+
+  <!-- icon zone: centered at 0.4·h, size = 0.6·min(w,h) -->
+  <circle cx="180" cy="152" r="48" fill="none" stroke="#dc0073" stroke-width="2" stroke-dasharray="5 4"/>
+  <path d="M 168 152 l 8 8 l 16 -18" fill="none" stroke="#dc0073" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="180" y="222" fill="#dc0073" font-size="9.5" text-anchor="middle">icon — size 0.6·min(w,h)</text>
+
+  <!-- label zone -->
+  <text x="180" y="272" fill="#e8ecf4" font-size="13" text-anchor="middle" font-family="Roboto,Metropolis,sans-serif">Label</text>
+  <line x1="140" y1="280" x2="220" y2="280" stroke="#3a4560"/>
+
+  <!-- progress strip -->
+  <rect x="62" y="290" width="236" height="5" fill="#1c2433"/>
+  <rect x="62" y="290" width="165" height="5" fill="#00a1e4"/>
+
+  <!-- callouts right -->
+  <g font-size="10.5">
+    <text x="340" y="96" fill="#dc0073">draw_icon / draw_icon_by_name</text>
+    <text x="340" y="114" fill="#8b98ad">glyph centered at 0.4·height —</text>
+    <text x="340" y="128" fill="#8b98ad">a tile's visual sweet spot</text>
+
+    <text x="340" y="172" fill="#e8ecf4">draw_label(text)</text>
+    <text x="340" y="190" fill="#8b98ad">label_font → icon_font → bitmap</text>
+    <text x="340" y="204" fill="#8b98ad">anchored at the bottom edge</text>
+
+    <text x="340" y="248" fill="#00a1e4">draw_progress_bar(value, h)</text>
+    <text x="340" y="266" fill="#8b98ad">strip at bottom, raised by</text>
+    <text x="340" y="280" fill="#8b98ad">PROGRESS_BAR_BOTTOM_MARGIN (2px)</text>
+  </g>
+
+  <!-- gauge -->
+  <text x="340" y="312" fill="#f5b700" font-size="10.5">draw_gauge — separate ring spec (see next)</text>
+</svg>
