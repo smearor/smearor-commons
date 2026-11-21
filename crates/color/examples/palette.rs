@@ -128,6 +128,9 @@ use smearor_commons_color::WORLD_OF_TOMORROW;
 use smearor_commons_color::WORLD_WAR_1;
 use smearor_commons_color::WORLD_WAR_2;
 use smearor_commons_color::YOUTHFUL_PASTIMES;
+use smearor_commons_drawing::CairoTarget;
+use smearor_commons_drawing::DrawPrimitiveOps;
+use smearor_commons_geometry::Size;
 
 const APP_ID: &str = "io.smearor.commons_color.palette";
 
@@ -473,10 +476,8 @@ fn build_ui(app: &Application) {
     area.set_draw_func({
         let selected = Rc::clone(&selected);
         move |_, cr, width, height| {
-            let rgba = gdk::RGBA::from(*selected.borrow());
-            cr.set_source_rgba(f64::from(rgba.red()), f64::from(rgba.green()), f64::from(rgba.blue()), f64::from(rgba.alpha()));
-            cr.rectangle(0.0, 0.0, f64::from(width), f64::from(height));
-            let _ = cr.fill();
+            let mut target = CairoTarget::new(cr, Size::new(width.max(0) as u32, height.max(0) as u32));
+            let _ = target.fill_background(*selected.borrow());
         }
     });
     let (grid, values) = representation_grid();
