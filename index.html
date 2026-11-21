@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="smearor-commons — a mono-workspace of shared, framework-agnostic Rust libraries for the Smearor table-top smart desk ecosystem.">
+    <title>smearor-commons — Shared Rust libraries for the Smearor smart desk</title>
+    <link rel="icon" type="image/png" href="images/smearor-avatar.png">
+    <link rel="apple-touch-icon" href="images/smearor-avatar.png">
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <link rel="stylesheet" href="css/open-props-normalize.min.css">
+    <link rel="stylesheet" href="css/open-props.min.css">
+    <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+<nav class="nav" id="nav">
+    <a class="nav-brand" href="#top" aria-label="smearor-commons home">
+        <span class="mini-tiles" aria-hidden="true">
+            <span class="mini-tile t-green">S</span><span class="mini-tile t-yellow">M</span><span class="mini-tile t-blue">E</span><span class="mini-tile t-pink">A</span><span class="mini-tile t-lime">R</span><span class="mini-tile t-green">O</span><span class="mini-tile t-yellow">R</span>
+        </span>
+        <span class="nav-sub">/ commons</span>
+    </a>
+    <div class="nav-links">
+        <a href="#documentation">Docs</a>
+        <a href="#crates">Crates</a>
+        <a href="#design">Design</a>
+        <a href="#start">Get Started</a>
+    </div>
+    <a class="nav-github" href="https://github.com/smearor/smearor-commons" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span>GitHub</span>
+    </a>
+</nav>
+
+<header class="hero" id="top">
+    <canvas id="tilefield" aria-hidden="true"></canvas>
+    <div class="hero-inner">
+        <p class="eyebrow">// shared rust libraries</p>
+        <div class="wordmark" aria-label="Commons">
+            <span class="tile t-green">C</span>
+            <span class="tile t-yellow">O</span>
+            <span class="tile t-blue">M</span>
+            <span class="tile t-pink">M</span>
+            <span class="tile t-lime">O</span>
+            <span class="tile t-green">N</span>
+            <span class="tile t-yellow">S</span>
+        </div>
+        <h1>One desk,<br>one <em>vocabulary</em>.</h1>
+        <p class="lead">
+            <strong>smearor-commons</strong> is a mono-workspace of shared, framework-agnostic Rust
+            libraries for the Smearor ecosystem — frameworks, applications and games for the
+            65&#8202;&Prime; table-top smart desk. Pure <code>std</code> cores, optional
+            integrations behind feature gates, published to crates.io.
+        </p>
+        <div class="hero-cta">
+            <a class="btn btn-primary" href="docs/">API Docs</a>
+            <a class="btn btn-ghost" href="book/">Read the Book</a>
+        </div>
+        <ul class="hero-chips">
+            <li>Rust edition 2024</li>
+            <li>MSRV 1.98</li>
+            <li>8 crates</li>
+            <li>MIT licensed</li>
+        </ul>
+    </div>
+    <a class="scroll-hint" href="#documentation" aria-label="Scroll down"><span></span></a>
+</header>
+
+<main>
+
+<section class="section docs" id="documentation">
+    <div class="wrap">
+        <p class="kicker reveal">Documentation</p>
+        <h2 class="reveal">Two ways in.</h2>
+        <p class="section-copy reveal">
+            Both sites are built in CI on every push to <code>main</code> and deployed to this
+            GitHub Pages site — the API reference straight from the source, and the book as its
+            prose companion.
+        </p>
+        <div class="doc-grid">
+            <a class="doc-card doc-card--rustdoc reveal" href="docs/">
+                <div class="doc-head">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></div>
+                    <div>
+                        <h3>API Reference</h3>
+                        <span class="doc-sub">cargo doc &middot; rustdoc</span>
+                    </div>
+                </div>
+                <p>
+                    The complete rustdoc for all workspace crates, built with
+                    <code>--all-features</code>. Every trait, newtype and error enum — searchable
+                    and cross-linked.
+                </p>
+                <span class="doc-path">smearor.github.io/smearor-commons/docs/</span>
+                <span class="card-link">Open the API docs &nearr;</span>
+            </a>
+            <a class="doc-card doc-card--book reveal" href="book/">
+                <div class="doc-head">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></div>
+                    <div>
+                        <h3>The Book</h3>
+                        <span class="doc-sub">mdBook &middot; guides &amp; rationale</span>
+                    </div>
+                </div>
+                <p>
+                    A guided tour of the workspace: per-crate chapters, design rationale, migration
+                    notes and mermaid diagrams — the prose companion to the API reference.
+                </p>
+                <span class="doc-path">smearor.github.io/smearor-commons/book/</span>
+                <span class="card-link">Open the book &nearr;</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="crates">
+    <div class="wrap">
+        <p class="kicker reveal">The workspace</p>
+        <h2 class="reveal">Eight crates,<br>one responsibility each.</h2>
+        <p class="section-copy reveal">
+            From unit-tagged geometry to a software-raster drawing vocabulary — each crate stays
+            small, strict and headless by default.
+        </p>
+        <div class="crate-grid">
+            <a class="crate-card reveal" href="docs/smearor_commons_animation/">
+                <span class="crate-name">smearor-commons-animation</span>
+                <span class="crate-desc">Generic <code>Interpolate</code>/<code>Trajectory</code>/<code>TimedAnimation</code> machinery with easing and a GTK4 frame-clock driver.</span>
+                <span class="crate-meta"><em>gtk4 optional</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_buffer/">
+                <span class="crate-name">smearor-commons-buffer</span>
+                <span class="crate-desc">Format-tagged pixel buffers, strided views and metadata.</span>
+                <span class="crate-meta"><em>gtk4 optional</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_color/">
+                <span class="crate-name">smearor-commons-color</span>
+                <span class="crate-desc">Channel-generic <code>Color&lt;T&gt;</code>, hex parsing and color operations.</span>
+                <span class="crate-meta"><em>cairo optional</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_drawing/">
+                <span class="crate-name">smearor-commons-drawing</span>
+                <span class="crate-desc">Shared rendering vocabulary — icons, text, progress bars and highlights on pixel buffers, with cairo and GTK4 targets.</span>
+                <span class="crate-meta"><em>cairo optional</em><em>gtk4 optional</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_font/">
+                <span class="crate-name">smearor-commons-font</span>
+                <span class="crate-desc">Font metric helpers on <code>ab_glyph</code> fonts: scale fitting, bounds centering and text truncation.</span>
+                <span class="crate-meta"><em>ab_glyph</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_geometry/">
+                <span class="crate-name">smearor-commons-geometry</span>
+                <span class="crate-desc">Unit-tagged 2D vectors, rotations, rectangles and shapes.</span>
+                <span class="crate-meta"><em>serde</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_layer/">
+                <span class="crate-name">smearor-commons-layer</span>
+                <span class="crate-desc">Layer-shell vocabulary: <code>SmearorLayer</code>, <code>LayerConfig</code> and orientation-to-edge conversions.</span>
+                <span class="crate-meta"><em>gtk4-layer-shell optional</em></span>
+            </a>
+            <a class="crate-card reveal" href="docs/smearor_commons_layout/">
+                <span class="crate-name">smearor-commons-layout</span>
+                <span class="crate-desc">Headless tabletop layouting: <code>TableSide</code>/<code>Seat</code>, the <code>LayoutStrategy</code> trait, <code>FlowLayout</code> and <code>SeatLayout</code>.</span>
+                <span class="crate-meta"><em>serde</em></span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="section design" id="design">
+    <div class="wrap">
+        <p class="kicker reveal">Design</p>
+        <h2 class="reveal">Built to be embedded.</h2>
+        <p class="section-copy reveal">
+            The crates provide technical, domain-free vocabulary — semantic newtypes like
+            <code>FigureColor</code> or <code>BoardOrientation</code> live in the consuming crates
+            as thin wrappers around these types.
+        </p>
+        <div class="feature-grid">
+            <article class="feature-card reveal">
+                <div class="feature-icon i-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12l2 2 4-4"/></svg></div>
+                <h3>Pure std core</h3>
+                <p>The default feature set pulls no GUI, compositor or schema framework dependencies — every crate stays usable in headless consumers.</p>
+            </article>
+            <article class="feature-card reveal">
+                <div class="feature-icon i-yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M18.4 5.6l-2.2 2.2M7.8 16.2l-2.2 2.2"/></svg></div>
+                <h3>Feature-gated integrations</h3>
+                <p>Transport, schema and UI conversions live behind optional features named after their dependency: <code>async-graphql</code>, <code>schemars</code>, <code>zbus</code>, <code>evdev</code>, <code>gtk4</code>, <code>cairo</code>, <code>smithay</code>.</p>
+            </article>
+            <article class="feature-card reveal">
+                <div class="feature-icon i-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M11 7h6v6"/></svg></div>
+                <h3>Strict newtypes</h3>
+                <p>Domain primitives are wrapped in newtype structs and every crate has its own <code>thiserror</code> error enum — panic-free by convention.</p>
+            </article>
+            <article class="feature-card reveal">
+                <div class="feature-icon i-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div>
+                <h3>serde by default</h3>
+                <p>Serialization support is a base dependency, not a feature — every technical type round-trips out of the box.</p>
+            </article>
+            <article class="feature-card reveal">
+                <div class="feature-icon i-lime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+                <h3>Mono-workspace</h3>
+                <p>All crates live under <code>crates/*</code>, share <code>workspace.package</code> metadata and release with a common version.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="start">
+    <div class="wrap">
+        <p class="kicker reveal">Get started</p>
+        <h2 class="reveal">Add it to your Cargo.toml.</h2>
+        <p class="section-copy reveal">
+            Pick only the crates you need — integrations stay off until you ask for them.
+        </p>
+        <div class="code-block reveal">
+            <div class="code-head">
+                <span class="code-title">Cargo.toml</span>
+                <span class="window-controls" aria-hidden="true">
+                    <span class="wc-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4.5 12h7"/></svg></span>
+                    <span class="wc-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="8" height="8" rx="1"/></svg></span>
+                    <span class="wc-btn wc-close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg></span>
+                </span>
+            </div>
+            <pre><code><span class="k">[dependencies]</span>
+<span class="s">smearor-commons-geometry</span> = <span class="s">"0.1"</span>
+<span class="s">smearor-commons-layout</span>   = <span class="s">"0.1"</span>
+<span class="c"># optional integrations, e.g. GTK4:</span>
+<span class="s">smearor-commons-buffer</span>   = { <span class="k">version</span> = <span class="s">"0.1"</span>, <span class="k">features</span> = [<span class="s">"gtk4"</span>] }</code></pre>
+        </div>
+    </div>
+</section>
+
+<section class="section outro">
+    <div class="wrap outro-inner reveal">
+        <p class="kicker">Free &amp; open source</p>
+        <h2>The desk is open.<br>So are the crates.</h2>
+        <div class="hero-cta">
+            <a class="btn btn-primary" href="https://github.com/smearor/smearor-commons" target="_blank" rel="noopener">Star on GitHub</a>
+            <a class="btn btn-ghost" href="https://crates.io/search?q=smearor-commons" target="_blank" rel="noopener">crates.io</a>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer class="footer">
+    <div class="wrap footer-inner">
+        <img class="footer-logo" src="images/smearor-logo.png" alt="Smearor" width="240" height="46">
+        <div class="footer-links">
+            <a href="docs/">API Docs</a>
+            <a href="book/">Book</a>
+            <a href="https://github.com/smearor/smearor-commons" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://crates.io/search?q=smearor-commons" target="_blank" rel="noopener">crates.io</a>
+            <a href="https://www.smearor.io/" target="_blank" rel="noopener">smearor.io</a>
+        </div>
+        <p class="footer-note">MIT licensed · Rust, GTK4 &amp; Wayland · © <span id="year">2026</span> The Smearor Project</p>
+    </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
