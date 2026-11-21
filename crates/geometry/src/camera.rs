@@ -37,6 +37,12 @@ impl Camera {
         point.rotated_y(self.yaw).rotated_x(self.pitch)
     }
 
+    /// The inverse of [`Self::view`]: a camera-space point back to
+    /// world space - undoes the pitch, then the yaw.
+    pub fn unview<U>(&self, point: Vec3<U>) -> Vec3<U> {
+        point.rotated_x(-self.pitch).rotated_y(-self.yaw)
+    }
+
     /// The screen position (in `Pixels`, `x` rightward and `y`
     /// downward from the viewport center) and the painter depth -
     /// larger means further away - of `point` inside a `viewport`.
@@ -77,6 +83,20 @@ mod tests {
         };
         let view = camera.view(Vec3::<()>::new(0.0, 0.0, 1.0));
         assert!((view.x - 1.0).abs() < 1e-12 && view.z.abs() < 1e-12);
+    }
+
+    #[test]
+    fn unview_inverts_view() {
+        let cam = Camera {
+            yaw: RotationRad::new(0.7),
+            pitch: RotationRad::new(-0.4),
+            scale: ScaleFactor::new(2.0),
+        };
+        let point = Vec3::<()>::new(1.0, 2.0, 3.0);
+        let back = cam.unview(cam.view(point));
+        for (a, b) in [(back.x, point.x), (back.y, point.y), (back.z, point.z)] {
+            assert!((a - b).abs() < 1e-12);
+        }
     }
 
     #[test]
