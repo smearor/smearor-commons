@@ -66,6 +66,8 @@ pub use named::PantoneNamedColor;
 pub use named::PantoneSuffix;
 pub use named_color::NamedColor;
 pub use palette::ABSTRACT_EXPRESSIONISTS;
+pub use palette::PaletteBuildError;
+pub use palette::PaletteBuilder;
 pub use palette::AMERICAN_DREAM;
 pub use palette::ANIME;
 pub use palette::ART_DECO;

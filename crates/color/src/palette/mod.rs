@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::hash_map;
 use std::hash::Hash;
 
+mod builder;
 mod p1900;
 mod p1910;
 mod p1920;
@@ -20,6 +21,8 @@ mod p1970;
 mod p1980;
 mod p1990;
 
+pub use builder::PaletteBuildError;
+pub use builder::PaletteBuilder;
 pub use p1900::ARTS_AND_CRAFTS;
 pub use p1900::ArtsAndCraftsColor;
 pub use p1900::CHARM_OF_IRIDESCENCE;
@@ -239,6 +242,23 @@ impl<N: Eq + Hash + 'static, T: 'static> Palette<N, T> {
     pub fn iter(&self) -> hash_map::Iter<'_, N, Color<T>> {
         self.colors.iter()
     }
+
+    /// Returns a palette with every color transformed by `f` (e.g.
+    /// channel conversion `Palette<N, f64>` -> `Palette<N, f32>`).
+    pub fn map_colors<U>(&self, f: impl Fn(Color<T>) -> Color<U>) -> Palette<N, U>
+    where
+        N: Clone,
+        T: Copy,
+        U: 'static,
+    {
+        Palette::new(self.colors.iter().map(|(name, color)| (name.clone(), f(*color))).collect())
+    }
+
+    /// A fluent builder for assembling a palette name by name - see
+    /// [`PaletteBuilder`].
+    pub fn builder() -> PaletteBuilder<N, T> {
+        PaletteBuilder::new()
+    }
 }
 
 impl<N: Eq + Hash + 'static, T: 'static> Palette<N, T> {
@@ -275,6 +295,24 @@ impl<N: Eq + Hash + 'static, T: 'static> Palette<N, T> {
     pub fn colors(&self) -> &HashMap<N, Color<T>> {
         &self.colors
     }
+
+    /// Registers `color` under `name`, returning the replaced
+    /// color. Names go through `Into`, so enum variants can be used
+    /// directly and [`crate::NamedColor`] keys can be written as
+    /// plain `&str`. For fluent assembly see
+    /// [`Palette::builder`].
+    pub fn insert(&mut self, name: impl Into<N>, color: Color<T>) -> Option<Color<T>> {
+        self.colors.insert(name.into(), color)
+    }
+
+    /// Removes the color registered under `name`, returning it.
+    pub fn remove<Q>(&mut self, name: &Q) -> Option<Color<T>>
+    where
+        N: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        self.colors.remove(name)
+    }
 }
 
 /// Methods available when the key type enumerates its vocabulary.
@@ -288,6 +326,12 @@ impl<N: PaletteDefinition, T: 'static> Palette<N, T> {
     /// `true` when every declared slot carries a color.
     pub fn is_complete(&self) -> bool {
         N::slots().iter().all(|slot| self.contains(slot))
+    }
+
+    /// Iterates all declared slots in declaration order, paired
+    /// with their color (`None` for unfilled slots).
+    pub fn ordered(&self) -> impl Iterator<Item = (N, Option<&Color<T>>)> {
+        N::slots().iter().copied().map(|slot| (slot, self.get(&slot)))
     }
 }
 
@@ -338,5 +382,84 @@ where
 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         HashMap::<N, Color<T>>::deserialize(deserializer).map(Self::new)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::NamedColor;
+    use crate::palette_definition;
+
+    const LIGHT: NamedColor = NamedColor::new("light");
+
+    palette_definition! {
+        /// Colors of a chess board theme.
+        pub enum BoardSlot {
+            /// Light squares.
+            Light => "light",
+            /// Dark squares.
+            Dark => "dark",
+            /// Frame around the board.
+            Frame => "frame"
+        }
+    }
+
+    fn board_palette() -> Palette<NamedColor, f64> {
+        Palette::builder()
+            .color(LIGHT.clone(), Color::<f64>::new(0.93, 0.83, 0.62))
+            .color("dark", Color::<f64>::new(0.45, 0.30, 0.18))
+            .build()
+    }
+
+    fn slot_palette() -> Palette<BoardSlot, f64> {
+        Palette::builder()
+            .color(BoardSlot::Light, Color::<f64>::new(0.93, 0.83, 0.62))
+            .color(BoardSlot::Dark, Color::<f64>::new(0.45, 0.30, 0.18))
+            .build()
+    }
+
+    #[test]
+    fn insert_and_get_by_name() {
+        let palette = board_palette();
+        assert_eq!(palette.get("light"), Some(&Color::<f64>::new(0.93, 0.83, 0.62)));
+        assert_eq!(palette.get(&LIGHT), Some(&Color::<f64>::new(0.93, 0.83, 0.62)));
+        assert_eq!(palette.len(), 2);
+    }
+
+    #[test]
+    fn insert_replaces_and_returns_previous() {
+        let mut palette = board_palette();
+        let previous = palette.insert("light", Color::<f64>::WHITE);
+        assert_eq!(previous, Some(Color::<f64>::new(0.93, 0.83, 0.62)));
+        assert_eq!(palette.get("light"), Some(&Color::<f64>::WHITE));
+    }
+
+    #[test]
+    fn remove_returns_the_color() {
+        let mut palette = board_palette();
+        assert_eq!(palette.remove("light"), Some(Color::<f64>::new(0.93, 0.83, 0.62)));
+        assert_eq!(palette.remove("light"), None);
+    }
+
+    #[test]
+    fn map_colors_converts_channel_type() {
+        let converted: Palette<BoardSlot, f32> = slot_palette().map_colors(|color| color.into());
+        assert_eq!(converted.get(&BoardSlot::Dark), Some(&Color::<f32>::new(0.45, 0.30, 0.18)));
+    }
+
+    #[test]
+    fn ordered_iterates_declaration_order() {
+        let palette = slot_palette();
+        let slots: Vec<BoardSlot> = palette.ordered().map(|(slot, _)| slot).collect();
+        assert_eq!(slots, vec![BoardSlot::Light, BoardSlot::Dark, BoardSlot::Frame]);
+        let light = palette.ordered().next().map(|(_, color)| color);
+        assert_eq!(light, Some(Some(&Color::<f64>::new(0.93, 0.83, 0.62))));
+    }
+
+    #[test]
+    fn missing_reports_unfilled_slots_in_declaration_order() {
+        assert_eq!(slot_palette().missing(), vec![BoardSlot::Frame]);
+        assert!(!slot_palette().is_complete());
     }
 }
