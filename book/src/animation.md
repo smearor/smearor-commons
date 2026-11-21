@@ -4,6 +4,21 @@ Timed animations, pure `std`: a `TimedAnimation` pairs a `Trajectory` —
 the shape of the animated output — with a `Duration` and an
 `EasingFunction`.
 
+## What's inside
+
+- [Clock](./animation/clock.md) — `TimedAnimation` lifecycle: start,
+  progress, `value_at`, the `Option` state machine
+- [Trajectories](./animation/trajectories.md) — `Span`,
+  `ThreePhaseSpan`, tuple composition, the ready-made aliases
+- [Interpolation](./animation/interpolation.md) — the `Interpolate`
+  contract per type, shortest-arc `RotationRad`, unclamped `t`
+- [Easing](./animation/easing.md) — all eight `EasingFunction` curves
+  with their exact formulas
+- [Rotation Snap](./animation/rotation-snap.md) — `RotationSnap`
+  gesture sessions: engage at 10°, snap at 45°, `SnapUpdate` events
+- [GTK Driver](./animation/gtk-driver.md) — `drive()` on a widget's
+  frame clock
+
 ```mermaid
 flowchart LR
     now["Instant"] --> progress["progress = elapsed / duration"]
@@ -12,31 +27,7 @@ flowchart LR
     value --> out["animated value"]
 ```
 
-## Trajectories compose
-
-- `Span<T>` interpolates between two values of any `Interpolate` type
-  (scalars, `Vec2`, `RotationRad` shortest-arc, `ScaleFactor`).
-- `ThreePhaseSpan<T>` eases out, holds and eases back.
-- `(S1, S2)` tuples animate composite values on one clock — "rotate
-  while zooming" needs no dedicated animation struct.
-
-Ready-made aliases: `RotationAnimation`, `ZoomAnimation`,
-`PulseAnimation`, `Vec2Animation<U>`, `RotationZoomAnimation`.
-
-## Easing
-
-`EasingFunction`: `Linear`, `EaseIn`, `EaseOut`, `EaseInOut`,
-`EaseInCubic`, `EaseOutCubic`, `EaseInOutCubic` and `Overshoot`
-(Penner's canonical `s = 1.70158` via `EasingFunction::overshoot()`).
-
-## Rotation snapping
-
-`RotationSnap` tracks a gesture rotation and reports `SnapUpdate`s when
-the angle crosses snap/direction/feedback thresholds — haptics-friendly
-rotation snapping without a dedicated state machine per consumer.
-
-## GTK4 driver
-
-The `gtk4` feature adds `drive`, which pumps a `TimedAnimation` on a
-widget's frame clock. `schemars` schema derives live behind their
-feature gate. See the crate's rustdoc for the full API.
+The crate splits an animation into three independent halves: a
+`Trajectory` says *what* changes, `Interpolate` says *how values* move,
+and `EasingFunction` says *how time* moves — compose them freely.
+See the crate's rustdoc for the full API.
