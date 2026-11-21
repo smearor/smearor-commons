@@ -287,6 +287,14 @@ impl PhaseShape {
 
 /// The animation under test - one boxed slot per value dimension.
 /// `control_points` carries the bezier handles for drawing.
+/// A draggable center marker of an orbital trajectory component.
+struct CenterMark {
+    /// The center in model coordinates.
+    point: Vec2<()>,
+    /// The component slot the marker controls.
+    slot: usize,
+}
+
 enum Demo {
     /// 1D - scalar trajectories on the x axis.
     Scalar {
@@ -305,6 +313,8 @@ enum Demo {
         phase: PhaseShape,
         /// Bezier handles drawn as reference points.
         control_points: Vec<Vec2<()>>,
+        /// Draggable centers of orbital components.
+        centers: Vec<CenterMark>,
         /// The per-component easings - drawn as background curves.
         easings: Vec<EasingFunction>,
     },
@@ -316,6 +326,8 @@ enum Demo {
         phase: PhaseShape,
         /// Bezier handles drawn as reference points.
         control_points: Vec<Vec2<()>>,
+        /// Draggable centers of orbital components.
+        centers: Vec<CenterMark>,
         /// The per-component easings - drawn as background curves.
         easings: Vec<EasingFunction>,
     },
@@ -350,6 +362,14 @@ impl Demo {
                 let v = animation.trajectory.value_at(t);
                 Vec2::new(v.x, v.y)
             }
+        }
+    }
+
+    /// The draggable center markers of orbital components.
+    fn centers(&self) -> &[CenterMark] {
+        match self {
+            Self::Scalar { .. } => &[],
+            Self::Planar { centers, .. } | Self::Spatial { centers, .. } => centers,
         }
     }
 
@@ -757,6 +777,16 @@ fn build_demo(knobs: &Knobs) -> Demo {
             .collect()
     };
     let points = |knobs: &ComponentKnobs| knobs.points.iter().map(|p| Vec2::<()>::new(p.x, p.y)).collect();
+    // orbital components own their center knob - the marker mirrors it
+    let centers = |count: usize| -> Vec<CenterMark> {
+        (0..count)
+            .filter(|&slot| ORBITAL.contains(&name(slot)))
+            .map(|slot| CenterMark {
+                point: Vec2::<()>::new(knobs.components[slot].center[0], knobs.components[slot].center[1]),
+                slot,
+            })
+            .collect()
+    };
     let duration = knobs.duration;
     let linear = EasingFunction::Linear;
     match roles {
@@ -778,6 +808,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
                 } else {
                     Vec::new()
                 },
+                centers: centers(1),
                 easings: easings(1),
             }
         }
@@ -788,6 +819,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
                 animation: TimedAnimation::new(Box::new(Compose2 { x, y }), duration, linear),
                 phase,
                 control_points: Vec::new(),
+                centers: Vec::new(),
                 easings: easings(2),
             }
         }
@@ -801,6 +833,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
                 } else {
                     Vec::new()
                 },
+                centers: centers(1),
                 easings: easings(1),
             }
         }
@@ -812,6 +845,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
                 animation: TimedAnimation::new(Box::new(ComposeXY { xy: Compose2 { x, y }, z }), duration, linear),
                 phase,
                 control_points: Vec::new(),
+                centers: Vec::new(),
                 easings: easings(3),
             }
         }
@@ -826,6 +860,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
                 } else {
                     Vec::new()
                 },
+                centers: centers(2),
                 easings: easings(2),
             }
         }
@@ -840,11 +875,54 @@ fn build_demo(knobs: &Knobs) -> Demo {
                 } else {
                     Vec::new()
                 },
+                centers: centers(2),
                 easings: easings(2),
             }
         }
         _ => unreachable!("component_roles covers every composition"),
     }
+}
+
+/// The plot domain `(x_min, x_max, y_min, y_max)` - fitted to the
+/// sampled trajectory, the per-component easing curves and the
+/// markers. Overshoot, back and elastic leave `0..=1` by design.
+fn plot_domain(demo: &Demo) -> (f64, f64, f64, f64) {
+    let mut x_min = 0.0_f64;
+    let mut x_max = 1.0_f64;
+    let mut y_min = 0.0_f64;
+    let mut y_max = 1.0_f64;
+    for i in 0..=200 {
+        let t = Fraction::new(i as f64 / 200.0);
+        for easing in demo.easings() {
+            let eased = easing.apply(t).as_f64();
+            if eased.is_finite() {
+                y_min = y_min.min(eased);
+                y_max = y_max.max(eased);
+            }
+        }
+        // the easings live inside the trajectories - the linear
+        // sample already reflects them
+        let value = demo.sample(t);
+        x_min = x_min.min(value.x);
+        x_max = x_max.max(value.x);
+        y_min = y_min.min(value.y);
+        y_max = y_max.max(value.y);
+        for point in demo.control_points() {
+            x_min = x_min.min(point.x);
+            x_max = x_max.max(point.x);
+            y_min = y_min.min(point.y);
+            y_max = y_max.max(point.y);
+        }
+    }
+    for mark in demo.centers() {
+        x_min = x_min.min(mark.point.x);
+        x_max = x_max.max(mark.point.x);
+        y_min = y_min.min(mark.point.y);
+        y_max = y_max.max(mark.point.y);
+    }
+    let x_pad = 0.25 * (x_max - x_min).max(0.2);
+    let y_pad = 0.25 * (y_max - y_min).max(0.2);
+    (x_min - x_pad, x_max + x_pad, y_min - y_pad, y_max + y_pad)
 }
 
 /// A labeled slider row for the sidebar - returns the row too, so
@@ -887,8 +965,13 @@ impl RangeSlider {
     }
 }
 
-/// A labeled two-grip range slider row for the sidebar.
-fn range_slider(parent: &GtkBox, label: &str, lower: f64, upper: f64) -> (GtkBox, RangeSlider) {
+/// Trajectories with a `center` knob - the center is drawn on the
+/// canvas as a draggable marker.
+const ORBITAL: &[&str] = &["Orbit", "Helix", "Lissajous", "Spiral", "Lemniskate", "SphericalOrbit", "TorusKnot", "Figure8"];
+
+/// A labeled two-grip range slider row for the sidebar - the
+/// grips carry `min..=max` values and `marks` draws the scale.
+fn range_slider(parent: &GtkBox, label: &str, min: f64, max: f64, lower: f64, upper: f64, marks: &[f64]) -> (GtkBox, RangeSlider) {
     let row = GtkBox::new(Orientation::Horizontal, 8);
     let text = Label::new(Some(label));
     text.set_width_chars(11);
@@ -897,6 +980,7 @@ fn range_slider(parent: &GtkBox, label: &str, lower: f64, upper: f64) -> (GtkBox
     row.append(&text);
     row.append(&area);
     parent.append(&row);
+    let marks: Rc<Vec<f64>> = Rc::new(marks.to_vec());
 
     const PAD: f64 = 14.0;
     let lower_cell = Rc::new(Cell::new(lower));
@@ -910,8 +994,9 @@ fn range_slider(parent: &GtkBox, label: &str, lower: f64, upper: f64) -> (GtkBox
         move |_, context, width, height| {
             let (w, h) = (f64::from(width), f64::from(height));
             let (track_w, mid) = (w - 2.0 * PAD, h * 0.35);
-            let lx = PAD + track_w * lower.get();
-            let ux = PAD + track_w * upper.get();
+            let position = |v: f64| (v - min) / (max - min);
+            let lx = PAD + track_w * position(lower.get());
+            let ux = PAD + track_w * position(upper.get());
             context.set_source_rgb(0.55, 0.55, 0.55);
             context.move_to(PAD, mid);
             context.line_to(PAD + track_w, mid);
@@ -929,13 +1014,14 @@ fn range_slider(parent: &GtkBox, label: &str, lower: f64, upper: f64) -> (GtkBox
             context.select_font_face("monospace", gtk4::cairo::FontSlant::Normal, gtk4::cairo::FontWeight::Normal);
             context.set_font_size(9.0);
             context.set_source_rgb(0.5, 0.5, 0.5);
-            for v in [0.0_f64, 0.25, 0.5, 0.75, 1.0] {
-                let tx = PAD + track_w * v;
+            for &v in marks.iter() {
+                let tx = PAD + track_w * position(v);
                 context.move_to(tx, mid + 10.0);
                 context.line_to(tx, mid + 15.0);
                 context.set_line_width(1.0);
                 let _ = context.stroke();
-                let label = format!("{v:.2}");
+                // integers get short labels, fractions two decimals
+                let label = if (v - v.round()).abs() < 1e-9 { format!("{v:.0}") } else { format!("{v:.2}") };
                 if let Ok(extents) = context.text_extents(&label) {
                     context.move_to(tx - extents.width() / 2.0, mid + 26.0);
                     let _ = context.show_text(&label);
@@ -972,8 +1058,9 @@ fn range_slider(parent: &GtkBox, label: &str, lower: f64, upper: f64) -> (GtkBox
         let (lower, upper, grabbed) = (Rc::clone(&lower_cell), Rc::clone(&upper_cell), Rc::clone(&grabbed));
         drag.connect_drag_begin(move |drag, x, _| {
             let w = f64::from(drag.widget().map(|w| w.width()).unwrap_or(0)).max(2.0 * PAD + 1.0);
-            let lx = PAD + (w - 2.0 * PAD) * lower.get();
-            let ux = PAD + (w - 2.0 * PAD) * upper.get();
+            let span = max - min;
+            let lx = PAD + (w - 2.0 * PAD) * (lower.get() - min) / span;
+            let ux = PAD + (w - 2.0 * PAD) * (upper.get() - min) / span;
             grabbed.set(if (x - lx).abs() <= (x - ux).abs() { 1 } else { 2 });
         });
     }
@@ -983,7 +1070,7 @@ fn range_slider(parent: &GtkBox, label: &str, lower: f64, upper: f64) -> (GtkBox
         drag.connect_drag_update(move |drag, dx, _| {
             let Some((start_x, _)) = drag.start_point() else { return };
             let w = f64::from(drag.widget().map(|w| w.width()).unwrap_or(0)).max(2.0 * PAD + 1.0);
-            let value = ((start_x + dx - PAD) / (w - 2.0 * PAD)).clamp(0.0, 1.0);
+            let value = (min + (start_x + dx - PAD) / (w - 2.0 * PAD) * (max - min)).clamp(min, max);
             match grabbed.get() {
                 1 => lower.set(value.min(upper.get())),
                 2 => upper.set(value.max(lower.get())),
@@ -1138,7 +1225,7 @@ struct ComponentPanel {
     phase_row: GtkBox,
     phase: Scale,
     climb_row: GtkBox,
-    climb: Vec<gtk4::SpinButton>,
+    climb: RangeSlider,
     point_rows: Rc<Vec<(GtkBox, Vec<gtk4::SpinButton>)>>,
     // --- easing parameter rows ---
     overshoot_row: GtkBox,
@@ -1183,19 +1270,25 @@ fn component_panel(parent: &GtkBox) -> ComponentPanel {
     let (repeat_row, repeat) = slider(&trajectory_box, "Repeat", 1.0, 8.0, 3.0, 0);
     repeat.set_round_digits(0);
     for mark in 1..=8 {
-        repeat.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        repeat.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
     }
     let (cycle_row, cycle_easing) = dropdown_row(&trajectory_box, "Cycle", PHASE_EASINGS);
     let (delay_row, delay) = slider(&trajectory_box, "Delay", 0.0, 0.9, 0.25, 2);
+    for mark in [0.0, 0.3, 0.6, 0.9] {
+        delay.add_mark(mark, gtk4::PositionType::Bottom, Some(&format!("{mark:.1}")));
+    }
+    for mark in [0.15, 0.45, 0.75] {
+        delay.add_mark(mark, gtk4::PositionType::Bottom, None);
+    }
     let (steps_row, steps) = slider(&trajectory_box, "Steps", 2.0, 12.0, 5.0, 0);
     steps.set_round_digits(0);
     for mark in 2..=12 {
-        steps.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        steps.add_mark(f64::from(mark), gtk4::PositionType::Bottom, (mark % 2 == 0).then(|| mark.to_string()).as_deref());
     }
     let (keys_row, keys_count) = slider(&trajectory_box, "Keys", 2.0, 8.0, 4.0, 0);
     keys_count.set_round_digits(0);
     for mark in 2..=8 {
-        keys_count.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        keys_count.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
     }
     let key_rows: Rc<Vec<(GtkBox, Vec<gtk4::SpinButton>)>> = Rc::new(
         DEFAULT_KEYS
@@ -1204,7 +1297,7 @@ fn component_panel(parent: &GtkBox) -> ComponentPanel {
             .map(|(i, (t, v))| spin_row(&trajectory_box, &format!("K{}", i + 1), &[("t", 0.0, 1.0, *t), ("v", -0.5, 1.5, *v)]))
             .collect(),
     );
-    let (lead_trail_row, lead_trail) = range_slider(&trajectory_box, "Lead/Trail", 0.3, 0.7);
+    let (lead_trail_row, lead_trail) = range_slider(&trajectory_box, "Lead/Trail", 0.0, 1.0, 0.3, 0.7, &[0.0, 0.25, 0.5, 0.75, 1.0]);
     let (lead_row, lead_easing) = dropdown_row(&trajectory_box, "Phase 1", PHASE_EASINGS);
     lead_easing.set_selected(2); // EaseOut
     let (hold_row, hold_easing) = dropdown_row(&trajectory_box, "Phase 2", PHASE_EASINGS);
@@ -1229,23 +1322,26 @@ fn component_panel(parent: &GtkBox) -> ComponentPanel {
     let (turns_row, turns) = slider(&trajectory_box, "Turns", 0.5, 4.0, 1.0, 1);
     turns.set_round_digits(1);
     for mark in 1..=4 {
-        turns.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        turns.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
+    }
+    for mark in [0.5, 1.5, 2.5, 3.5] {
+        turns.add_mark(mark, gtk4::PositionType::Bottom, None);
     }
     let (y_turns_row, y_turns) = slider(&trajectory_box, "Freq y", 1.0, 6.0, 2.0, 0);
     y_turns.set_round_digits(0);
     for mark in 1..=6 {
-        y_turns.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        y_turns.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
     }
     let (tilt_row, tilt) = slider(&trajectory_box, "Tilt", 0.0, 1.0, 0.5, 2);
     let (windings_row, windings) = slider(&trajectory_box, "Windings", 1.0, 9.0, 3.0, 0);
     windings.set_round_digits(0);
     for mark in 1..=9 {
-        windings.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        windings.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
     }
     let (depth_row, depth) = slider(&trajectory_box, "Depth", -1.0, 1.0, 0.5, 2);
     let (center_row, center) = spin_row(&trajectory_box, "Center", &[("x", -0.5, 1.5, 0.5), ("y", -0.5, 1.5, 0.5)]);
     let (phase_row, phase) = slider(&trajectory_box, "Phase", 0.0, 1.0, 0.25, 2);
-    let (climb_row, climb) = spin_row(&trajectory_box, "Climb", &[("z0", -2.0, 2.0, -1.0), ("z1", -2.0, 2.0, 1.0)]);
+    let (climb_row, climb) = range_slider(&trajectory_box, "Climb", -2.0, 2.0, -1.0, 1.0, &[-2.0, -1.0, 0.0, 1.0, 2.0]);
     let point_rows: Rc<Vec<(GtkBox, Vec<gtk4::SpinButton>)>> = Rc::new(
         bezier_points()
             .iter()
@@ -1267,7 +1363,7 @@ fn component_panel(parent: &GtkBox) -> ComponentPanel {
     let (easing_steps_row, easing_steps) = slider(&easing_box, "Steps", 2.0, 12.0, 5.0, 0);
     easing_steps.set_round_digits(0);
     for mark in 2..=12 {
-        easing_steps.add_mark(f64::from(mark), gtk4::PositionType::Bottom, None);
+        easing_steps.add_mark(f64::from(mark), gtk4::PositionType::Bottom, (mark % 2 == 0).then(|| mark.to_string()).as_deref());
     }
     let jump = DropDown::new(Some(StringList::new(&["End", "Start"])), gtk4::Expression::NONE);
     let jump_row = GtkBox::new(Orientation::Horizontal, 8);
@@ -1376,7 +1472,7 @@ fn component_knobs(panel: &ComponentPanel) -> ComponentKnobs {
         depth: panel.depth.value(),
         center: [panel.center[0].value(), panel.center[1].value()],
         phase: panel.phase.value(),
-        climb: [panel.climb[0].value(), panel.climb[1].value()],
+        climb: [panel.climb.lower.get(), panel.climb.upper.get()],
         lead_easing: panel.lead_easing.selected(),
         trail_easing: panel.trail_easing.selected(),
         hold_easing: panel.hold_easing.selected(),
@@ -1445,10 +1541,14 @@ fn connect_panel(panel: &ComponentPanel, restart: &Rc<dyn Fn()>) {
             spin.connect_value_changed(move |_| restart());
         }
     }
-    for spin in panel.center.iter().chain(panel.climb.iter()) {
+    for spin in panel.center.iter() {
         let restart = Rc::clone(restart);
         spin.connect_value_changed(move |_| restart());
     }
+    panel.climb.connect_changed({
+        let restart = Rc::clone(restart);
+        move || restart()
+    });
 }
 
 /// Shows only the parameter rows a component's selection actually
@@ -1468,22 +1568,15 @@ fn update_panel(panel: &ComponentPanel, name: &str, params: Params, spatial: boo
         row.set_visible(matches!(name, "BezierPath" | "PolygonPath" | "CatmullRom"));
         spins[2].set_visible(spatial);
     }
-    let sized = matches!(name, "Orbit" | "Helix" | "Lissajous" | "Spiral" | "Lemniskate" | "SphericalOrbit" | "TorusKnot" | "Figure8");
-    panel.radius_row.set_visible(sized);
-    panel.turns_row.set_visible(matches!(
-        name,
-        "Orbit" | "Helix" | "Lissajous" | "Spiral" | "Lemniskate" | "SphericalOrbit" | "TorusKnot" | "Figure8"
-    ));
+    panel.radius_row.set_visible(ORBITAL.contains(&name));
+    panel.turns_row.set_visible(ORBITAL.contains(&name));
     panel.y_turns_row.set_visible(name == "Lissajous");
     panel.phase_row.set_visible(name == "Lissajous");
     panel.tilt_row.set_visible(name == "SphericalOrbit");
     panel.windings_row.set_visible(name == "TorusKnot");
     panel.depth_row.set_visible(name == "Figure8");
     panel.climb_row.set_visible(name == "Helix");
-    panel.center_row.set_visible(matches!(
-        name,
-        "Orbit" | "Helix" | "Lissajous" | "Spiral" | "Lemniskate" | "SphericalOrbit" | "TorusKnot" | "Figure8"
-    ));
+    panel.center_row.set_visible(ORBITAL.contains(&name));
     for row in [
         &panel.lead_row,
         &panel.trail_row,
@@ -1713,47 +1806,7 @@ fn main() -> glib::ExitCode {
                 let (w, h) = (f64::from(width), f64::from(height));
                 let margin = 40.0;
                 let (pw, ph) = (w - 2.0 * margin, h - 2.0 * margin);
-
-                // Grid + the easing curve in the background. Both
-                // domains fit the sampled content: y covers the easing
-                // curve (and path heights), x the trajectory values -
-                // overshoot, back and elastic leave 0..1 by design.
-                let mut x_min = 0.0_f64;
-                let mut x_max = 1.0_f64;
-                let mut y_min = 0.0_f64;
-                let mut y_max = 1.0_f64;
-                {
-                    let animation = demo.borrow();
-                    for i in 0..=200 {
-                        let t = Fraction::new(i as f64 / 200.0);
-                        for easing in animation.easings() {
-                            let eased = easing.apply(t).as_f64();
-                            if eased.is_finite() {
-                                y_min = y_min.min(eased);
-                                y_max = y_max.max(eased);
-                            }
-                        }
-                        // the easings live inside the trajectories -
-                        // the linear sample already reflects them
-                        let value = animation.sample(t);
-                        x_min = x_min.min(value.x);
-                        x_max = x_max.max(value.x);
-                        y_min = y_min.min(value.y);
-                        y_max = y_max.max(value.y);
-                        for point in animation.control_points() {
-                            x_min = x_min.min(point.x);
-                            x_max = x_max.max(point.x);
-                            y_min = y_min.min(point.y);
-                            y_max = y_max.max(point.y);
-                        }
-                    }
-                }
-                let x_pad = 0.25 * (x_max - x_min).max(0.2);
-                x_min -= x_pad;
-                x_max += x_pad;
-                let y_pad = 0.25 * (y_max - y_min).max(0.2);
-                y_min -= y_pad;
-                y_max += y_pad;
+                let (x_min, x_max, y_min, y_max) = plot_domain(&demo.borrow());
                 let to_x = |v: f64| margin + pw * (v - x_min) / (x_max - x_min);
                 let to_y = |v: f64| margin + ph * (1.0 - (v - y_min) / (y_max - y_min));
 
@@ -1805,6 +1858,22 @@ fn main() -> glib::ExitCode {
                     context.set_source_rgb(0.5, 0.5, 0.5);
                     let _ = context.fill();
                 }
+                // one draggable center crosshair per orbital component,
+                // in its easing curve's color but darker
+                const MARK_COLORS: [(f64, f64, f64); 3] = [(0.4, 0.4, 0.62), (0.62, 0.36, 0.3), (0.32, 0.52, 0.36)];
+                for mark in animation.centers() {
+                    let (x, y) = (to_x(mark.point.x), to_y(mark.point.y));
+                    let (r, g, b) = MARK_COLORS[mark.slot % MARK_COLORS.len()];
+                    context.set_source_rgb(r, g, b);
+                    context.set_line_width(1.5);
+                    context.arc(x, y, 7.0, 0.0, std::f64::consts::TAU);
+                    let _ = context.stroke();
+                    context.move_to(x - 10.0, y);
+                    context.line_to(x + 10.0, y);
+                    context.move_to(x, y - 10.0);
+                    context.line_to(x, y + 10.0);
+                    let _ = context.stroke();
+                }
                 if let Some((point, scale)) = latest.get() {
                     let (x, y) = (to_x(point.x), to_y(point.y));
                     match &logo {
@@ -1840,6 +1909,70 @@ fn main() -> glib::ExitCode {
                 let _ = context.show_text(&format!("t {progress:.2}   eased {}", eased.join(" | ")));
             }
         });
+
+        // Dragging a center crosshair rewrites that component's
+        // Center spins - the spin change rebuilds the demo, which
+        // moves the marker under the pointer.
+        {
+            let grabbed = Rc::new(Cell::new(usize::MAX));
+            let drag = gtk4::GestureDrag::new();
+            {
+                let (demo, grabbed) = (Rc::clone(&demo), Rc::clone(&grabbed));
+                drag.connect_drag_begin(move |drag, x, y| {
+                    let Some(canvas) = drag.widget() else { return };
+                    let (w, h) = (f64::from(canvas.width()), f64::from(canvas.height()));
+                    let margin = 40.0;
+                    let (x_min, x_max, y_min, y_max) = plot_domain(&demo.borrow());
+                    let to_px = |vx: f64, vy: f64| {
+                        (
+                            margin + (w - 2.0 * margin) * (vx - x_min) / (x_max - x_min),
+                            margin + (h - 2.0 * margin) * (1.0 - (vy - y_min) / (y_max - y_min)),
+                        )
+                    };
+                    // the nearest marker inside the grab radius wins
+                    let mut best = usize::MAX;
+                    let mut best_dist = 24.0_f64;
+                    for mark in demo.borrow().centers() {
+                        let (mx, my) = to_px(mark.point.x, mark.point.y);
+                        let dist = ((mx - x).powi(2) + (my - y).powi(2)).sqrt();
+                        if dist < best_dist {
+                            best_dist = dist;
+                            best = mark.slot;
+                        }
+                    }
+                    grabbed.set(best);
+                });
+            }
+            {
+                let (demo, panels, grabbed) = (Rc::clone(&demo), Rc::clone(&panels), Rc::clone(&grabbed));
+                drag.connect_drag_update(move |drag, dx, dy| {
+                    let slot = grabbed.get();
+                    let (Some((start_x, start_y)), Some(canvas)) = (drag.start_point(), drag.widget()) else {
+                        return;
+                    };
+                    if slot == usize::MAX {
+                        return;
+                    }
+                    let (w, h) = (f64::from(canvas.width()), f64::from(canvas.height()));
+                    let margin = 40.0;
+                    let (x, y) = {
+                        // the borrow must end before the spins fire the
+                        // restart that rebuilds `demo`
+                        let (x_min, x_max, y_min, y_max) = plot_domain(&demo.borrow());
+                        let (px, py) = (start_x + dx - margin, start_y + dy - margin);
+                        (x_min + px / (w - 2.0 * margin) * (x_max - x_min), y_min + (1.0 - py / (h - 2.0 * margin)) * (y_max - y_min))
+                    };
+                    // the Center spin range clamps the drag target
+                    panels[slot].center[0].set_value(x.clamp(-0.5, 1.5));
+                    panels[slot].center[1].set_value(y.clamp(-0.5, 1.5));
+                });
+            }
+            {
+                let grabbed = Rc::clone(&grabbed);
+                drag.connect_drag_end(move |_, _, _| grabbed.set(usize::MAX));
+            }
+            canvas.add_controller(drag);
+        }
 
         let view = GtkBox::new(Orientation::Horizontal, 0);
         view.append(&canvas);
