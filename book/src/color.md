@@ -1,20 +1,39 @@
 # smearor-commons-color
 
-Channel-generic `Color<T>` with hex `FromStr`/`Display` (`#rgb`,
-`#rgba`, `#rrggbb`, `#rrggbbaa`), alpha handling (`Alpha`,
-`AlphaPercent`) and consolidated operations (`luminance`,
-`luminance_601`, `luminance_709`, `lerp`, `lighten`, `brighten`,
-`with_min_luminance`, `alpha_over`).
+Channel-generic `Color<T>` (normalized `f64`/`f32` and byte `u8`) with
+hex `FromStr`/`Display`, alpha handling and consolidated operations —
+plus alternate color spaces, classic color-order systems, three named
+vocabularies and a complete palette layer.
 
-## Palettes
+## One type, many doors in
 
-`Palette<N, T>` maps semantic names to colors. The `palette_definition!`
-macro generates a fieldless enum plus its `PaletteDefinition`
-implementation, so every lookup is type-checked and `missing()`/
-`is_complete()` verify that all declared slots are filled. `NamedColor`
-is the dynamic string key for palettes without a fixed vocabulary;
-`static_palette!` builds a `const`-evaluable `StaticPalette` that
-converts into `Palette`.
+`Color<T>` is the single currency: `u8` for wire and buffer work,
+`f64`/`f32` for math. Around it the crate layers everything a color
+pipeline needs:
+
+- **[Representations](color/representations.md)** — the three channel
+  types, the `#rgb`/`#rrggbb`/`#rrggbbaa` hex grammar, `HexColor` and
+  `ParseColorError`.
+- **[Color Spaces](color/spaces.md)** — `Hsl`, `Hsv`, `Cmyk`, `Xyz`,
+  `Lab` and `Hue`, connected by `From` conversions (Lab via `Xyz`).
+- **[Components](color/components.md)** — the channel newtypes `Alpha`,
+  `AlphaPercent`, `Saturation`, `Lightness`, `Value`, `Luminance`,
+  `LuminanceWeights`, `LabLightness`.
+- **[Operations](color/operations.md)** — `lerp`, `lighten`,
+  `brighten`, `luminance`/`_601`/`_709`, `with_min_luminance`,
+  `alpha_over`, `with_alpha`, `fade`, `normalized`, `clamp`.
+- **[Color Systems](color/systems.md)** — `Ncs`/`NcsHue`, `Ostwald`,
+  the `MUNSELL_SAMPLES` atlas, `SPECTRAL_LOCUS`/`PLANCKIAN_LOCUS`
+  chromaticity tables.
+- **[Named Colors](color/named.md)** — `CssNamedColor` (148 keywords),
+  `PantoneNamedColor` (PMS + `to_cmyk`/`nearest`/`counterpart`),
+  `PantoneFhiNamedColor` (2310 FHI swatches) and the dynamic
+  `NamedColor` key.
+- **[Palettes](color/palettes.md)** — `Palette<N, T>` name→color maps,
+  `palette_definition!`/`static_palette!` macros, `PaletteBuilder`,
+  `StaticPalette` — with completeness checks on enum vocabularies.
+- **[Decades](color/decades.md)** — all 89 curated palettes of
+  *"Pantone: The Twentieth Century in Color"* as `const`s, visualized.
 
 ```mermaid
 classDiagram
@@ -43,4 +62,5 @@ classDiagram
 ```
 
 Feature gates: `cairo` and `gtk4` bridge `Color` into cairo source
-calls and `gdk::RGBA`. See the crate's rustdoc for the full API.
+calls and `gdk::RGBA`; `schemars`/`async-graphql`/`zbus` add schema
+derives where they fit. See the crate's rustdoc for the full API.

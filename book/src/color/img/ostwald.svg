@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <defs>
+    <linearGradient id="wedgeV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#00a1e4"/></linearGradient>
+    <linearGradient id="wedgeS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00a1e4"/><stop offset="1" stop-color="#000000"/></linearGradient>
+  </defs>
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- Ostwald triangle: white top, black bottom-left, full color bottom-right -->
+  <polygon points="330,60 150,260 510,260" fill="#10151f" stroke="#3a4560" stroke-width="1.5"/>
+  <polygon points="330,60 380,150 510,260" fill="url(#wedgeV)" fill-opacity="0.25"/>
+  <polygon points="380,150 510,260 330,260" fill="url(#wedgeS)" fill-opacity="0.25"/>
+
+  <circle cx="330" cy="60" r="8" fill="#e8ecf4"/>
+  <text x="330" y="42" fill="#e8ecf4" font-size="12" text-anchor="middle">w — white</text>
+  <circle cx="150" cy="260" r="8" fill="#05070b" stroke="#8b98ad" stroke-width="1.5"/>
+  <text x="150" y="284" fill="#8b98ad" font-size="12" text-anchor="middle">s — black</text>
+  <circle cx="510" cy="260" r="8" fill="#00a1e4"/>
+  <text x="510" y="284" fill="#00a1e4" font-size="12" text-anchor="middle">v — full color</text>
+
+  <!-- sample mixture point -->
+  <circle cx="384" cy="200" r="5" fill="#59b7de" stroke="#e8ecf4" stroke-width="1.5"/>
+  <text x="396" y="195" fill="#e8ecf4" font-size="10.5">v·0.5 + w·0.3 + s·0.2</text>
+
+  <text x="330" y="130" fill="#8b98ad" font-size="10.5" text-anchor="middle">v + w + s = 1</text>
+  <text x="330" y="285" fill="#8b98ad" font-size="10.5" text-anchor="middle">Ostwald::new(hue, full, white, black)</text>
+</svg>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <defs>
+    <linearGradient id="lerpG" x1="0" x2="1"><stop offset="0" stop-color="#04e762"/><stop offset="1" stop-color="#dc0073"/></linearGradient>
+    <pattern id="checker2" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#10151f"/><rect width="4" height="4" fill="#1c2433"/><rect x="4" y="4" width="4" height="4" fill="#1c2433"/>
+    </pattern>
+  </defs>
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- lerp -->
+  <text x="40" y="52" fill="#e8ecf4" font-size="12">lerp(other, t)</text>
+  <rect x="40" y="66" width="580" height="26" rx="7" fill="url(#lerpG)"/>
+  <g fill="#8b98ad" font-size="10" text-anchor="middle">
+    <text x="40" y="110">t=0</text><text x="330" y="110">t=0.5</text><text x="620" y="110">t=1.0</text>
+    <text x="40" y="128" fill="#04e762">self</text><text x="620" y="128" fill="#dc0073">other</text>
+  </g>
+  <line x1="330" y1="92" x2="330" y2="100" stroke="#8b98ad" stroke-width="1.5"/>
+
+  <!-- per-channel ops on #00a1e4 -->
+  <text x="40" y="168" fill="#e8ecf4" font-size="12">one base, five ops</text>
+  <rect x="40" y="182" width="60" height="44" rx="7" fill="#00a1e4"/>
+  <text x="70" y="246" fill="#8b98ad" font-size="10" text-anchor="middle">base</text>
+
+  <rect x="128" y="182" width="60" height="44" rx="7" fill="#33b4e9"/>
+  <text x="158" y="246" fill="#8b98ad" font-size="10" text-anchor="middle">lighten</text>
+  <text x="158" y="260" fill="#3a4560" font-size="9" text-anchor="middle">(0.2)</text>
+
+  <rect x="216" y="182" width="60" height="44" rx="7" fill="#4dc4ed"/>
+  <text x="246" y="246" fill="#8b98ad" font-size="10" text-anchor="middle">brighten</text>
+  <text x="246" y="260" fill="#3a4560" font-size="9" text-anchor="middle">(0.2)</text>
+
+  <rect x="304" y="182" width="60" height="44" rx="7" fill="url(#checker2)"/>
+  <rect x="304" y="182" width="60" height="44" rx="7" fill="#00a1e4" fill-opacity="0.45"/>
+  <text x="334" y="246" fill="#8b98ad" font-size="10" text-anchor="middle">fade</text>
+  <text x="334" y="260" fill="#3a4560" font-size="9" text-anchor="middle">(0.45)</text>
+
+  <rect x="392" y="182" width="60" height="44" rx="7" fill="#00a1e4" fill-opacity="0.5"/>
+  <rect x="392" y="182" width="60" height="44" rx="7" fill="#10151f" fill-opacity="0.55"/>
+  <text x="422" y="246" fill="#8b98ad" font-size="10" text-anchor="middle">alpha_over</text>
+  <text x="422" y="260" fill="#3a4560" font-size="9" text-anchor="middle">(u8 only)</text>
+
+  <rect x="480" y="182" width="60" height="44" rx="7" fill="#5f7d94"/>
+  <text x="510" y="246" fill="#8b98ad" font-size="10" text-anchor="middle">min-</text>
+  <text x="510" y="260" fill="#3a4560" font-size="9" text-anchor="middle">luminance</text>
+
+  <text x="40" y="288" fill="#8b98ad" font-size="10.5">luminance() / luminance_601() / luminance_709() — weighted r·w + g·w + b·w</text>
+</svg>

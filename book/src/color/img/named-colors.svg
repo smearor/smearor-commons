@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 335" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="335" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <!-- CSS -->
+  <text x="30" y="42" fill="#8b98ad" font-size="11" letter-spacing="2">CSSNAMEDCOLOR · 148 keywords</text>
+  <g>
+    <rect x="30" y="56" width="52" height="38" rx="6" fill="#663399"/><text x="56" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">rebecca-</text><text x="56" y="117" fill="#8b98ad" font-size="8" text-anchor="middle">purple</text>
+    <rect x="92" y="56" width="52" height="38" rx="6" fill="#ffd700"/><text x="118" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">gold</text>
+    <rect x="154" y="56" width="52" height="38" rx="6" fill="#008080"/><text x="180" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">teal</text>
+    <rect x="216" y="56" width="52" height="38" rx="6" fill="#fa8072"/><text x="242" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">salmon</text>
+    <rect x="278" y="56" width="52" height="38" rx="6" fill="#2f4f4f"/><text x="304" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">darkslate-</text><text x="304" y="117" fill="#8b98ad" font-size="8" text-anchor="middle">gray</text>
+    <rect x="340" y="56" width="52" height="38" rx="6" fill="#ff7f50"/><text x="366" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">coral</text>
+    <rect x="402" y="56" width="52" height="38" rx="6" fill="#00ff7f"/><text x="428" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">spring-</text><text x="428" y="117" fill="#8b98ad" font-size="8" text-anchor="middle">green</text>
+    <rect x="464" y="56" width="52" height="38" rx="6" fill="#4682b4"/><text x="490" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">steel-</text><text x="490" y="117" fill="#8b98ad" font-size="8" text-anchor="middle">blue</text>
+    <rect x="526" y="56" width="52" height="38" rx="6" fill="#daa520"/><text x="552" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">golden-</text><text x="552" y="117" fill="#8b98ad" font-size="8" text-anchor="middle">rod</text>
+    <rect x="588" y="56" width="52" height="38" rx="6" fill="#800080"/><text x="614" y="108" fill="#8b98ad" font-size="8" text-anchor="middle">purple</text>
+  </g>
+
+  <!-- PMS -->
+  <text x="30" y="152" fill="#8b98ad" font-size="11" letter-spacing="2">PANTONENAMEDCOLOR · PMS solid</text>
+  <g>
+    <rect x="30" y="166" width="52" height="38" rx="6" fill="#ef3340"/><text x="56" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">Red 032 C</text>
+    <rect x="92" y="166" width="52" height="38" rx="6" fill="#fedd00"/><text x="118" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">Yellow C</text>
+    <rect x="154" y="166" width="52" height="38" rx="6" fill="#10069f"/><text x="180" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">Blue 072 C</text>
+    <rect x="216" y="166" width="52" height="38" rx="6" fill="#00ab84"/><text x="242" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">Green C</text>
+    <rect x="278" y="166" width="52" height="38" rx="6" fill="#2d2926"/><text x="304" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">Black C</text>
+    <rect x="340" y="166" width="52" height="38" rx="6" fill="#fead77"/><text x="366" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">PMS 7410</text>
+    <rect x="402" y="166" width="52" height="38" rx="6" fill="#c05131"/><text x="428" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">PMS 7580</text>
+    <rect x="464" y="166" width="52" height="38" rx="6" fill="#4e3629"/><text x="490" y="218" fill="#8b98ad" font-size="8" text-anchor="middle">PMS 476</text>
+  </g>
+
+  <!-- FHI -->
+  <text x="30" y="252" fill="#8b98ad" font-size="11" letter-spacing="2">PANTONEFHINAMEDCOLOR · 2310 swatches</text>
+  <g>
+    <rect x="30" y="266" width="52" height="38" rx="6" fill="#1e4477"/><text x="56" y="312" fill="#8b98ad" font-size="8" text-anchor="middle">true-blue</text>
+    <rect x="92" y="266" width="52" height="38" rx="6" fill="#45b5aa"/><text x="118" y="312" fill="#8b98ad" font-size="8" text-anchor="middle">turquoise</text>
+    <rect x="154" y="266" width="52" height="38" rx="6" fill="#a2a2a1"/><text x="180" y="312" fill="#8b98ad" font-size="8" text-anchor="middle">silver</text>
+    <rect x="216" y="266" width="52" height="38" rx="6" fill="#ce785d"/><text x="242" y="312" fill="#8b98ad" font-size="8" text-anchor="middle">carnelian</text>
+    <rect x="278" y="266" width="52" height="38" rx="6" fill="#767ba5"/><text x="304" y="312" fill="#8b98ad" font-size="8" text-anchor="middle">lavender-</text><text x="304" y="321" fill="#8b98ad" font-size="8" text-anchor="middle">violet</text>
+  </g>
+</svg>
