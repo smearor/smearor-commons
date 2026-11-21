@@ -1,6 +1,7 @@
 # Summary
 
 - [Introduction](./introduction.md)
+- [Usage](./usage.md)
 - [Geometry](./geometry.md)
 - [Color](./color.md)
 - [Font](./font.md)
