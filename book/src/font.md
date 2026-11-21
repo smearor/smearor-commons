@@ -1,16 +1,18 @@
 # smearor-commons-font
 
-Font metric utilities on `ab_glyph` fonts — the pure computations only;
-font loading and caching policy stay with the consumer. All results are
-expressed in `smearor-commons-geometry` units (`Pixels`, `Vec2`,
-`Rect`).
+Font metric utilities on `ab_glyph` fonts — the pure computations
+only; font loading and caching policy stay with the consumer. All
+results are expressed in `smearor-commons-geometry` units (`Pixels`,
+`Vec2`, `Rect`).
 
-- `glyph_fit_scale` — the `PxScale` that fits a glyph into a target
-  pixel box.
-- `centered_glyph` — positions a glyph so its bounds center inside a
-  target point.
-- `truncate_text_to_width` — shortens text with an ellipsis until it
-  fits a maximum pixel width.
+## What's inside
+
+- [Glyph Fit](./font/glyph-fit.md) — `glyph_fit_scale`: the `PxScale`
+  that makes a glyph's *rendered* size equal `target_px`
+- [Centering](./font/centering.md) — `centered_glyph`: position the
+  glyph's `px_bounds` center on a target point
+- [Truncation](./font/truncation.md) — `truncate_text_to_width`: the
+  longest string prefix that fits a pixel width
 
 ```mermaid
 flowchart LR
@@ -22,4 +24,6 @@ flowchart LR
     trunc --> short["fitted String"]
 ```
 
-See the crate's rustdoc for the full API.
+Three functions, one job each — `smearor-commons-drawing` builds its
+icon pipeline on them (`Codepoint.center`, the glyph scale cache,
+label rendering). See the crate's rustdoc for the full API.

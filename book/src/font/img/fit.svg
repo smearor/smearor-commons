@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="660" height="300" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="330" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">GLYPH_FIT_SCALE — em size ≠ glyph size</text>
+
+  <!-- em square vs glyph bounds -->
+  <rect x="60" y="70" width="150" height="150" rx="6" fill="#10151f" stroke="#3a4560" stroke-dasharray="5 4"/>
+  <text x="135" y="60" fill="#8b98ad" font-size="10" text-anchor="middle">em square (PxScale)</text>
+  <!-- glyph inside, occupying ~60% -->
+  <rect x="90" y="100" width="90" height="90" rx="4" fill="#00a1e4" fill-opacity="0.2" stroke="#00a1e4"/>
+  <text x="135" y="150" fill="#00a1e4" font-size="22" text-anchor="middle">★</text>
+  <text x="135" y="212" fill="#00a1e4" font-size="9" text-anchor="middle">px_bounds — what you see</text>
+
+  <!-- probe logic -->
+  <rect x="240" y="70" width="200" height="150" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="340" y="92" fill="#8b98ad" font-size="9.5" letter-spacing="1" text-anchor="middle">SOLVE FOR TARGET</text>
+  <g font-size="9.5" fill="#8b98ad">
+    <text x="256" y="116">probe at 100px em</text>
+    <text x="256" y="136">measure px_bounds</text>
+    <text x="256" y="156" fill="#e8ecf4">scale = target × 100 /</text>
+    <text x="256" y="170" fill="#e8ecf4">        max(w, h)</text>
+    <text x="256" y="196" fill="#3a4560">outline-less glyph?</text>
+    <text x="256" y="210" fill="#3a4560">→ glyph_bounds fallback</text>
+  </g>
+
+  <!-- result -->
+  <rect x="470" y="70" width="150" height="150" rx="6" fill="#10151f" stroke="#04e762" stroke-width="2"/>
+  <text x="545" y="60" fill="#04e762" font-size="10" text-anchor="middle">fits target_px box</text>
+  <rect x="485" y="85" width="120" height="120" rx="4" fill="#04e762" fill-opacity="0.15" stroke="#04e762" stroke-dasharray="4 3"/>
+  <text x="545" y="150" fill="#04e762" font-size="26" text-anchor="middle">★</text>
+
+  <text x="330" y="266" fill="#8b98ad" font-size="10.5" text-anchor="middle">icon fonts fill only a fraction of the em — the function solves the *visual* size</text>
+</svg>

@@ -6,6 +6,15 @@ from CLI arguments (`FromStr`), deserializes from configuration files
 (`serde`) and converts into `gtk4_layer_shell::Layer` behind the
 `gtk4-layer-shell` feature. `ParseLayerError` reports unknown names.
 
+## What's inside
+
+- [Layers](./layer/layers.md) — the four variants, strict `FromStr`
+  vs. lenient `From<&str>`, serde aliases, `ParseLayerError`
+- [LayerConfig](./layer/config.md) — the config quartet, exclusive-zone
+  semantics, `merge()`, `effective_exclusive_zone()`
+- [Edges](./layer/edges.md) — `EdgeOf` mapping `QuarterTurn`,
+  `Rotation` and `TableSide` onto layer-shell anchor edges
+
 `LayerConfig` is the config quartet apps repeat across arguments, files
 and state: `layer`, `namespace`, `monitor` and `exclusive_zone`
 (`None` = auto-exclusive-zone, `0` = overlay mode).
