@@ -33,6 +33,9 @@ mod ops;
 mod param;
 mod render;
 mod spec;
+
+#[cfg(feature = "gtk4")]
+pub mod gtk;
 mod spoke_count;
 
 pub use assets::FxAssets;

@@ -17,4 +17,15 @@ pub enum FxError {
     /// `params()` (wrong length or wrong kind).
     #[error("parameter mismatch: {0}")]
     ParamMismatch(String),
+
+    /// [`crate::gtk::snapshot`] got a zero-size or node-less widget.
+    #[cfg(feature = "gtk4")]
+    #[error("widget snapshot produced no pixels")]
+    SnapshotEmpty,
+
+    /// A cairo status error surfaced by the GTK adapter - carried as
+    /// text so the error type stays GTK-free.
+    #[cfg(feature = "cairo")]
+    #[error("cairo error: {0}")]
+    Cairo(String),
 }

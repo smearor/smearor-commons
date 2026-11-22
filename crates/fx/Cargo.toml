@@ -29,6 +29,7 @@ smearor-commons-noise.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+libadwaita = "0.9.2"
 serde_json = "1.0"
 
 [[example]]
@@ -41,4 +42,8 @@ required-features = ["gtk4"]
 
 [[example]]
 name = "dump_frame"
+required-features = ["gtk4"]
+
+[[example]]
+name = "gtk_adapter"
 required-features = ["gtk4"]

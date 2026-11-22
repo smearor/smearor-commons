@@ -88,6 +88,37 @@ over surface. `WindowEffect::check` returns
 `ctx.surface`; `apply` itself degrades gracefully to transparent
 reads so headless consumers can still drive the window pass alone.
 
+## The GTK adapter (`gtk4` feature)
+
+`smearor_commons_fx::gtk` attaches the headless engine to real GTK
+widgets - the same frame pipeline the experimenter uses:
+
+- **`gtk::snapshot(&widget)`** - renders a widget into a frozen
+  straight-alpha `PixelBuffer<Rgba>` at `allocation * scale_factor`
+  (`WidgetPaintable` -> render node -> cairo `ARgb32` -> buffer).
+  Called once per animation; live widget content is a non-goal.
+- **`gtk::FxPlayer`** - a `DrawingArea` subclass owning the clock and
+  frame buffers. `set_effect(spec, input)` + `play(FxPlayOptions)`
+  runs a `TimedAnimation` on the widget's frame clock and paints the
+  effect output as a `TextureNode`; `pause`/`resume`/`stop` and the
+  `animation-ended` signal cover the lifecycle. Pointer events feed
+  `ctx.pointer` (broken-glass epicenter, pixel-wipe origin).
+- **`gtk::SurfaceProvider`** - the callback layered
+  (`SurfaceAndWindow`) specs pull their `ctx.surface` backdrop from,
+  once per frame. Without one the pass degrades gracefully
+  (`MissingSurface` contract).
+
+Floating-board recipe (the adapter never owns the real widget -
+hide/show stays consumer policy):
+
+1. *card added*: `snapshot(card)` -> `FxPlayer` at the card's
+   coordinates, hide the card, `play` an `Open` spec, on
+   `animation-ended` remove the player and show the card.
+2. *card removed*: same in `Close` direction; destroy the card on
+   end.
+3. *board transitions*: snapshot card + board, run a layered spec
+   with a `SurfaceProvider` returning the board pixels.
+
 ## The `fx` experimenter
 
 `cargo run -p smearor-commons-fx --features gtk4 --example fx` opens
