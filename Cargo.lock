@@ -2246,6 +2246,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "smearor-commons-fx"
+version = "0.1.0"
+dependencies = [
+ "cairo-rs",
+ "gtk4",
+ "schemars",
+ "serde",
+ "serde_json",
+ "smearor-commons-animation",
+ "smearor-commons-buffer",
+ "smearor-commons-color 0.1.0",
+ "smearor-commons-drawing",
+ "smearor-commons-geometry",
+ "smearor-commons-noise",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "smearor-commons-geometry"
 version = "0.1.0"
 dependencies = [

@@ -12,6 +12,7 @@ smearor-commons-geometry = "0.1"
 smearor-commons-color    = "0.1"
 smearor-commons-layout   = "0.1"
 smearor-commons-noise    = "0.1"
+smearor-commons-fx       = "0.1"
 ```
 
 Optional integrations stay off until you name the feature — features

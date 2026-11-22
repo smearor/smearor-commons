@@ -16,6 +16,7 @@ homepage = "https://smearor.io/"
 smearor-commons-animation = { path = "crates/animation" }
 smearor-commons-buffer = { path = "crates/buffer" }
 smearor-commons-drawing = { path = "crates/drawing" }
+smearor-commons-fx = { path = "crates/fx" }
 smearor-commons-geometry = { path = "crates/geometry" }
 smearor-commons-font = { path = "crates/font" }
 smearor-commons-color = { path = "crates/color" }
