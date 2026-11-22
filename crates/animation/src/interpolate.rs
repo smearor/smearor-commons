@@ -7,6 +7,7 @@ use smearor_commons_geometry::RotationRad;
 use smearor_commons_geometry::ScaleFactor;
 use smearor_commons_geometry::Vec2;
 use smearor_commons_geometry::Vec3;
+use smearor_commons_geometry::Vec4;
 
 /// A value that can be interpolated between two endpoints along a
 /// normalized progress `t` (`0` = `self`, `1` = `target`).
@@ -90,6 +91,18 @@ impl<U, T: Interpolate + Copy> Interpolate for Vec2<U, T> {
 impl<U, T: Interpolate + Copy> Interpolate for Vec3<U, T> {
     fn interpolate(self, target: Self, t: Fraction) -> Self {
         Self::new(self.x.interpolate(target.x, t), self.y.interpolate(target.y, t), self.z.interpolate(target.z, t))
+    }
+}
+
+/// Component-wise interpolation in four dimensions.
+impl<U, T: Interpolate + Copy> Interpolate for Vec4<U, T> {
+    fn interpolate(self, target: Self, t: Fraction) -> Self {
+        Self::new(
+            self.x.interpolate(target.x, t),
+            self.y.interpolate(target.y, t),
+            self.z.interpolate(target.z, t),
+            self.w.interpolate(target.w, t),
+        )
     }
 }
 

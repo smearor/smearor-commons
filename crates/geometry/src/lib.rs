@@ -43,6 +43,7 @@ mod transforms;
 mod units;
 mod vec2;
 mod vec3;
+mod vec4;
 
 pub use annulus::Annulus;
 pub use arc::Arc;
@@ -92,3 +93,4 @@ pub use vec2::serde_pair;
 pub use vec2::serde_pair_option;
 pub use vec2::serde_points;
 pub use vec3::Vec3;
+pub use vec4::Vec4;
