@@ -87,6 +87,24 @@ impl Color<f64> {
         }
     }
 
+    /// Porter-Duff `over` with the alpha carried by both colors:
+    /// `self` composited over `under`. The sibling of `Color<u8>::alpha_over`,
+    /// which instead takes an external coverage alpha - here the source's
+    /// own alpha channel decides how much it covers (GLSL `alphaOver`
+    /// semantics for straight-alpha shader compositing).
+    ///
+    /// `out.a = src.a + dst.a * (1 - src.a)`; channels are weighted by
+    /// their own alpha, unpremultiplied by `out.a`. A fully transparent
+    /// pair yields transparent black.
+    pub fn alpha_over(&self, under: &Self) -> Self {
+        let out_a = self.a + under.a * (1.0 - self.a);
+        if out_a < 1e-6 {
+            return Self::new_rgba(0.0, 0.0, 0.0, 0.0);
+        }
+        let blend = |s: f64, d: f64| (s * self.a + d * under.a * (1.0 - self.a)) / out_a;
+        Self::new_rgba(blend(self.r, under.r), blend(self.g, under.g), blend(self.b, under.b), out_a)
+    }
+
     /// The color scaled so its largest channel is `1.0` - the
     /// brightest displayable color at this hue ratio (the gamut
     /// edge). Black stays black.
