@@ -101,46 +101,83 @@
 <a href=#101 id=101 data-nosnippet>101</a>        }
 <a href=#102 id=102 data-nosnippet>102</a>        <span class="prelude-val">Some</span>(<span class="self">self</span>.trajectory.value_at(<span class="self">self</span>.easing_function.apply(progress)))
 <a href=#103 id=103 data-nosnippet>103</a>    }
-<a href=#104 id=104 data-nosnippet>104</a>}
-<a href=#105 id=105 data-nosnippet>105</a>
-<a href=#106 id=106 data-nosnippet>106</a><span class="attr">#[cfg(test)]
-<a href=#107 id=107 data-nosnippet>107</a></span><span class="kw">mod </span>tests {
-<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">use </span><span class="kw">super</span>::TimedAnimation;
-<a href=#109 id=109 data-nosnippet>109</a>    <span class="kw">use </span><span class="kw">crate</span>::EasingFunction;
-<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">use </span><span class="kw">crate</span>::Span;
-<a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">use </span>smearor_commons_geometry::RotationRad;
-<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">use </span>std::thread::sleep;
-<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">use </span>std::time::Duration;
-<a href=#114 id=114 data-nosnippet>114</a>
-<a href=#115 id=115 data-nosnippet>115</a>    <span class="doccomment">/// An unstarted animation yields nothing.
-<a href=#116 id=116 data-nosnippet>116</a>    </span><span class="attr">#[test]
-<a href=#117 id=117 data-nosnippet>117</a>    </span><span class="kw">fn </span>unstarted_yields_no_value() {
-<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">let </span>animation = TimedAnimation::new(Span::new(<span class="number">0.0_f64</span>, <span class="number">10.0</span>), Duration::from_millis(<span class="number">10</span>), EasingFunction::Linear);
-<a href=#119 id=119 data-nosnippet>119</a>        <span class="macro">assert_eq!</span>(animation.value(), <span class="prelude-val">None</span>);
-<a href=#120 id=120 data-nosnippet>120</a>        <span class="macro">assert!</span>(!animation.is_started());
-<a href=#121 id=121 data-nosnippet>121</a>        <span class="macro">assert!</span>(!animation.is_complete());
-<a href=#122 id=122 data-nosnippet>122</a>    }
-<a href=#123 id=123 data-nosnippet>123</a>
-<a href=#124 id=124 data-nosnippet>124</a>    <span class="doccomment">/// Half-way through a linear animation the value is near the
-<a href=#125 id=125 data-nosnippet>125</a>    /// midpoint.
-<a href=#126 id=126 data-nosnippet>126</a>    </span><span class="attr">#[test]
-<a href=#127 id=127 data-nosnippet>127</a>    </span><span class="kw">fn </span>linear_animation_tracks_elapsed_time() {
-<a href=#128 id=128 data-nosnippet>128</a>        <span class="kw">let </span><span class="kw-2">mut </span>animation = TimedAnimation::new(Span::new(<span class="number">0.0_f64</span>, <span class="number">10.0</span>), Duration::from_millis(<span class="number">100</span>), EasingFunction::Linear);
-<a href=#129 id=129 data-nosnippet>129</a>        animation.start();
-<a href=#130 id=130 data-nosnippet>130</a>        sleep(Duration::from_millis(<span class="number">50</span>));
-<a href=#131 id=131 data-nosnippet>131</a>        <span class="kw">let </span>value = animation.value();
-<a href=#132 id=132 data-nosnippet>132</a>        <span class="macro">assert!</span>(value.is_some_and(|v| (<span class="number">3.0</span>..<span class="number">7.0</span>).contains(<span class="kw-2">&amp;</span>v)), <span class="string">"value {value:?} should be near the midpoint"</span>);
-<a href=#133 id=133 data-nosnippet>133</a>    }
-<a href=#134 id=134 data-nosnippet>134</a>
-<a href=#135 id=135 data-nosnippet>135</a>    <span class="doccomment">/// Past the duration the animation reports `t = 1` - the exact
-<a href=#136 id=136 data-nosnippet>136</a>    /// trajectory end, not an eased approximation.
-<a href=#137 id=137 data-nosnippet>137</a>    </span><span class="attr">#[test]
-<a href=#138 id=138 data-nosnippet>138</a>    </span><span class="kw">fn </span>completed_animation_returns_the_exact_end() {
-<a href=#139 id=139 data-nosnippet>139</a>        <span class="kw">let </span><span class="kw-2">mut </span>animation = TimedAnimation::new(Span::new(RotationRad::ZERO, RotationRad::QUARTER_TURN), Duration::from_millis(<span class="number">10</span>), EasingFunction::Linear);
-<a href=#140 id=140 data-nosnippet>140</a>        animation.start();
-<a href=#141 id=141 data-nosnippet>141</a>        sleep(Duration::from_millis(<span class="number">20</span>));
-<a href=#142 id=142 data-nosnippet>142</a>        <span class="macro">assert!</span>(animation.is_complete());
-<a href=#143 id=143 data-nosnippet>143</a>        <span class="macro">assert_eq!</span>(animation.value(), <span class="prelude-val">Some</span>(RotationRad::QUARTER_TURN));
-<a href=#144 id=144 data-nosnippet>144</a>    }
-<a href=#145 id=145 data-nosnippet>145</a>}
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a>    <span class="doccomment">/// Pins the clock so [`Self::progress`] reports `progress` -
+<a href=#106 id=106 data-nosnippet>106</a>    /// the seek operation behind scrubbing and pause controls. The
+<a href=#107 id=107 data-nosnippet>107</a>    /// animation keeps running from there. `progress` is clamped to
+<a href=#108 id=108 data-nosnippet>108</a>    /// `0.0..=1.0`.
+<a href=#109 id=109 data-nosnippet>109</a>    </span><span class="kw">pub fn </span>seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, progress: Fraction) {
+<a href=#110 id=110 data-nosnippet>110</a>        <span class="self">self</span>.seek_at(progress, Instant::now());
+<a href=#111 id=111 data-nosnippet>111</a>    }
+<a href=#112 id=112 data-nosnippet>112</a>
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="doccomment">/// Pins the clock at `now` so [`Self::progress_at`] reports
+<a href=#114 id=114 data-nosnippet>114</a>    /// `progress` - the injectable variant of [`Self::seek`].
+<a href=#115 id=115 data-nosnippet>115</a>    /// Calling it every frame with the same `progress` freezes the
+<a href=#116 id=116 data-nosnippet>116</a>    /// animation - that is what a pause button does.
+<a href=#117 id=117 data-nosnippet>117</a>    </span><span class="kw">pub fn </span>seek_at(<span class="kw-2">&amp;mut </span><span class="self">self</span>, progress: Fraction, now: Instant) {
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">let </span>elapsed = <span class="self">self</span>.duration.mul_f64(progress.as_f64().clamp(<span class="number">0.0</span>, <span class="number">1.0</span>));
+<a href=#119 id=119 data-nosnippet>119</a>        <span class="self">self</span>.start_time = <span class="prelude-val">Some</span>(now.checked_sub(elapsed).unwrap_or(now));
+<a href=#120 id=120 data-nosnippet>120</a>    }
+<a href=#121 id=121 data-nosnippet>121</a>}
+<a href=#122 id=122 data-nosnippet>122</a>
+<a href=#123 id=123 data-nosnippet>123</a><span class="attr">#[cfg(test)]
+<a href=#124 id=124 data-nosnippet>124</a></span><span class="kw">mod </span>tests {
+<a href=#125 id=125 data-nosnippet>125</a>    <span class="kw">use </span><span class="kw">super</span>::TimedAnimation;
+<a href=#126 id=126 data-nosnippet>126</a>    <span class="kw">use </span><span class="kw">crate</span>::EasingFunction;
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="kw">use </span><span class="kw">crate</span>::Span;
+<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">use </span>smearor_commons_geometry::Fraction;
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="kw">use </span>smearor_commons_geometry::RotationRad;
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="kw">use </span>std::thread::sleep;
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">use </span>std::time::Duration;
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">use </span>std::time::Instant;
+<a href=#133 id=133 data-nosnippet>133</a>
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="doccomment">/// An unstarted animation yields nothing.
+<a href=#135 id=135 data-nosnippet>135</a>    </span><span class="attr">#[test]
+<a href=#136 id=136 data-nosnippet>136</a>    </span><span class="kw">fn </span>unstarted_yields_no_value() {
+<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">let </span>animation = TimedAnimation::new(Span::new(<span class="number">0.0_f64</span>, <span class="number">10.0</span>), Duration::from_millis(<span class="number">10</span>), EasingFunction::Linear);
+<a href=#138 id=138 data-nosnippet>138</a>        <span class="macro">assert_eq!</span>(animation.value(), <span class="prelude-val">None</span>);
+<a href=#139 id=139 data-nosnippet>139</a>        <span class="macro">assert!</span>(!animation.is_started());
+<a href=#140 id=140 data-nosnippet>140</a>        <span class="macro">assert!</span>(!animation.is_complete());
+<a href=#141 id=141 data-nosnippet>141</a>    }
+<a href=#142 id=142 data-nosnippet>142</a>
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="doccomment">/// Half-way through a linear animation the value is near the
+<a href=#144 id=144 data-nosnippet>144</a>    /// midpoint.
+<a href=#145 id=145 data-nosnippet>145</a>    </span><span class="attr">#[test]
+<a href=#146 id=146 data-nosnippet>146</a>    </span><span class="kw">fn </span>linear_animation_tracks_elapsed_time() {
+<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw">let </span><span class="kw-2">mut </span>animation = TimedAnimation::new(Span::new(<span class="number">0.0_f64</span>, <span class="number">10.0</span>), Duration::from_millis(<span class="number">100</span>), EasingFunction::Linear);
+<a href=#148 id=148 data-nosnippet>148</a>        animation.start();
+<a href=#149 id=149 data-nosnippet>149</a>        sleep(Duration::from_millis(<span class="number">50</span>));
+<a href=#150 id=150 data-nosnippet>150</a>        <span class="kw">let </span>value = animation.value();
+<a href=#151 id=151 data-nosnippet>151</a>        <span class="macro">assert!</span>(value.is_some_and(|v| (<span class="number">3.0</span>..<span class="number">7.0</span>).contains(<span class="kw-2">&amp;</span>v)), <span class="string">"value {value:?} should be near the midpoint"</span>);
+<a href=#152 id=152 data-nosnippet>152</a>    }
+<a href=#153 id=153 data-nosnippet>153</a>
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="doccomment">/// Seeking pins the clock to the requested progress, seeking
+<a href=#155 id=155 data-nosnippet>155</a>    /// to the same progress twice freezes the animation.
+<a href=#156 id=156 data-nosnippet>156</a>    </span><span class="attr">#[test]
+<a href=#157 id=157 data-nosnippet>157</a>    </span><span class="kw">fn </span>seek_pins_the_clock() {
+<a href=#158 id=158 data-nosnippet>158</a>        <span class="kw">let </span><span class="kw-2">mut </span>animation = TimedAnimation::new(Span::new(<span class="number">0.0_f64</span>, <span class="number">10.0</span>), Duration::from_secs(<span class="number">1</span>), EasingFunction::Linear);
+<a href=#159 id=159 data-nosnippet>159</a>        <span class="kw">let </span>now = Instant::now();
+<a href=#160 id=160 data-nosnippet>160</a>        animation.seek_at(Fraction::new(<span class="number">0.75</span>), now);
+<a href=#161 id=161 data-nosnippet>161</a>        <span class="kw">let </span>pinned = animation.progress_at(now).map(|p| p.as_f64());
+<a href=#162 id=162 data-nosnippet>162</a>        <span class="macro">assert_eq!</span>(pinned, <span class="prelude-val">Some</span>(<span class="number">0.75</span>));
+<a href=#163 id=163 data-nosnippet>163</a>        <span class="comment">// 100ms later the pinned clock has advanced again
+<a href=#164 id=164 data-nosnippet>164</a>        </span><span class="kw">let </span>later = now + Duration::from_millis(<span class="number">100</span>);
+<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">let </span>advanced = animation.progress_at(later).map(|p| p.as_f64());
+<a href=#166 id=166 data-nosnippet>166</a>        <span class="macro">assert_eq!</span>(advanced, <span class="prelude-val">Some</span>(<span class="number">0.85</span>));
+<a href=#167 id=167 data-nosnippet>167</a>        <span class="comment">// out-of-range seeks clamp into the run
+<a href=#168 id=168 data-nosnippet>168</a>        </span>animation.seek_at(Fraction::new(<span class="number">1.5</span>), now);
+<a href=#169 id=169 data-nosnippet>169</a>        <span class="macro">assert_eq!</span>(animation.progress_at(now).map(|p| p.as_f64()), <span class="prelude-val">Some</span>(<span class="number">1.0</span>));
+<a href=#170 id=170 data-nosnippet>170</a>    }
+<a href=#171 id=171 data-nosnippet>171</a>
+<a href=#172 id=172 data-nosnippet>172</a>    <span class="doccomment">/// Past the duration the animation reports `t = 1` - the exact
+<a href=#173 id=173 data-nosnippet>173</a>    /// trajectory end, not an eased approximation.
+<a href=#174 id=174 data-nosnippet>174</a>    </span><span class="attr">#[test]
+<a href=#175 id=175 data-nosnippet>175</a>    </span><span class="kw">fn </span>completed_animation_returns_the_exact_end() {
+<a href=#176 id=176 data-nosnippet>176</a>        <span class="kw">let </span><span class="kw-2">mut </span>animation = TimedAnimation::new(Span::new(RotationRad::ZERO, RotationRad::QUARTER_TURN), Duration::from_millis(<span class="number">10</span>), EasingFunction::Linear);
+<a href=#177 id=177 data-nosnippet>177</a>        animation.start();
+<a href=#178 id=178 data-nosnippet>178</a>        sleep(Duration::from_millis(<span class="number">20</span>));
+<a href=#179 id=179 data-nosnippet>179</a>        <span class="macro">assert!</span>(animation.is_complete());
+<a href=#180 id=180 data-nosnippet>180</a>        <span class="macro">assert_eq!</span>(animation.value(), <span class="prelude-val">Some</span>(RotationRad::QUARTER_TURN));
+<a href=#181 id=181 data-nosnippet>181</a>    }
+<a href=#182 id=182 data-nosnippet>182</a>}
 </code></pre></div></section></main></body></html>
