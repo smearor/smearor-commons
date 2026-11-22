@@ -30,3 +30,15 @@ thiserror.workspace = true
 
 [dev-dependencies]
 serde_json = "1.0"
+
+[[example]]
+name = "fx"
+required-features = ["gtk4"]
+
+[[example]]
+name = "dump_card"
+required-features = ["gtk4"]
+
+[[example]]
+name = "dump_frame"
+required-features = ["gtk4"]

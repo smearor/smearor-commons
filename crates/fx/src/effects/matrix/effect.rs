@@ -305,16 +305,16 @@ mod tests {
         assert_ne!(rain_at(50.5), rain_at(70.5), "different columns differ");
     }
 
-    /// The procedural atlas is deterministic per tile and covers cells.
+    /// The bundled atlas is deterministic per tile and covers cells.
     #[test]
     fn matrix_atlas_parity() {
         let atlas = ProceduralGlyphAtlas;
         let tile = Vec2::<()>::new(3.0, 7.0);
         let mut filled = 0;
-        // Scan all 4x6 stroke cells at their centers.
-        for cy in 0..6 {
-            for cx in 0..4 {
-                let uv = Vec2::<()>::new((cx as f64 + 0.5) / 4.0, (cy as f64 + 0.5) / 6.0);
+        // Scan the 5x7 font grid (in its 7x7 cell frame) at centers.
+        for cy in 0..7 {
+            for cx in 0..7 {
+                let uv = Vec2::<()>::new((cx as f64 + 0.5) / 7.0, (cy as f64 + 0.5) / 7.0);
                 let a = atlas.glyph(tile, uv);
                 let b = atlas.glyph(tile, uv);
                 assert_eq!(a, b, "deterministic per tile");
@@ -323,6 +323,6 @@ mod tests {
                 }
             }
         }
-        assert!(filled > 3, "atlas tile should cover several strokes, got {filled}");
+        assert!(filled > 3, "a glyph tile should cover several cells, got {filled}");
     }
 }

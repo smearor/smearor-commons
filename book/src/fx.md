@@ -27,7 +27,7 @@ a `TimedAnimation` driven by the consumer.
 | `glide` | `Glide` | UV transform (scale, squish, tilt, shift) + dissolve. |
 | `pixel-wheel` | `PixelWheel` | Pixelation + angular spoke wipe. |
 | `fire` | `Fire` | Fractal-noise burn front with a 5-stop flame ramp. |
-| `matrix` | `Matrix` | Glyph rain + trail composite over a falling window mask; glyphs come from a `GlyphSource` (bundled `ProceduralGlyphAtlas`). |
+| `matrix` | `Matrix` | Glyph rain + trail composite over a falling window mask; glyphs come from a `GlyphSource` (bundled `ProceduralGlyphAtlas` with an embedded 5x7 bitmap font). |
 | `aura-glow` | `AuraGlow` | Radial blur + cos-palette glow + superellipse crop. |
 
 All six are reachable through `EffectSpec::by_nick`/`build` and survive
@@ -36,3 +36,51 @@ its source shader in the Burn-My-Windows checkout for provenance; the
 implementations are semantic re-implementations on our ops (`mix`,
 `smoothstep`, `absolute_edge_mask`, `offset_hue`, `BufferView`
 sampling, `Color::alpha_over`), not line ports.
+
+## The `fx` experimenter
+
+`cargo run -p smearor-commons-fx --features gtk4 --example fx` opens
+the GTK experimenter - the same grammar as the animation examples:
+a rendered test card on the left, generated controls on the right,
+playback and effect serialization at the bottom.
+
+The right panel is **metadata-driven**: every `ParamKind` maps to one
+widget (`Float` -> `Scale`, `Int` -> `SpinButton`, `Toggle` ->
+`CheckButton`, `Color` -> `ColorDialogButton`, `Choice` ->
+`DropDown`), so no per-effect UI is written by hand.
+
+The test card is a fixed `PixelBuffer<Rgba>` rendered through
+`smearor-commons-drawing` - a floating-board card *on
+transparency*: every pixel outside the card rect keeps `a = 0` and
+only the card's own soft shadow carries alpha. The desktop gradient
+is compositor-owned (`common::desktop`); per frame the canvas shows
+`out` source-over `desktop`, exactly the split a real compositor
+makes when it hands a window snapshot to an effect.
+
+Save/Load/Emit speak the shared `Effect` envelope:
+
+```json
+{
+  "demo": "fx",
+  "object": "fire",
+  "options": { "scale": 1.0, "direction": "close", "seed": 42 },
+  "duration_secs": 1.6,
+  "components": []
+}
+```
+
+`options` is the serde-flattened `EffectSpec` payload plus
+`direction`/`seed`, so a saved effect replays deterministically.
+Emit generates a `serde_json` spec constructor plus a ready
+`FxContext`/`apply` skeleton (`<name>.rs` next to the JSON path).
+
+The test card itself - a floating-board window mock with the
+Smearor tile mark - regenerates via `cargo run -p
+smearor-commons-fx --features gtk4 --example dump_card`:
+
+<img src="fx/img/test_card.png" alt="The fx experimenter's test card" style="width: 100%; max-width: 560px; image-rendering: pixelated;">
+
+Rendered frames (all deterministic for a fixed seed/progress) come
+from `cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- <effect> <progress> <direction>`:
+
+<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;">

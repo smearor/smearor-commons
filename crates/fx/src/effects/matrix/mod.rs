@@ -5,6 +5,7 @@
 
 mod atlas;
 mod effect;
+mod font;
 mod glyph;
 mod rain;
 

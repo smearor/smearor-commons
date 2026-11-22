@@ -39,8 +39,13 @@ impl Seed {
     }
 
     /// The seed as a `[0, 1)` scalar - the `uSeed` float equivalent.
+    ///
+    /// The u64 bits are avalanche-folded (the `mix` rounds) before the
+    /// normalization: hashing a near-zero float collapses, so a raw
+    /// high-bit take would leave every small seed (42) effectively
+    /// identical.
     pub fn as_f64(&self) -> f64 {
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64
+        (self.mix(&Seed(0)).0 >> 11) as f64 / (1u64 << 53) as f64
     }
 
     /// A deterministic `Vec2` coordinate offset derived from the seed -
