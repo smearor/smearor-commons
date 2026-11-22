@@ -3,6 +3,7 @@ use crate::BufferMetadata;
 use crate::PixelFormat;
 use crate::Rgba;
 use crate::Stride;
+use smearor_commons_color::Color;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Size;
 use std::marker::PhantomData;
@@ -96,6 +97,24 @@ impl<'a, F: PixelFormat> BufferViewMut<'a, F> {
     /// The byte offset of pixel `(x, y)` inside `data`, `None` when out of bounds.
     pub fn pixel_offset(&self, x: Pixels<u32>, y: Pixels<u32>) -> Option<usize> {
         self.metadata.pixel_offset(x, y, F::BYTES_PER_PIXEL)
+    }
+
+    /// Writes `color` at `(x, y)` - the write counterpart of the
+    /// `sample_*` texel reads: normalized straight-alpha `0..=1`
+    /// channels in, `F`-encoded bytes out ([`PixelFormat::write_pixel`];
+    /// premultiplied formats premultiply on write). Out-of-bounds
+    /// coordinates are ignored.
+    pub fn put_color(&mut self, x: Pixels<u32>, y: Pixels<u32>, color: Color<f64>) {
+        let byte = |v: f64| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
+        if let Some(offset) = self.pixel_offset(x, y) {
+            F::write_pixel(
+                &mut self.data[offset..offset + F::BYTES_PER_PIXEL],
+                byte(color.r),
+                byte(color.g),
+                byte(color.b),
+                byte(color.a),
+            );
+        }
     }
 
     /// Fills every pixel with `pixel` (`F::BYTES_PER_PIXEL` bytes).
@@ -196,6 +215,21 @@ mod tests {
             view.fill(&[1, 2, 3]);
         }
         assert_eq!(data, vec![0u8; 16]);
+    }
+
+    /// `put_color` encodes normalized straight alpha into the pixel
+    /// bytes and ignores out-of-bounds coordinates.
+    #[test]
+    fn put_color_encodes_and_clamps() {
+        use smearor_commons_color::Color;
+        let mut data = vec![0u8; 16];
+        {
+            let mut view = BufferViewMut::<Rgba>::from_packed(&mut data, Size::new(2, 2)).unwrap();
+            view.put_color(Pixels::new(1), Pixels::new(0), Color::<f64>::new_rgba(1.0, 0.0, 0.5, 1.0));
+            view.put_color(Pixels::new(9), Pixels::new(9), Color::<f64>::new_rgba(1.0, 1.0, 1.0, 1.0));
+        }
+        assert_eq!(&data[4..8], &[255, 0, 128, 255]);
+        assert_eq!(&data[0..4], &[0; 4]);
     }
 
     /// `from_packed` is the common rendering-target construction.
