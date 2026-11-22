@@ -1,6 +1,11 @@
+use crate::AuraGlow;
 use crate::Crossfade;
+use crate::Fire;
 use crate::FxError;
+use crate::Glide;
+use crate::Matrix;
 use crate::ParamValue;
+use crate::PixelWheel;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -16,14 +21,31 @@ use serde::Serialize;
 pub enum EffectSpec {
     /// The reference effect - plain cross-fade.
     Crossfade(Crossfade),
-    // Fire(Fire), Glide(Glide), ... - appended by phases 2/4
+    /// UV-transform glide - scale, squish, tilt, shift + dissolve.
+    Glide(Glide),
+    /// Pixelation + angular spoke wipe.
+    PixelWheel(PixelWheel),
+    /// Fractal-noise burn with a 5-stop flame ramp.
+    Fire(Fire),
+    /// Glyph rain + trail composite (Matrix effect).
+    Matrix(Matrix),
+    /// Radial blur + cos-palette glow + superellipse crop.
+    AuraGlow(AuraGlow),
+    // Doom, Incinerate, ... - appended by phase 4
 }
 
 impl EffectSpec {
     /// One default-configured instance of every shipped spec - the
     /// dropdown's source and `by_nick`'s search space.
     pub fn all() -> Vec<EffectSpec> {
-        vec![EffectSpec::Crossfade(Crossfade)]
+        vec![
+            EffectSpec::Crossfade(Crossfade),
+            EffectSpec::Glide(Glide::default()),
+            EffectSpec::PixelWheel(PixelWheel::default()),
+            EffectSpec::Fire(Fire::default()),
+            EffectSpec::Matrix(Matrix::default()),
+            EffectSpec::AuraGlow(AuraGlow::default()),
+        ]
     }
 
     /// Finds + returns the default spec named by `nick` - `Err` on
@@ -40,6 +62,11 @@ impl EffectSpec {
     pub fn nick(&self) -> &'static str {
         match self {
             Self::Crossfade(effect) => effect.nick(),
+            Self::Glide(effect) => effect.nick(),
+            Self::PixelWheel(effect) => effect.nick(),
+            Self::Fire(effect) => effect.nick(),
+            Self::Matrix(effect) => effect.nick(),
+            Self::AuraGlow(effect) => effect.nick(),
         }
     }
 
@@ -47,6 +74,11 @@ impl EffectSpec {
     pub fn build(&self) -> Box<dyn WindowEffect> {
         match self {
             Self::Crossfade(effect) => Box::new(*effect),
+            Self::Glide(effect) => Box::new(*effect),
+            Self::PixelWheel(effect) => Box::new(*effect),
+            Self::Fire(effect) => Box::new(effect.clone()),
+            Self::Matrix(effect) => Box::new(effect.clone()),
+            Self::AuraGlow(effect) => Box::new(*effect),
         }
     }
 
@@ -55,6 +87,11 @@ impl EffectSpec {
     pub fn set_values(&mut self, values: &[ParamValue]) -> Result<(), FxError> {
         match self {
             Self::Crossfade(effect) => effect.set_values(values),
+            Self::Glide(effect) => effect.set_values(values),
+            Self::PixelWheel(effect) => effect.set_values(values),
+            Self::Fire(effect) => effect.set_values(values),
+            Self::Matrix(effect) => effect.set_values(values),
+            Self::AuraGlow(effect) => effect.set_values(values),
         }
     }
 
@@ -103,9 +140,21 @@ mod tests {
         for spec in EffectSpec::all() {
             let effect = spec.build();
             let json = serde_json::to_value(&spec).unwrap();
-            let object = json.as_object().unwrap();
             for param in effect.params() {
-                assert!(object.contains_key(param.key), "{}: param `{}` is not a serde field", spec.nick(), param.key);
+                // Dotted keys address nested objects - `colors.ember`
+                // resolves `{"colors": {"ember": ...}}`.
+                let mut node = &json;
+                let mut found = true;
+                for segment in param.key.split('.') {
+                    match node.get(segment) {
+                        Some(child) => node = child,
+                        None => {
+                            found = false;
+                            break;
+                        }
+                    }
+                }
+                assert!(found, "{}: param `{}` does not resolve in the serde payload", spec.nick(), param.key);
             }
             let _ = effect.values(); // every effect reports values
         }
