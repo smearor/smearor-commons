@@ -37,16 +37,21 @@ pub fn remap(x: f64, old_min: f64, old_max: f64, new_min: f64, new_max: f64) -> 
 }
 
 /// BMW `getAbsoluteEdgeMask` - the context-aware edge fade: fades
-/// `uv` (pixel space) inside the layer rect shrunk by `padding`;
-/// fullscreen content is never faded.
+/// `uv` (pixel space) inside the layer rect shrunk by the effective
+/// padding `max(0, padding - fade * offset)`; fullscreen content is
+/// never faded.
+///
+/// `offset` positions the fade zone relative to the window border:
+/// `0` fully inside, `0.5` centered on the border (the value every
+/// shipped effect uses), `1` fully outside.
 ///
 /// Delegates to [`Rect::edge_fade`] for the pure rect math - this
 /// wrapper only knows where the window sits inside the padded layer.
-pub fn absolute_edge_mask(uv: Vec2<()>, size: Vec2<()>, padding: Pixels<f64>, fade: Pixels<f64>, fullscreen: bool) -> f64 {
+pub fn absolute_edge_mask(uv: Vec2<()>, size: Vec2<()>, padding: Pixels<f64>, fade: Pixels<f64>, offset: f64, fullscreen: bool) -> f64 {
     if fullscreen {
         return 1.0;
     }
-    let p = padding.0;
+    let p = (padding.0 - fade.0 * offset).max(0.0);
     Rect::new(Vec2::<()>::new(p, p), Vec2::<()>::new(size.x - 2.0 * p, size.y - 2.0 * p)).edge_fade(uv, fade.0)
 }
 
@@ -85,9 +90,15 @@ mod tests {
     #[test]
     fn absolute_edge_mask_respects_padding_and_fullscreen() {
         let size = Vec2::<()>::new(100.0, 100.0);
-        // Inside the padded rect -> 1.0; at the outer edge -> 0.0.
-        assert_eq!(absolute_edge_mask(Vec2::<()>::new(50.0, 50.0), size, Pixels::new(10.0), Pixels::new(5.0), false), 1.0);
-        assert!(absolute_edge_mask(Vec2::<()>::new(0.0, 50.0), size, Pixels::new(10.0), Pixels::new(5.0), false) < 0.5);
-        assert_eq!(absolute_edge_mask(Vec2::<()>::new(0.0, 0.0), size, Pixels::new(10.0), Pixels::new(5.0), true), 1.0);
+        // Inside the padded rect -> 1.0; at the outer edge -> faded.
+        assert_eq!(absolute_edge_mask(Vec2::<()>::new(50.0, 50.0), size, Pixels::new(10.0), Pixels::new(5.0), 0.5, false), 1.0);
+        assert!(absolute_edge_mask(Vec2::<()>::new(0.0, 50.0), size, Pixels::new(10.0), Pixels::new(5.0), 0.5, false) < 0.5);
+        assert_eq!(absolute_edge_mask(Vec2::<()>::new(0.0, 0.0), size, Pixels::new(10.0), Pixels::new(5.0), 0.5, true), 1.0);
+        // A bigger offset pushes the fade zone outward: at uv 8 the
+        // offset-1.0 mask (fade starts at padding 5) is well inside
+        // while offset-0.0 (fade starts at padding 10) is still 0.
+        let outward = absolute_edge_mask(Vec2::<()>::new(8.0, 50.0), size, Pixels::new(10.0), Pixels::new(5.0), 1.0, false);
+        let inward = absolute_edge_mask(Vec2::<()>::new(8.0, 50.0), size, Pixels::new(10.0), Pixels::new(5.0), 0.0, false);
+        assert!(outward > inward, "offset 1.0 keeps more mask inside the window");
     }
 }
