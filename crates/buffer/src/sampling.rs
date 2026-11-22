@@ -65,18 +65,19 @@ impl<F: PixelFormat> BufferView<'_, F> {
 
     /// Radial-blur sampling - the mean of `taps` bilinear samples
     /// along `directions` evenly spaced rays of `radius` uv units
-    /// around `uv`. A `radius` of `0.0` degenerates to the center
-    /// texel.
-    pub fn sample_radial_blur(&self, uv: Vec2<()>, radius: f64, directions: u32, taps: u32) -> Color<f64> {
-        if radius <= 0.0 || directions == 0 || taps == 0 {
+    /// around `uv`. The radius is a `Vec2`, so anisotropic (elliptical)
+    /// blurs like `radius_px / size` are expressible; a zero component
+    /// degenerates to the center texel.
+    pub fn sample_radial_blur(&self, uv: Vec2<()>, radius: Vec2<()>, directions: u32, taps: u32) -> Color<f64> {
+        if directions == 0 || taps == 0 || (radius.x <= 0.0 && radius.y <= 0.0) {
             return self.sample_bilinear(uv);
         }
         let mut acc = Color::<f64>::new_rgba(0.0, 0.0, 0.0, 0.0);
         for direction in 0..directions {
             let angle = direction as f64 / directions as f64 * TAU;
             for tap in 1..=taps {
-                let r = radius * tap as f64 / taps as f64;
-                let c = self.sample_bilinear(Vec2::<()>::new(uv.x + angle.cos() * r, uv.y + angle.sin() * r));
+                let r = radius * (tap as f64 / taps as f64);
+                let c = self.sample_bilinear(Vec2::<()>::new(uv.x + angle.cos() * r.x, uv.y + angle.sin() * r.y));
                 acc = Color::<f64>::new_rgba(acc.r + c.r, acc.g + c.g, acc.b + c.b, acc.a + c.a);
             }
         }
@@ -128,9 +129,12 @@ mod tests {
     #[test]
     fn radial_blur_averages_the_neighborhood() {
         let (_data, view) = checker();
-        let v = view.sample_radial_blur(Vec2::<()>::new(0.5, 0.5), 0.3, 8, 2);
+        let v = view.sample_radial_blur(Vec2::<()>::new(0.5, 0.5), Vec2::<()>::new(0.3, 0.3), 8, 2);
         // Mean of an all-four-texel neighborhood in a checker is ~0.5 per channel.
         assert!((v.r - 0.5).abs() < 0.3, "radial r = {}", v.r);
-        assert_eq!(view.sample_radial_blur(Vec2::<()>::new(0.25, 0.25), 0.0, 8, 2), Color::<f64>::new_rgba(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(
+            view.sample_radial_blur(Vec2::<()>::new(0.25, 0.25), Vec2::<()>::new(0.0, 0.0), 8, 2),
+            Color::<f64>::new_rgba(0.0, 0.0, 0.0, 1.0)
+        );
     }
 }
