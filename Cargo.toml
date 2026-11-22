@@ -21,6 +21,7 @@ smearor-commons-font = { path = "crates/font" }
 smearor-commons-color = { path = "crates/color" }
 smearor-commons-layer = { path = "crates/layer" }
 smearor-commons-layout = { path = "crates/layout" }
+smearor-commons-noise = { path = "crates/noise" }
 # core
 ahash = "0.8"
 serde = { version = "1.0", features = ["derive"] }

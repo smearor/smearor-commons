@@ -87,6 +87,16 @@ impl<U, T> Vec4<U, T> {
         Self { x, y, z, w, unit: PhantomData }
     }
 
+    /// Component-wise product (Hadamard product): each axis scaled by
+    /// the other vector's matching component - per-axis weights, not a
+    /// dot product.
+    pub fn component_mul(&self, other: &Self) -> Self
+    where
+        T: Copy + Mul<Output = T>,
+    {
+        Self::new(self.x * other.x, self.y * other.y, self.z * other.z, self.w * other.w)
+    }
+
     /// Reinterprets this vector in the unit `V` - the components are
     /// unchanged; use this when a framework boundary knows the
     /// coordinate space that the erased `()` tag does not express.
@@ -95,6 +105,38 @@ impl<U, T> Vec4<U, T> {
         T: Clone,
     {
         Vec4::new(self.x.clone(), self.y.clone(), self.z.clone(), self.w.clone())
+    }
+
+    /// `x,x,y,z` swizzle.
+    pub fn xxyz(&self) -> Self
+    where
+        T: Clone,
+    {
+        Self::new(self.x.clone(), self.x.clone(), self.y.clone(), self.z.clone())
+    }
+
+    /// `y,z,z,w` swizzle.
+    pub fn yzzw(&self) -> Self
+    where
+        T: Clone,
+    {
+        Self::new(self.y.clone(), self.z.clone(), self.z.clone(), self.w.clone())
+    }
+
+    /// `z,y,w,x` swizzle.
+    pub fn zywx(&self) -> Self
+    where
+        T: Clone,
+    {
+        Self::new(self.z.clone(), self.y.clone(), self.w.clone(), self.x.clone())
+    }
+
+    /// `w,z,x,y` swizzle.
+    pub fn wzxy(&self) -> Self
+    where
+        T: Clone,
+    {
+        Self::new(self.w.clone(), self.z.clone(), self.x.clone(), self.y.clone())
     }
 
     /// Maps the components into another component type `V`, keeping

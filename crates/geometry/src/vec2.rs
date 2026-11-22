@@ -121,6 +121,22 @@ impl<U, T> Vec2<U, T> {
         Self { x, y, unit: PhantomData }
     }
 
+    /// `y,x` swizzle - swaps the components.
+    pub fn yx(&self) -> Self
+    where
+        T: Clone,
+    {
+        Self::new(self.y.clone(), self.x.clone())
+    }
+
+    /// `x,y,x` swizzle - lifts to three components (GLSL `p.xyx`).
+    pub fn xyx(&self) -> crate::Vec3<U, T>
+    where
+        T: Clone,
+    {
+        crate::Vec3::new(self.x.clone(), self.y.clone(), self.x.clone())
+    }
+
     /// Reinterprets this vector in the unit `V` - the inverse of the
     /// unit-erased boundary forms ([`crate::Size`], [`crate::Position`]).
     /// The components are unchanged; use this when a framework boundary
