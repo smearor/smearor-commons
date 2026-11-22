@@ -51,6 +51,7 @@ pub use effects::EnergizeA;
 pub use effects::EnergizeB;
 pub use effects::Fire;
 pub use effects::FireColor;
+pub use effects::Focus;
 pub use effects::Glide;
 pub use effects::Glitch;
 pub use effects::GlyphSource;

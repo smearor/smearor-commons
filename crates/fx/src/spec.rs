@@ -7,6 +7,7 @@ use crate::Doom;
 use crate::EnergizeA;
 use crate::EnergizeB;
 use crate::Fire;
+use crate::Focus;
 use crate::FxError;
 use crate::Glide;
 use crate::Glitch;
@@ -111,6 +112,8 @@ pub enum EffectSpec {
     Morph(Morph),
     /// Rubber-sheet funnel + window pushed out of the void.
     Wormhole(Wormhole),
+    /// Radial blur that resolves into focus while fading.
+    Focus(Focus),
 }
 
 impl EffectSpec {
@@ -150,6 +153,7 @@ impl EffectSpec {
             EffectSpec::AperturePanels(AperturePanels::default()),
             EffectSpec::Morph(Morph::default()),
             EffectSpec::Wormhole(Wormhole::default()),
+            EffectSpec::Focus(Focus::default()),
         ]
     }
 
@@ -198,6 +202,7 @@ impl EffectSpec {
             Self::AperturePanels(effect) => effect.nick(),
             Self::Morph(effect) => effect.nick(),
             Self::Wormhole(effect) => effect.nick(),
+            Self::Focus(effect) => effect.nick(),
         }
     }
 
@@ -236,6 +241,7 @@ impl EffectSpec {
             Self::AperturePanels(effect) => Box::new(*effect),
             Self::Morph(effect) => Box::new(*effect),
             Self::Wormhole(effect) => Box::new(*effect),
+            Self::Focus(effect) => Box::new(*effect),
         }
     }
 
@@ -275,6 +281,7 @@ impl EffectSpec {
             Self::AperturePanels(effect) => effect.set_values(values),
             Self::Morph(effect) => effect.set_values(values),
             Self::Wormhole(effect) => effect.set_values(values),
+            Self::Focus(effect) => effect.set_values(values),
         }
     }
 
@@ -341,6 +348,52 @@ mod tests {
             }
             let _ = effect.values(); // every effect reports values
         }
+    }
+
+    /// Schema parity: `EffectSpec::all()` must enumerate exactly the
+    /// shipped nicks - catches a variant added to the enum but left
+    /// out of `all()`, and duplicate or renamed nicks.
+    #[test]
+    fn all_covers_the_shipped_schema() {
+        const SHIPPED: &[&str] = &[
+            "aperture-panels",
+            "apparition",
+            "aura-glow",
+            "broken-glass",
+            "crossfade",
+            "doom",
+            "energize-a",
+            "energize-b",
+            "fire",
+            "focus",
+            "glide",
+            "glitch",
+            "hexagon",
+            "incinerate",
+            "materialize",
+            "matrix",
+            "morph",
+            "mushroom",
+            "paint-brush",
+            "pixel-wheel",
+            "pixel-wipe",
+            "pixelate",
+            "portal",
+            "rgbwarp",
+            "shredder",
+            "snap",
+            "team-rocket",
+            "trex",
+            "tv",
+            "tv-glitch",
+            "venetian-blinds",
+            "wisps",
+            "wormhole",
+        ];
+        let mut nicks: Vec<&str> = EffectSpec::all().iter().map(|spec| spec.nick()).collect();
+        nicks.sort_unstable();
+        assert_eq!(nicks.len(), SHIPPED.len(), "EffectSpec::all() count drifted");
+        assert_eq!(nicks.as_slice(), SHIPPED, "shipped nicks drifted - update SHIPPED");
     }
 
     /// `values()` ↔ `params()` length parity + `set_values(values())`
