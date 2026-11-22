@@ -11,6 +11,9 @@ trajectory only knows how to answer `value_at(t)`.
 
 ## `Span<T>` — two endpoints
 
+  <img src="img/traj-span.svg" alt="A Span trajectory sampled over progress">
+
+
 ```rust
 use smearor_commons_animation::{Span, Trajectory};
 use smearor_commons_geometry::{Fraction, Pixels, Vec2};
@@ -23,6 +26,9 @@ let slide = Span::new(Vec2::<Pixels>::new(0.0, 0.0), Vec2::<Pixels>::new(320.0, 
 ```
 
 ## `ThreePhaseSpan<T>` — out, hold, back
+
+  <img src="img/traj-threephasespan.svg" alt="A ThreePhaseSpan trajectory sampled over progress">
+
 
 `new(from, mid, to, lead, trail)`: interpolates `from → mid` over
 `[0, lead)`, holds `mid` over `[lead, trail]`, interpolates `mid → to`
@@ -54,6 +60,9 @@ oscillation.
 
 ## `Keyframes<T>` — the general case
 
+  <img src="img/traj-keyframes.svg" alt="A Keyframes trajectory sampled over progress">
+
+
 `(progress, value)` pairs, piecewise-lerped, boundary values holding
 outside the range. `Span` is two keys, `ThreePhaseSpan` is four —
 every other shape is a special case of this one:
@@ -74,6 +83,9 @@ empty.
 
 ## `Repeat<S>` — the same cycle, `n` times
 
+  <img src="img/traj-repeat.svg" alt="A Repeat trajectory sampled over progress">
+
+
 Wraps an inner trajectory and plays it `count` times within the
 duration — blinking, pulsing, loading indicators. Easing applies to
 the whole sequence, not per cycle:
@@ -86,24 +98,52 @@ let blink = Repeat::new(Span::new(0.0_f64, 1.0), 3); // three cycles
 
 ## `Mirror<S>` — yo-yo
 
+  <img src="img/traj-mirror.svg" alt="A Mirror trajectory sampled over progress">
+
+
 `0 → 0.5` plays `inner` forward, `0.5 → 1` plays it backward —
 `A → B → A` on one clock. `Mirror` inside `Repeat` is a seamless
 back-and-forth.
 
 ## `Delay<S>` — choreography
 
+  <img src="img/traj-delay.svg" alt="A Delay trajectory sampled over progress">
+
+
 Holds `inner`'s start value until progress `delay`, then plays the
 inner trajectory compressed into the rest. In a tuple composite this
 staggers the members: `(Span<RotationRad>, Delay<Span<ScaleFactor>>)`
 rotates first, zooms after, on one clock.
 
+## `Eased<S>` — a local easing decorator
+
+  <img src="img/traj-eased.svg" alt="An Eased span shaped by the bounce easing">
+
+`Eased::new(inner, easing)` applies an `EasingFunction` to the
+progress *inside* a trajectory — `value_at(t) =
+inner.value_at(easing(t))`. That frees easing from the clock:
+`TimedAnimation` can run `Linear` while each component of a
+composite animation (a tuple, a split axis) keeps its own curve.
+
+```rust
+use smearor_commons_animation::{Eased, EasingFunction, Span};
+
+let bounced = Eased::new(Span::new(0.0, 1.0), EasingFunction::Bounce);
+```
+
 ## `Steps<T>` — discrete values
+
+  <img src="img/traj-steps.svg" alt="A Steps trajectory sampled over progress">
+
 
 `values` held in order, `1 / n` progress each — no interpolation.
 Typewriter reveals, frame animation. For stepping *before* the
 trajectory sees the progress use `EasingFunction::Steps` instead.
 
 ## `BezierPath<P>` — along a curve
+
+  <img src="img/traj-bezierpath.svg" alt="A BezierPath trajectory sampled over progress">
+
 
 The value is the point on the bezier through `points` at `t` —
 evaluated by recursive de Casteljau. Two points give a line, three a
@@ -125,6 +165,9 @@ swoop.value_at(Fraction::HALF);
 
 ## `Orbit<U>` — circular laps
 
+  <img src="img/traj-orbit.svg" alt="A Orbit trajectory sampled over progress">
+
+
 `Orbit::new(center, radius)` moves the value on a circle —
 spinners, loading wheels. One lap by default; `with_turns(n)` runs
 `n` revolutions per animation. Integer `turns` closes the curve, so
@@ -141,6 +184,9 @@ wheel.value_at(Fraction::new(0.25));    // south after half a lap
 
 ## `Helix<U>` — circular climb
 
+  <img src="img/traj-helix.svg" alt="A Helix trajectory sampled over progress">
+
+
 `Helix::new(center, radius, z_from, z_to)` is the spatial cousin of
 `Orbit`: the value winds around `center` while `z` interpolates
 linearly — corkscrews, ascending paths. `with_turns(n)` adds
@@ -155,6 +201,9 @@ corkscrew.value_at(Fraction::HALF);     // opposite point at z = 0.5
 ```
 
 ## `Lissajous<U>` — sinusoidal ratio figures
+
+  <img src="img/traj-lissajous.svg" alt="A Lissajous trajectory sampled over progress">
+
 
 `Lissajous::new(center, size, x_turns, y_turns)` oscillates both
 axes sinusoidally — `2:1` draws a figure eight, `3:2` a bow tie.
@@ -172,11 +221,17 @@ let eight = Lissajous::new(Vec2::<()>::new(0.5, 0.5), 0.4, 2.0, 1.0)
 
 ## `Spiral<U>` — winding out
 
+  <img src="img/traj-spiral.svg" alt="A Spiral trajectory sampled over progress">
+
+
 `Spiral::new(center, radius)` circles the center while the radius
 grows linearly from `0` to `radius` — `with_turns` sets the
 windings.
 
 ## `PolygonPath<P>` — edges in equal time
+
+  <img src="img/traj-polygonpath.svg" alt="A PolygonPath trajectory sampled over progress">
+
 
 `PolygonPath::new(vertices)` travels a closed polygon — every
 edge gets the same time share, corners stay corners. Generic like
@@ -184,22 +239,34 @@ edge gets the same time share, corners stay corners. Generic like
 
 ## `CatmullRom<P>` — through every point
 
+  <img src="img/traj-catmullrom.svg" alt="A CatmullRom trajectory sampled over progress">
+
+
 `CatmullRom::new(points)` draws the smooth spline that passes
 through *all* its control points — unlike a bezier, every knob
 lies on the curve. Same generic point type.
 
 ## `Lemniskate<U>` — the canonical eight
 
+  <img src="img/traj-lemniskate.svg" alt="A Lemniskate trajectory sampled over progress">
+
+
 `Lemniskate::new(center, size)` traces the Bernoulli lemniscate —
 the classic infinity shape, smooth through its crossing.
 
 ## `SphericalOrbit<U>` — a tilted lap
+
+  <img src="img/traj-sphericalorbit.svg" alt="A SphericalOrbit trajectory sampled over progress">
+
 
 `SphericalOrbit::new(center, radius, inclination)` is `Orbit` with
 the plane tilted by `inclination` radians — `0` is flat,
 `FRAC_PI_2` a vertical wheel swinging through `z`.
 
 ## `TorusKnot<U>` — winding a torus
+
+  <img src="img/traj-torusknot.svg" alt="A TorusKnot trajectory sampled over progress">
+
 
 `TorusKnot::new(center, radius, p, q)` traces the (p,q) torus
 knot — `p` winds around the axis, `q` threads the hole. Prime
@@ -213,17 +280,26 @@ infinity loop diving forward.
 
 ## `Ellipse<U>` — the oval lap
 
+  <img src="img/traj-ellipse.svg" alt="A Ellipse trajectory sampled over progress">
+
+
 `Ellipse::new(center, rx, ry)` widens `Orbit` to independent
 semi-axes; `with_rotation` tilts the axes, `with_turns` counts
 laps.
 
 ## `Rose<U>` — the rosette
 
+  <img src="img/traj-rose.svg" alt="A Rose trajectory sampled over progress">
+
+
 `Rose::new(center, size, petals)` traces `r = size·cos(k·θ)` —
 `petals = 3` the trefoil rose, `4` an eight-leaf rosette.
 `with_phase` rotates the figure.
 
 ## `Spiro<U>` — the spirograph
+
+  <img src="img/traj-spiro.svg" alt="A Spiro trajectory sampled over progress">
+
 
 `Spiro::new(center, outer, inner, pen)` rolls a wheel `inner`
 inside `outer` while a pen `pen` units out draws stars and
@@ -232,25 +308,40 @@ four-cusped astroid.
 
 ## `Superellipse<U>` — exponent morphing
 
+  <img src="img/traj-superellipse.svg" alt="A Superellipse trajectory sampled over progress">
+
+
 `Superellipse::new(center, rx, ry, exponent)` morphs with `n`:
 `2` is the ellipse, `2/3` the astroid, large `n` a squircle.
 
 ## `StarPath<P>` — the star polygon
+
+  <img src="img/traj-starpath.svg" alt="A StarPath trajectory sampled over progress">
+
 
 `StarPath::new(vertices).with_step(k)` is `PolygonPath` skipping
 `k` vertices per edge - five points, `step = 2`: the pentagram.
 
 ## `WaveTrail<U>` — travel with wobble
 
+  <img src="img/traj-wavetrail.svg" alt="A WaveTrail trajectory sampled over progress">
+
+
 `WaveTrail::new(from, to, amplitude, waves)` moves `from -> to`
 swaying perpendicular — a slalom across the field.
 
 ## `BouncePath<U>` — hops that decay
 
+  <img src="img/traj-bouncepath.svg" alt="A BouncePath trajectory sampled over progress">
+
+
 `BouncePath::new(from, to, height, hops, decay)` hops parabolas
 along the route, each `decay` smaller than the last.
 
 ## `ConicalHelix<U>` — the tapering staircase
+
+  <img src="img/traj-conicalhelix.svg" alt="A ConicalHelix trajectory sampled over progress">
+
 
 `ConicalHelix::new(center, r_from, r_to, z_from, z_to)` is `Helix`
 with the radius growing or shrinking while it climbs — a spiral
@@ -258,10 +349,16 @@ staircase flaring into a cone.
 
 ## `Viviani<U>` — a figure eight on a sphere
 
+  <img src="img/traj-viviani.svg" alt="A Viviani trajectory sampled over progress">
+
+
 `Viviani::new(center, radius)` traces the intersection of sphere
 and off-center cylinder — a closed lemniscate in space.
 
 ## `Mobius<U>` — the one-sided edge
+
+  <img src="img/traj-mobius.svg" alt="A Mobius trajectory sampled over progress">
+
 
 `Mobius::new(center, radius, width)` walks the single edge of a
 Moebius strip — two ring revolutions to return, half a run flips
@@ -269,11 +366,17 @@ sides.
 
 ## `SphereLissajous<U>` — weaving a ball
 
+  <img src="img/traj-spherelissajous.svg" alt="A SphereLissajous trajectory sampled over progress">
+
+
 `SphereLissajous::new(center, radius, lon, lat)` oscillates
 longitude and latitude in frequency ratio — woven basket coverage
 of a sphere, closed for integer ratios.
 
 ## `Lorenz<U>` — the strange attractor
+
+  <img src="img/traj-lorenz.svg" alt="A Lorenz trajectory sampled over progress">
+
 
 `Lorenz::new(center, size)` integrates the classic chaotic system
 at construction and walks the baked path — the butterfly. It does
