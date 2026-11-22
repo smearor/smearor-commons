@@ -211,6 +211,74 @@ pairs draw the interlaced classics, e.g. `(2, 3)` the trefoil.
 the `x`/`y` plane that also swings `depth` units along `z` — an
 infinity loop diving forward.
 
+## `Ellipse<U>` — the oval lap
+
+`Ellipse::new(center, rx, ry)` widens `Orbit` to independent
+semi-axes; `with_rotation` tilts the axes, `with_turns` counts
+laps.
+
+## `Rose<U>` — the rosette
+
+`Rose::new(center, size, petals)` traces `r = size·cos(k·θ)` —
+`petals = 3` the trefoil rose, `4` an eight-leaf rosette.
+`with_phase` rotates the figure.
+
+## `Spiro<U>` — the spirograph
+
+`Spiro::new(center, outer, inner, pen)` rolls a wheel `inner`
+inside `outer` while a pen `pen` units out draws stars and
+blossoms - `outer = 4·inner` with `pen = inner` gives the
+four-cusped astroid.
+
+## `Superellipse<U>` — exponent morphing
+
+`Superellipse::new(center, rx, ry, exponent)` morphs with `n`:
+`2` is the ellipse, `2/3` the astroid, large `n` a squircle.
+
+## `StarPath<P>` — the star polygon
+
+`StarPath::new(vertices).with_step(k)` is `PolygonPath` skipping
+`k` vertices per edge - five points, `step = 2`: the pentagram.
+
+## `WaveTrail<U>` — travel with wobble
+
+`WaveTrail::new(from, to, amplitude, waves)` moves `from -> to`
+swaying perpendicular — a slalom across the field.
+
+## `BouncePath<U>` — hops that decay
+
+`BouncePath::new(from, to, height, hops, decay)` hops parabolas
+along the route, each `decay` smaller than the last.
+
+## `ConicalHelix<U>` — the tapering staircase
+
+`ConicalHelix::new(center, r_from, r_to, z_from, z_to)` is `Helix`
+with the radius growing or shrinking while it climbs — a spiral
+staircase flaring into a cone.
+
+## `Viviani<U>` — a figure eight on a sphere
+
+`Viviani::new(center, radius)` traces the intersection of sphere
+and off-center cylinder — a closed lemniscate in space.
+
+## `Mobius<U>` — the one-sided edge
+
+`Mobius::new(center, radius, width)` walks the single edge of a
+Moebius strip — two ring revolutions to return, half a run flips
+sides.
+
+## `SphereLissajous<U>` — weaving a ball
+
+`SphereLissajous::new(center, radius, lon, lat)` oscillates
+longitude and latitude in frequency ratio — woven basket coverage
+of a sphere, closed for integer ratios.
+
+## `Lorenz<U>` — the strange attractor
+
+`Lorenz::new(center, size)` integrates the classic chaotic system
+at construction and walks the baked path — the butterfly. It does
+not close; `Mirror` makes it loop-friendly.
+
 ## Tuples — composite values on one clock
 
 `(A, B)` implements `Trajectory` when both members do — a

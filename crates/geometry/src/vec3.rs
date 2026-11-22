@@ -29,6 +29,7 @@ use std::ops::SubAssign;
 /// Serializes as a flat `{"x": .., "y": .., "z": ..}` map; the unit
 /// marker is skipped.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Vec3<U = (), T = f64> {
     /// X coordinate in the unit `U`.
     pub x: T,

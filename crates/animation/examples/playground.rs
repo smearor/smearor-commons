@@ -16,29 +16,41 @@ use gtk4::StringList;
 use gtk4::glib;
 use gtk4::prelude::*;
 use smearor_commons_animation::BezierPath;
+use smearor_commons_animation::BouncePath;
 use smearor_commons_animation::CatmullRom;
+use smearor_commons_animation::ConicalHelix;
 use smearor_commons_animation::Delay;
 use smearor_commons_animation::Eased;
 use smearor_commons_animation::EasingFunction;
+use smearor_commons_animation::Ellipse;
 use smearor_commons_animation::Figure8;
 use smearor_commons_animation::Helix;
 use smearor_commons_animation::HoldMode;
 use smearor_commons_animation::Keyframes;
 use smearor_commons_animation::Lemniskate;
 use smearor_commons_animation::Lissajous;
+use smearor_commons_animation::Lorenz;
 use smearor_commons_animation::Mirror;
+use smearor_commons_animation::Mobius;
 use smearor_commons_animation::Orbit;
 use smearor_commons_animation::PolygonPath;
 use smearor_commons_animation::Repeat;
+use smearor_commons_animation::Rose;
 use smearor_commons_animation::Span;
+use smearor_commons_animation::SphereLissajous;
 use smearor_commons_animation::SphericalOrbit;
 use smearor_commons_animation::Spiral;
+use smearor_commons_animation::Spiro;
+use smearor_commons_animation::StarPath;
 use smearor_commons_animation::Steps;
 use smearor_commons_animation::StepsJump;
+use smearor_commons_animation::Superellipse;
 use smearor_commons_animation::ThreePhaseSpan;
 use smearor_commons_animation::TimedAnimation;
 use smearor_commons_animation::TorusKnot;
 use smearor_commons_animation::Trajectory;
+use smearor_commons_animation::Viviani;
+use smearor_commons_animation::WaveTrail;
 use smearor_commons_geometry::Fraction;
 use smearor_commons_geometry::Vec2;
 use smearor_commons_geometry::Vec3;
@@ -69,6 +81,13 @@ const TRAJECTORIES_2D: &[&str] = &[
     "PolygonPath",
     "CatmullRom",
     "Lemniskate",
+    "Ellipse",
+    "Rose",
+    "Spiro",
+    "Superellipse",
+    "StarPath",
+    "WaveTrail",
+    "BouncePath",
 ];
 
 /// The 3D list adds the spatial natives - volumetric bezier and
@@ -86,6 +105,11 @@ const TRAJECTORIES_3D: &[&str] = &[
     "SphericalOrbit",
     "TorusKnot",
     "Figure8",
+    "ConicalHelix",
+    "Viviani",
+    "Mobius",
+    "SphereLissajous",
+    "Lorenz",
 ];
 
 /// How the value axes may be split into independently driven
@@ -510,6 +534,14 @@ struct ComponentKnobs {
     center: [f64; 2],
     phase: f64,
     climb: [f64; 2],
+    radii: [f64; 2],
+    spiro: [f64; 3],
+    exponent: f64,
+    step: f64,
+    waves: f64,
+    height: f64,
+    decay: f64,
+    verts: f64,
     lead_easing: u32,
     trail_easing: u32,
     hold_easing: u32,
@@ -706,6 +738,56 @@ fn planar_trajectory(name: &str, knobs: &ComponentKnobs) -> (Box<dyn Trajectory<
         "PolygonPath" => (Box::new(PolygonPath::new(knobs.points.iter().map(|p| Vec2::<()>::new(p.x, p.y)))), PhaseShape::Identity),
         "CatmullRom" => (Box::new(CatmullRom::new(knobs.points.iter().map(|p| Vec2::<()>::new(p.x, p.y)))), PhaseShape::Identity),
         "Lemniskate" => (Box::new(Lemniskate::new(center(knobs), knobs.radius).with_turns(knobs.turns)), laps()),
+        "Ellipse" => (
+            Box::new(
+                Ellipse::new(center(knobs), knobs.radii[0], knobs.radii[1])
+                    .with_rotation(knobs.phase * std::f64::consts::TAU)
+                    .with_turns(knobs.turns),
+            ),
+            laps(),
+        ),
+        "Rose" => (
+            Box::new(
+                Rose::new(center(knobs), knobs.radius, knobs.windings)
+                    .with_phase(knobs.phase * std::f64::consts::TAU)
+                    .with_turns(knobs.turns),
+            ),
+            laps(),
+        ),
+        "Spiro" => (
+            Box::new(Spiro::new(center(knobs), knobs.spiro[0], knobs.spiro[1], knobs.spiro[2]).with_turns(knobs.turns)),
+            PhaseShape::Identity,
+        ),
+        "Superellipse" => (
+            Box::new(Superellipse::new(center(knobs), knobs.radii[0], knobs.radii[1], knobs.exponent).with_turns(knobs.turns)),
+            laps(),
+        ),
+        "StarPath" => (
+            Box::new(
+                StarPath::regular(center(knobs), knobs.radius, knobs.verts as usize)
+                    .with_step((knobs.step as usize).min((knobs.verts as usize).saturating_sub(1).max(1))),
+            ),
+            PhaseShape::Identity,
+        ),
+        "WaveTrail" => (
+            Box::new(WaveTrail::new(
+                Vec2::<()>::new(knobs.points[0].x, knobs.points[0].y),
+                Vec2::<()>::new(knobs.points[1].x, knobs.points[1].y),
+                knobs.height,
+                knobs.waves,
+            )),
+            PhaseShape::Identity,
+        ),
+        "BouncePath" => (
+            Box::new(BouncePath::new(
+                Vec2::<()>::new(knobs.points[0].x, knobs.points[0].y),
+                Vec2::<()>::new(knobs.points[1].x, knobs.points[1].y),
+                knobs.height,
+                knobs.turns,
+                knobs.decay,
+            )),
+            PhaseShape::Identity,
+        ),
         "BezierPath" => (Box::new(bezier_path(&knobs.points)), PhaseShape::Identity),
         _ => {
             let (trajectory, phase) = build_scalar_trajectory(name, knobs);
@@ -737,6 +819,14 @@ fn spatial_trajectory(name: &str, knobs: &ComponentKnobs) -> (Box<dyn Trajectory
             PhaseShape::Identity,
         ),
         "Figure8" => (Box::new(Figure8::new(center(knobs), knobs.radius, knobs.depth).with_turns(knobs.turns)), laps()),
+        "ConicalHelix" => (
+            Box::new(ConicalHelix::new(center(knobs), knobs.radii[0], knobs.radii[1], knobs.climb[0], knobs.climb[1]).with_turns(knobs.turns)),
+            laps(),
+        ),
+        "Viviani" => (Box::new(Viviani::new(center(knobs), knobs.radius).with_turns(knobs.turns)), laps()),
+        "Mobius" => (Box::new(Mobius::new(center(knobs), knobs.radius, knobs.depth)), PhaseShape::Identity),
+        "SphereLissajous" => (Box::new(SphereLissajous::new(center(knobs), knobs.radius, knobs.turns, knobs.y_turns)), laps()),
+        "Lorenz" => (Box::new(Lorenz::new(center(knobs), knobs.radius)), PhaseShape::Identity),
         "BezierPath" => (Box::new(bezier3_path(&knobs.points)), PhaseShape::Identity),
         _ => {
             let (trajectory, phase) = build_scalar_trajectory(name, knobs);
@@ -803,7 +893,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
             Demo::Planar {
                 animation: TimedAnimation::new(trajectory, duration, linear),
                 phase,
-                control_points: if matches!(name(0), "BezierPath" | "PolygonPath" | "CatmullRom") {
+                control_points: if POINT_PATHS.contains(&name(0)) {
                     points(&knobs.components[0])
                 } else {
                     Vec::new()
@@ -828,7 +918,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
             Demo::Spatial {
                 animation: TimedAnimation::new(trajectory, duration, linear),
                 phase,
-                control_points: if matches!(name(0), "BezierPath" | "PolygonPath" | "CatmullRom") {
+                control_points: if POINT_PATHS.contains(&name(0)) {
                     points(&knobs.components[0])
                 } else {
                     Vec::new()
@@ -855,7 +945,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
             Demo::Spatial {
                 animation: TimedAnimation::new(Box::new(ComposeXY { xy, z }), duration, linear),
                 phase,
-                control_points: if matches!(name(0), "BezierPath" | "PolygonPath" | "CatmullRom") {
+                control_points: if POINT_PATHS.contains(&name(0)) {
                     points(&knobs.components[0])
                 } else {
                     Vec::new()
@@ -870,7 +960,7 @@ fn build_demo(knobs: &Knobs) -> Demo {
             Demo::Spatial {
                 animation: TimedAnimation::new(Box::new(ComposeYZ { x, yz }), duration, linear),
                 phase,
-                control_points: if matches!(name(1), "BezierPath" | "PolygonPath" | "CatmullRom") {
+                control_points: if POINT_PATHS.contains(&name(1)) {
                     points(&knobs.components[1])
                 } else {
                     Vec::new()
@@ -967,7 +1057,29 @@ impl RangeSlider {
 
 /// Trajectories with a `center` knob - the center is drawn on the
 /// canvas as a draggable marker.
-const ORBITAL: &[&str] = &["Orbit", "Helix", "Lissajous", "Spiral", "Lemniskate", "SphericalOrbit", "TorusKnot", "Figure8"];
+const ORBITAL: &[&str] = &[
+    "Orbit",
+    "Helix",
+    "Lissajous",
+    "Spiral",
+    "Lemniskate",
+    "SphericalOrbit",
+    "TorusKnot",
+    "Figure8",
+    "Ellipse",
+    "Rose",
+    "Spiro",
+    "Superellipse",
+    "ConicalHelix",
+    "Viviani",
+    "Mobius",
+    "SphereLissajous",
+    "Lorenz",
+    "StarPath",
+];
+
+/// Trajectories driven by the P1-P4 point rows.
+const POINT_PATHS: &[&str] = &["BezierPath", "PolygonPath", "CatmullRom", "WaveTrail", "BouncePath"];
 
 /// A labeled two-grip range slider row for the sidebar - the
 /// grips carry `min..=max` values and `marks` draws the scale.
@@ -1226,6 +1338,22 @@ struct ComponentPanel {
     phase: Scale,
     climb_row: GtkBox,
     climb: RangeSlider,
+    radii_row: GtkBox,
+    radii: Vec<gtk4::SpinButton>,
+    spiro_row: GtkBox,
+    spiro: Vec<gtk4::SpinButton>,
+    exponent_row: GtkBox,
+    exponent: Scale,
+    step_row: GtkBox,
+    step: Scale,
+    waves_row: GtkBox,
+    waves: Scale,
+    height_row: GtkBox,
+    height: Scale,
+    decay_row: GtkBox,
+    decay: Scale,
+    verts_row: GtkBox,
+    verts: Scale,
     point_rows: Rc<Vec<(GtkBox, Vec<gtk4::SpinButton>)>>,
     // --- easing parameter rows ---
     overshoot_row: GtkBox,
@@ -1342,6 +1470,28 @@ fn component_panel(parent: &GtkBox) -> ComponentPanel {
     let (center_row, center) = spin_row(&trajectory_box, "Center", &[("x", -0.5, 1.5, 0.5), ("y", -0.5, 1.5, 0.5)]);
     let (phase_row, phase) = slider(&trajectory_box, "Phase", 0.0, 1.0, 0.25, 2);
     let (climb_row, climb) = range_slider(&trajectory_box, "Climb", -2.0, 2.0, -1.0, 1.0, &[-2.0, -1.0, 0.0, 1.0, 2.0]);
+    let (radii_row, radii) = spin_row(&trajectory_box, "Radii", &[("r0", 0.05, 0.8, 0.35), ("r1", 0.05, 0.8, 0.2)]);
+    let (spiro_row, spiro) = spin_row(&trajectory_box, "Spiro", &[("R", 0.1, 0.6, 0.4), ("r", 0.02, 0.3, 0.1), ("d", 0.0, 0.6, 0.1)]);
+    let (exponent_row, exponent) = slider(&trajectory_box, "Exponent", 0.3, 8.0, 2.0, 2);
+    for mark in [1.0, 2.0, 4.0, 8.0] {
+        exponent.add_mark(mark, gtk4::PositionType::Bottom, Some(&format!("{mark:.0}")));
+    }
+    let (step_row, step) = slider(&trajectory_box, "Step", 1.0, 6.0, 2.0, 0);
+    step.set_round_digits(0);
+    for mark in 1..=6 {
+        step.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
+    }
+    let (waves_row, waves) = slider(&trajectory_box, "Waves", 0.5, 8.0, 3.0, 1);
+    for mark in 1..=8 {
+        waves.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
+    }
+    let (height_row, height) = slider(&trajectory_box, "Height", -0.8, 0.8, 0.3, 2);
+    let (decay_row, decay) = slider(&trajectory_box, "Decay", 0.05, 1.0, 0.5, 2);
+    let (verts_row, verts) = slider(&trajectory_box, "Verts", 3.0, 10.0, 5.0, 0);
+    verts.set_round_digits(0);
+    for mark in 3..=10 {
+        verts.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
+    }
     let point_rows: Rc<Vec<(GtkBox, Vec<gtk4::SpinButton>)>> = Rc::new(
         bezier_points()
             .iter()
@@ -1427,6 +1577,22 @@ fn component_panel(parent: &GtkBox) -> ComponentPanel {
         phase,
         climb_row,
         climb,
+        radii_row,
+        radii,
+        spiro_row,
+        spiro,
+        exponent_row,
+        exponent,
+        step_row,
+        step,
+        waves_row,
+        waves,
+        height_row,
+        height,
+        decay_row,
+        decay,
+        verts_row,
+        verts,
         point_rows,
         overshoot_row,
         overshoot,
@@ -1473,6 +1639,14 @@ fn component_knobs(panel: &ComponentPanel) -> ComponentKnobs {
         center: [panel.center[0].value(), panel.center[1].value()],
         phase: panel.phase.value(),
         climb: [panel.climb.lower.get(), panel.climb.upper.get()],
+        radii: [panel.radii[0].value(), panel.radii[1].value()],
+        spiro: [panel.spiro[0].value(), panel.spiro[1].value(), panel.spiro[2].value()],
+        exponent: panel.exponent.value(),
+        step: panel.step.value(),
+        waves: panel.waves.value(),
+        height: panel.height.value(),
+        decay: panel.decay.value(),
+        verts: panel.verts.value(),
         lead_easing: panel.lead_easing.selected(),
         trail_easing: panel.trail_easing.selected(),
         hold_easing: panel.hold_easing.selected(),
@@ -1506,6 +1680,12 @@ fn connect_panel(panel: &ComponentPanel, restart: &Rc<dyn Fn()>) {
         &panel.windings,
         &panel.depth,
         &panel.phase,
+        &panel.exponent,
+        &panel.step,
+        &panel.waves,
+        &panel.height,
+        &panel.decay,
+        &panel.verts,
         &panel.overshoot,
         &panel.amplitude,
         &panel.period,
@@ -1541,7 +1721,7 @@ fn connect_panel(panel: &ComponentPanel, restart: &Rc<dyn Fn()>) {
             spin.connect_value_changed(move |_| restart());
         }
     }
-    for spin in panel.center.iter() {
+    for spin in panel.center.iter().chain(panel.radii.iter()).chain(panel.spiro.iter()) {
         let restart = Rc::clone(restart);
         spin.connect_value_changed(move |_| restart());
     }
@@ -1565,18 +1745,70 @@ fn update_panel(panel: &ComponentPanel, name: &str, params: Params, spatial: boo
         row.set_visible(name == "Keyframes" && i < key_count);
     }
     for (row, spins) in panel.point_rows.iter() {
-        row.set_visible(matches!(name, "BezierPath" | "PolygonPath" | "CatmullRom"));
+        row.set_visible(POINT_PATHS.contains(&name));
         spins[2].set_visible(spatial);
     }
-    panel.radius_row.set_visible(ORBITAL.contains(&name));
-    panel.turns_row.set_visible(ORBITAL.contains(&name));
-    panel.y_turns_row.set_visible(name == "Lissajous");
-    panel.phase_row.set_visible(name == "Lissajous");
+    panel.radius_row.set_visible(matches!(
+        name,
+        "Orbit"
+            | "Helix"
+            | "Lissajous"
+            | "Spiral"
+            | "Lemniskate"
+            | "SphericalOrbit"
+            | "TorusKnot"
+            | "Figure8"
+            | "Rose"
+            | "Viviani"
+            | "Mobius"
+            | "SphereLissajous"
+            | "Lorenz"
+            | "StarPath"
+    ));
+    panel.turns_row.set_visible(matches!(
+        name,
+        "Orbit"
+            | "Helix"
+            | "Lissajous"
+            | "Spiral"
+            | "Lemniskate"
+            | "SphericalOrbit"
+            | "TorusKnot"
+            | "Figure8"
+            | "Ellipse"
+            | "Rose"
+            | "Spiro"
+            | "Superellipse"
+            | "ConicalHelix"
+            | "Viviani"
+            | "SphereLissajous"
+            | "BouncePath"
+    ));
+    panel.y_turns_row.set_visible(matches!(name, "Lissajous" | "SphereLissajous"));
+    panel.phase_row.set_visible(matches!(name, "Lissajous" | "Ellipse" | "Rose"));
     panel.tilt_row.set_visible(name == "SphericalOrbit");
-    panel.windings_row.set_visible(name == "TorusKnot");
-    panel.depth_row.set_visible(name == "Figure8");
-    panel.climb_row.set_visible(name == "Helix");
+    panel.windings_row.set_visible(matches!(name, "TorusKnot" | "Rose"));
+    panel.depth_row.set_visible(matches!(name, "Figure8" | "Mobius"));
+    panel.climb_row.set_visible(matches!(name, "Helix" | "ConicalHelix"));
     panel.center_row.set_visible(ORBITAL.contains(&name));
+    panel.radii_row.set_visible(matches!(name, "Ellipse" | "Superellipse" | "ConicalHelix"));
+    panel.spiro_row.set_visible(name == "Spiro");
+    panel.exponent_row.set_visible(name == "Superellipse");
+    panel.step_row.set_visible(name == "StarPath");
+    panel.verts_row.set_visible(name == "StarPath");
+    if name == "StarPath" {
+        // {n/k} degenerates at k >= n - the step range tracks the
+        // vertex count, e.g. the pentagram needs verts 5, step 2
+        let last = (panel.verts.value() - 1.0).max(1.0);
+        panel.step.set_range(1.0, last);
+        panel.step.clear_marks();
+        for mark in 1..=last as i32 {
+            panel.step.add_mark(f64::from(mark), gtk4::PositionType::Bottom, Some(&mark.to_string()));
+        }
+    }
+    panel.waves_row.set_visible(name == "WaveTrail");
+    panel.height_row.set_visible(matches!(name, "WaveTrail" | "BouncePath"));
+    panel.decay_row.set_visible(name == "BouncePath");
     for row in [
         &panel.lead_row,
         &panel.trail_row,
