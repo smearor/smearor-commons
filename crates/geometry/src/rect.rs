@@ -159,6 +159,30 @@ impl<U, T: Copy + PartialOrd + Add<Output = T> + Sub<Output = T>> Rect<U, T> {
     }
 }
 
+impl<U> Rect<U, f64> {
+    /// `1.0` at least `fade` units inside the rectangle, smoothstep-
+    /// fading to `0.0` at each edge - the product of the four
+    /// directional edge masks (GLSL `getEdgeMask` semantics: a soft
+    /// alpha taper at the boundary, full coverage inside).
+    ///
+    /// This is pure coordinate math - the fade distance is measured in
+    /// whatever unit `U` the rectangle and point carry (pixels for
+    /// texture edges, units for layout vignettes).
+    pub fn edge_fade(&self, point: Vec2<U, f64>, fade: f64) -> f64 {
+        let fade = fade.max(f64::EPSILON);
+        smoothstep(0.0, fade, point.x - self.min.x)
+            * smoothstep(0.0, fade, self.right() - point.x)
+            * smoothstep(0.0, fade, point.y - self.min.y)
+            * smoothstep(0.0, fade, self.bottom() - point.y)
+    }
+}
+
+/// GLSL `smoothstep` - the hermite ramp `t²(3-2t)` clamped to `[0, 1]`.
+fn smoothstep(edge0: f64, edge1: f64, x: f64) -> f64 {
+    let t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
 impl<U, T: Default> Default for Rect<U, T> {
     /// The empty rectangle at the origin.
     fn default() -> Self {
