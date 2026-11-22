@@ -61,6 +61,7 @@ pub use polyline::Polyline;
 pub use position::Position;
 pub use projection::Projection;
 pub use quantities::AspectRatio;
+pub use quantities::Factor;
 pub use quantities::Fraction;
 pub use quantities::QuarterTurn;
 pub use quantities::Rotation;
