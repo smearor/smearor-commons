@@ -3,6 +3,7 @@ use crate::FxError;
 use crate::ParamKind;
 use crate::ParamSpec;
 use crate::ParamValue;
+use crate::ScratchCount;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -43,7 +44,7 @@ pub struct Trex {
     pub warp: Factor,
     /// Number of claw strikes - schema `trex-scratch_count`, default `5`.
     #[serde(default = "Trex::default_count")]
-    pub count: u32,
+    pub count: ScratchCount,
 }
 
 impl Trex {
@@ -56,8 +57,8 @@ impl Trex {
     const fn default_warp() -> Factor {
         Factor::new(0.15)
     }
-    const fn default_count() -> u32 {
-        5
+    const fn default_count() -> ScratchCount {
+        ScratchCount::new(5)
     }
 }
 
@@ -129,7 +130,7 @@ impl WindowEffect for Trex {
             ParamValue::Color(self.color),
             ParamValue::Float(self.scale.0),
             ParamValue::Float(self.warp.0),
-            ParamValue::Int(self.count as i64),
+            ParamValue::Int(i64::from(self.count.as_u32())),
         ]
     }
 
@@ -141,7 +142,7 @@ impl WindowEffect for Trex {
         self.color = values[0].as_color().ok_or(mismatch(0))?;
         self.scale = Factor::new(values[1].as_f64().ok_or(mismatch(1))?.max(0.01));
         self.warp = Factor::new(values[2].as_f64().ok_or(mismatch(2))?);
-        self.count = values[3].as_i64().ok_or(mismatch(3))?.max(1) as u32;
+        self.count = ScratchCount::new(values[3].as_i64().ok_or(mismatch(3))?.max(1) as u32);
         Ok(())
     }
 
@@ -151,7 +152,7 @@ impl WindowEffect for Trex {
         let opening = matches!(ctx.direction, crate::Direction::Open);
         let seed = Hash::<Vec2<()>>::hash(&ctx.seed.as_f64());
         let progress = EasingFunction::EaseOut.apply(ctx.progress).as_f64();
-        let num_claws = self.count.max(1) as f64;
+        let num_claws = f64::from(self.count.as_u32().max(1));
         let grid_scale = 1.0 / self.scale.0;
         let warp = self.warp.0;
         let flash_color = self.color;

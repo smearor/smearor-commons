@@ -30,7 +30,7 @@ pub(super) struct GlitchRow {
     /// The composited row color before any dissolve.
     pub color: Color<f64>,
     /// The row noise value (`0..1`) - Glitch uses it for the dissolve.
-    pub noise: f64,
+    pub noise: Fraction,
 }
 
 /// Shades one row of the glitch effect: the column position `x_pos`
@@ -87,7 +87,10 @@ pub(super) fn glitch_row(
     let offset = 0.1 * noise * displace;
     color.g = crate::mix(color.g, window.sample_bilinear(Vec2::<()>::new(x_pos + offset, coords.y)).g, 0.25);
     color.b = crate::mix(color.b, window.sample_bilinear(Vec2::<()>::new(x_pos - offset, coords.y)).b, 0.25);
-    GlitchRow { color, noise }
+    GlitchRow {
+        color,
+        noise: Fraction::new(noise),
+    }
 }
 
 /// Rows of the window shear sideways on simplex waves while
@@ -241,7 +244,7 @@ impl WindowEffect for Glitch {
             let coords = Vec2::<()>::new((x as f64 + 0.5) / size_px.x, (y as f64 + 0.5) / size_px.y);
             let row = glitch_row(ctx.window, coords, size_px, self.scale.0, strength, displace, time, seed, self.color);
             // The dissolve rides the row noise.
-            let alpha = (row.noise + 2.5 - 4.5 * progress).clamp(0.0, 1.0);
+            let alpha = (row.noise.as_f64() + 2.5 - 4.5 * progress).clamp(0.0, 1.0);
             let mut c = row.color;
             c.a *= alpha;
             c

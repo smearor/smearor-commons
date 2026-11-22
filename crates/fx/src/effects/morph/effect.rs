@@ -2,10 +2,13 @@ use crate::FxContext;
 use crate::FxError;
 use crate::Layer;
 use crate::Layers;
+use crate::MorphStyle;
 use crate::ParamKind;
 use crate::ParamSpec;
 use crate::ParamValue;
+use crate::Phase;
 use crate::WindowEffect;
+use crate::effects::morph::frame::MorphFrame;
 use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_buffer::BufferView;
@@ -13,6 +16,7 @@ use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Factor;
+use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Vec2;
 use smearor_commons_noise::Field;
 use smearor_commons_noise::Hash;
@@ -52,15 +56,15 @@ pub struct Morph {
     /// Morph style: `0` = liquid flow, `1` = edge-guided melt,
     /// `2` = pixelate - schema `morph-style`, default `0`.
     #[serde(default = "Morph::default_style")]
-    pub style: u32,
+    pub style: MorphStyle,
     /// Displacement multiplier - schema `morph-strength`, default `1.0`.
     #[serde(default = "Morph::default_strength")]
     pub strength: Factor,
 }
 
 impl Morph {
-    const fn default_style() -> u32 {
-        0
+    const fn default_style() -> MorphStyle {
+        MorphStyle::LiquidFlow
     }
     const fn default_strength() -> Factor {
         Factor::new(1.0)
@@ -76,38 +80,28 @@ impl Default for Morph {
     }
 }
 
-const FLOW_PX: f64 = 30.0;
-const FLOW_SCALE: f64 = 160.0;
-const RADIAL_PX: f64 = 30.0;
-const SPILL_PX: f64 = 5.0;
-const CORNER_PX: f64 = 24.0;
-const BLUR_PX: f64 = 6.0;
+const BLUR_PX: Pixels<f64> = Pixels::new(6.0);
 const DISSOLVE_SCALE: f64 = 380.0;
 const DISSOLVE_EDGE: f64 = 0.22;
-const MELT_PX: f64 = 40.0;
-const MELT_RADIUS: f64 = 8.0;
+const MELT_PX: Pixels<f64> = Pixels::new(40.0);
+const MELT_RADIUS: Pixels<f64> = Pixels::new(8.0);
 const MELT_ALONG: f64 = 0.7;
 const MELT_ACROSS: f64 = 0.5;
 const MELT_NOISE: f64 = 0.35;
 const MELT_STEPS: usize = 3;
 const EDGE_FIRST: f64 = 0.35;
-const PIXEL_PX: f64 = 24.0;
+const PIXEL_PX: Pixels<f64> = Pixels::new(24.0);
 const PIXEL_TAPS: usize = 3;
 const PIXEL_RANDOM: f64 = 0.75;
 const PIXEL_SPREAD: f64 = 1.3;
 const PIXEL_DUR: f64 = 0.5;
 const PIXEL_RESIZE: f64 = 0.5;
-const P_COARSEN: (f64, f64) = (0.0, PIXEL_RESIZE);
-const P_FADE: (f64, f64) = (0.0, 1.0);
-const P_SHARPEN: (f64, f64) = (1.0 - PIXEL_RESIZE, 1.0);
-const T_SURFACE: (f64, f64) = (0.00, 0.60);
-const T_WINDOW: (f64, f64) = (0.40, 1.00);
-const T_FADE: (f64, f64) = (0.20, 0.85);
-
-/// `streamFn` - two-octave curl source.
-fn stream_fn(p: Vec2<()>, seed: Vec2<()>) -> f64 {
-    Simplex2D.at(p + seed * 100.0) + 0.5 * Simplex2D.at(p * 2.03 + Vec2::<()>::new(17.1, 5.3) + seed * 100.0)
-}
+const P_COARSEN: Phase = Phase::new(0.0, PIXEL_RESIZE);
+const P_FADE: Phase = Phase::new(0.0, 1.0);
+const P_SHARPEN: Phase = Phase::new(1.0 - PIXEL_RESIZE, 1.0);
+const T_SURFACE: Phase = Phase::new(0.00, 0.60);
+const T_WINDOW: Phase = Phase::new(0.40, 1.00);
+const T_FADE: Phase = Phase::new(0.20, 0.85);
 
 /// The layer's texture read - surface clamps, the window reads
 /// transparent outside (`readLayer` in the shader).
@@ -147,9 +141,10 @@ fn blurred_read(view: BufferView<'_, Rgba>, uv: Vec2<()>, radius: f64, texel: Ve
 }
 
 /// `luma` - transparent counts as mid-grey, so the window's outline
-/// is an edge too.
+/// is an edge too. The alpha-over-midgrey composite is a sampling
+/// policy of this edge detector, not a property of `Color`.
 fn luma(c: Color<f64>) -> f64 {
-    c.a * (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) + (1.0 - c.a) * 0.5
+    c.a * c.luminance_601().as_f64() + (1.0 - c.a) * 0.5
 }
 
 /// `meltDir` - direction from the layer's own luminance gradient.
@@ -161,7 +156,7 @@ fn melt_dir(view: BufferView<'_, Rgba>, uv: Vec2<()>, texel: Vec2<()>, surface: 
         let dir = Vec2::<()>::new(ang.cos(), ang.sin());
         let l = luma(read_layer(
             view,
-            Vec2::<()>::new(uv.x + dir.x * MELT_RADIUS * texel.x, uv.y + dir.y * MELT_RADIUS * texel.y),
+            Vec2::<()>::new(uv.x + dir.x * MELT_RADIUS.0 * texel.x, uv.y + dir.y * MELT_RADIUS.0 * texel.y),
             surface,
         ));
         g += dir * l;
@@ -180,65 +175,6 @@ fn melt_dir(view: BufferView<'_, Rgba>, uv: Vec2<()>, texel: Vec2<()>, surface: 
 }
 
 /// The morph's per-frame geometry shared by all styles.
-struct MorphFrame {
-    /// `uFrameRect` in layer pixels.
-    frame: (Vec2<()>, Vec2<()>),
-    /// Texture size in pixels.
-    size_px: Vec2<()>,
-    /// Normalized `[0,1]` seed (`uSeed`).
-    seed: Vec2<()>,
-    /// `uStrength`.
-    strength: f64,
-}
-
-impl MorphFrame {
-    /// `frameDist` - signed distance to the rounded frame rect.
-    fn frame_dist(&self, px: Vec2<()>) -> f64 {
-        let (o, s) = self.frame;
-        let c = o + s * 0.5;
-        let h = Vec2::<()>::new((0.5 * s.x - CORNER_PX).max(0.0), (0.5 * s.y - CORNER_PX).max(0.0));
-        let q = Vec2::<()>::new((px.x - c.x).abs() - h.x, (px.y - c.y).abs() - h.y);
-        let mx = q.x.max(0.0);
-        let my = q.y.max(0.0);
-        (mx * mx + my * my).sqrt() + q.x.max(q.y).min(0.0) - CORNER_PX
-    }
-
-    /// `regionMask` - 1 inside, fading to 0 `SPILL_PX` outside.
-    fn region_mask(&self, px: Vec2<()>) -> f64 {
-        1.0 - crate::smoothstep(0.0, SPILL_PX, self.frame_dist(px))
-    }
-
-    /// `flowAt` - the full displacement field in pixels.
-    fn flow_at(&self, px: Vec2<()>) -> Vec2<()> {
-        let m = self.region_mask(px);
-        if m <= 0.0 {
-            return Vec2::<()>::new(0.0, 0.0);
-        }
-        let p = Vec2::<()>::new(px.x / FLOW_SCALE, px.y / FLOW_SCALE);
-        const E: f64 = 0.01;
-        let dx = (stream_fn(p + Vec2::<()>::new(E, 0.0), self.seed) - stream_fn(p - Vec2::<()>::new(E, 0.0), self.seed)) / (2.0 * E);
-        let dy = (stream_fn(p + Vec2::<()>::new(0.0, E), self.seed) - stream_fn(p - Vec2::<()>::new(0.0, E), self.seed)) / (2.0 * E);
-        let mut c = Vec2::<()>::new(dy, -dx);
-        let cl = (c.x * c.x + c.y * c.y).sqrt();
-        c = c / (2.3 + 0.3 * cl);
-
-        let (o, s) = self.frame;
-        let centre = o + s * 0.5;
-        let rel = Vec2::<()>::new((px.x - centre.x) / (0.5 * s.x).max(1.0), (px.y - centre.y) / (0.5 * s.y).max(1.0));
-        let r = (rel.x * rel.x + rel.y * rel.y).sqrt();
-        let radial = if r > 1e-4 {
-            rel / r * (std::f64::consts::PI * r.min(1.0)).sin()
-        } else {
-            Vec2::<()>::new(0.0, 0.0)
-        };
-
-        Vec2::<()>::new(
-            m * self.strength * (c.x * FLOW_PX + radial.x * RADIAL_PX),
-            m * self.strength * (c.y * FLOW_PX + radial.y * RADIAL_PX),
-        )
-    }
-}
-
 const PARAMS: &[ParamSpec] = &[
     ParamSpec {
         key: "style",
@@ -256,7 +192,6 @@ const PARAMS: &[ParamSpec] = &[
         },
     },
 ];
-
 impl WindowEffect for Morph {
     fn nick(&self) -> &'static str {
         "morph"
@@ -275,7 +210,7 @@ impl WindowEffect for Morph {
     }
 
     fn values(&self) -> Vec<ParamValue> {
-        vec![ParamValue::Int(i64::from(self.style)), ParamValue::Float(self.strength.0)]
+        vec![ParamValue::Int(i64::from(u32::from(self.style))), ParamValue::Float(self.strength.0)]
     }
 
     fn set_values(&mut self, values: &[ParamValue]) -> Result<(), FxError> {
@@ -283,7 +218,7 @@ impl WindowEffect for Morph {
         if values.len() != 2 {
             return Err(FxError::ParamMismatch(format!("morph takes 2 parameters, got {}", values.len())));
         }
-        self.style = values[0].as_i64().ok_or(mismatch(0))?.clamp(0, 2) as u32;
+        self.style = MorphStyle::try_from(values[0].as_i64().ok_or(mismatch(0))?.clamp(0, 2) as u32).map_err(|_| mismatch(0))?;
         self.strength = Factor::new(values[1].as_f64().ok_or(mismatch(1))?);
         Ok(())
     }
@@ -309,11 +244,11 @@ impl WindowEffect for Morph {
             strength: self.strength.0,
         };
         let texel = Vec2::<()>::new(1.0 / size_px.x, 1.0 / size_px.y);
-        let span = |t: (f64, f64)| crate::smoothstep(t.0, t.1, progress);
-        let blur = BLUR_PX * self.strength.0.min(1.0);
-        let melt = self.style == 1;
 
-        if self.style == 2 {
+        let blur = BLUR_PX.0 * self.strength.0.min(1.0);
+        let melt = self.style == MorphStyle::EdgeMelt;
+
+        if self.style == MorphStyle::Pixelate {
             self.apply_pixelate(ctx, out, view, &mf, progress, surface_pass);
             return;
         }
@@ -324,7 +259,7 @@ impl WindowEffect for Morph {
             let flow = mf.flow_at(px);
 
             if surface_pass {
-                let s = span(T_SURFACE);
+                let s = T_SURFACE.at(progress);
                 if s <= 0.0 || (flow.x == 0.0 && flow.y == 0.0) {
                     return view.sample_bilinear(uv0);
                 }
@@ -332,7 +267,7 @@ impl WindowEffect for Morph {
                 if melt {
                     for _ in 0..MELT_STEPS {
                         let (d, _) = melt_dir(view, tc, texel, true);
-                        let step = mf.region_mask(px) * MELT_PX * mf.strength;
+                        let step = mf.region_mask(px) * MELT_PX.0 * mf.strength;
                         tc += Vec2::<()>::new(
                             (d.x * step + flow.x * MELT_NOISE) * -s / MELT_STEPS as f64 * texel.x,
                             (d.y * step + flow.y * MELT_NOISE) * -s / MELT_STEPS as f64 * texel.y,
@@ -345,8 +280,8 @@ impl WindowEffect for Morph {
                 c.a = 1.0;
                 c
             } else {
-                let w = 1.0 - span(T_WINDOW);
-                let f = span(T_FADE);
+                let w = 1.0 - T_WINDOW.at(progress);
+                let f = T_FADE.at(progress);
                 if w <= 0.0 && f >= 1.0 {
                     return read_layer(view, uv0, false);
                 }
@@ -356,7 +291,7 @@ impl WindowEffect for Morph {
                     for _ in 0..MELT_STEPS {
                         let (d, e) = melt_dir(view, tc, texel, false);
                         edge = e;
-                        let step = mf.region_mask(px) * MELT_PX * mf.strength;
+                        let step = mf.region_mask(px) * MELT_PX.0 * mf.strength;
                         tc += Vec2::<()>::new(
                             (d.x * step + flow.x * MELT_NOISE) * w / MELT_STEPS as f64 * texel.x,
                             (d.y * step + flow.y * MELT_NOISE) * w / MELT_STEPS as f64 * texel.y,
@@ -395,13 +330,13 @@ impl Morph {
     ) {
         let size_px = mf.size_px;
         let texel = Vec2::<()>::new(1.0 / size_px.x, 1.0 / size_px.y);
-        let span = |t: (f64, f64)| crate::smoothstep(t.0, t.1, progress);
-        let coarse = span(P_COARSEN) * (1.0 - span(P_SHARPEN));
-        let bs = crate::mix(1.0, (PIXEL_PX * mf.strength).max(1.0), coarse).floor().max(1.0);
+
+        let coarse = P_COARSEN.at(progress) * (1.0 - P_SHARPEN.at(progress));
+        let bs = crate::mix(1.0, (PIXEL_PX.0 * mf.strength).max(1.0), coarse).floor().max(1.0);
         let (fo, fs) = mf.frame;
         let centre = fo + fs * 0.5;
-        let peak = (PIXEL_PX * mf.strength + 0.5).floor().max(1.0);
-        let f = span(P_FADE);
+        let peak = (PIXEL_PX.0 * mf.strength + 0.5).floor().max(1.0);
+        let f = P_FADE.at(progress);
         let seed_px = Vec2::<()>::new((mf.seed.x * 1000.0).floor(), (mf.seed.y * 1000.0).floor());
 
         crate::render::fill(out, |x, y| {
@@ -466,7 +401,6 @@ mod tests {
     use crate::Layer;
     use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_geometry::Fraction;
-    use smearor_commons_geometry::Pixels;
     use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::Size;
     use smearor_commons_noise::Seed;

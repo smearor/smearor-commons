@@ -56,6 +56,7 @@ pub use matrix::GlyphSource;
 pub use matrix::Matrix;
 pub use matrix::ProceduralGlyphAtlas;
 pub use morph::Morph;
+pub use morph::MorphStyle;
 pub use mushroom::Mushroom;
 pub use mushroom::StarColor;
 pub use paint_brush::PaintBrush;

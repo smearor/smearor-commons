@@ -3,6 +3,7 @@ use crate::FxError;
 use crate::ParamKind;
 use crate::ParamSpec;
 use crate::ParamValue;
+use crate::StripCount;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -35,7 +36,7 @@ use smearor_commons_noise::Simplex2D;
 pub struct Shredder {
     /// Strip count - schema `shredder-strips`, default `20`.
     #[serde(default = "Shredder::default_strips")]
-    pub strips: u32,
+    pub strips: StripCount,
     /// Start-time spread - schema `shredder-randomness`, default `0.7`.
     #[serde(default = "Shredder::default_randomness")]
     pub randomness: Factor,
@@ -45,8 +46,8 @@ pub struct Shredder {
 }
 
 impl Shredder {
-    const fn default_strips() -> u32 {
-        20
+    const fn default_strips() -> StripCount {
+        StripCount::new(20)
     }
     const fn default_randomness() -> Factor {
         Factor::new(0.7)
@@ -117,7 +118,7 @@ impl WindowEffect for Shredder {
 
     fn values(&self) -> Vec<ParamValue> {
         vec![
-            ParamValue::Int(self.strips as i64),
+            ParamValue::Int(i64::from(self.strips.as_u32())),
             ParamValue::Float(self.randomness.0),
             ParamValue::Bool(self.rough_edges),
         ]
@@ -128,7 +129,7 @@ impl WindowEffect for Shredder {
         if values.len() != 3 {
             return Err(FxError::ParamMismatch(format!("shredder takes 3 parameters, got {}", values.len())));
         }
-        self.strips = values[0].as_i64().ok_or(mismatch(0))?.max(1) as u32;
+        self.strips = StripCount::new(values[0].as_i64().ok_or(mismatch(0))?.max(1) as u32);
         self.randomness = Factor::new(values[1].as_f64().ok_or(mismatch(1))?);
         self.rough_edges = values[2].as_bool().ok_or(mismatch(2))?;
         Ok(())
@@ -142,7 +143,7 @@ impl WindowEffect for Shredder {
             crate::Direction::Close => ctx.progress.as_f64(),
         };
         // Frame constants.
-        let strips = self.strips as f64;
+        let strips = f64::from(self.strips.as_u32());
         let max_fall = 0.5 * (ACTOR_SCALE - 1.0);
         let spread = (0.5 * self.randomness.0).min(0.95);
         let inv_norm = 1.0 / (1.0 - spread).max(f64::EPSILON);

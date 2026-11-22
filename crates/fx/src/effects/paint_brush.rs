@@ -1,3 +1,4 @@
+use crate::BrushSize;
 use crate::FxContext;
 use crate::FxError;
 use crate::ParamKind;
@@ -28,12 +29,12 @@ use smearor_commons_geometry::Vec2;
 pub struct PaintBrush {
     /// Brush thickness - schema `paint-brush-size`, default `3`.
     #[serde(default = "PaintBrush::default_size")]
-    pub size: u32,
+    pub size: BrushSize,
 }
 
 impl PaintBrush {
-    const fn default_size() -> u32 {
-        3
+    const fn default_size() -> BrushSize {
+        BrushSize::new(3)
     }
 }
 
@@ -66,13 +67,13 @@ impl WindowEffect for PaintBrush {
     }
 
     fn values(&self) -> Vec<ParamValue> {
-        vec![ParamValue::Int(self.size as i64)]
+        vec![ParamValue::Int(i64::from(self.size.as_u32()))]
     }
 
     fn set_values(&mut self, values: &[ParamValue]) -> Result<(), FxError> {
         match values {
             [ParamValue::Int(size)] => {
-                self.size = (*size).clamp(1, 4) as u32;
+                self.size = BrushSize::new((*size).clamp(1, 4) as u32);
                 Ok(())
             }
             _ => Err(FxError::ParamMismatch(format!("paint-brush takes 1 int parameter, got {}", values.len()))),
@@ -84,7 +85,7 @@ impl WindowEffect for PaintBrush {
         let size_px = Vec2::<()>::new(size.x as f64, size.y as f64);
         let opening = matches!(ctx.direction, crate::Direction::Open);
         let progress = ctx.progress.as_f64();
-        let channel = (self.size.clamp(1, 4) - 1) as usize;
+        let channel = (self.size.as_u32().clamp(1, 4) - 1) as usize;
         let window = ctx.window;
         let brush_texture = ctx.assets.brush;
         // The sweep-time field at `uv` - texture channel or

@@ -3,6 +3,7 @@ use crate::FxError;
 use crate::ParamKind;
 use crate::ParamSpec;
 use crate::ParamValue;
+use crate::StepCount;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -40,7 +41,7 @@ pub struct Materialize {
     pub start_scale: Fraction,
     /// Quantized growth steps (`0` = smooth) - schema `materialize-steps`, default `4`.
     #[serde(default = "Materialize::default_steps")]
-    pub steps: u32,
+    pub steps: StepCount,
 }
 
 impl Materialize {
@@ -50,8 +51,8 @@ impl Materialize {
     const fn default_start_scale() -> Fraction {
         Fraction::new(0.6)
     }
-    const fn default_steps() -> u32 {
-        4
+    const fn default_steps() -> StepCount {
+        StepCount::new(4)
     }
 }
 
@@ -114,7 +115,7 @@ impl WindowEffect for Materialize {
         vec![
             ParamValue::Color(self.color),
             ParamValue::Float(self.start_scale.as_f64()),
-            ParamValue::Int(self.steps as i64),
+            ParamValue::Int(i64::from(self.steps.as_u32())),
         ]
     }
 
@@ -125,7 +126,7 @@ impl WindowEffect for Materialize {
         }
         self.color = values[0].as_color().ok_or(mismatch(0))?;
         self.start_scale = Fraction::new(values[1].as_f64().ok_or(mismatch(1))?);
-        self.steps = values[2].as_i64().ok_or(mismatch(2))?.max(0) as u32;
+        self.steps = StepCount::new(values[2].as_i64().ok_or(mismatch(2))?.max(0) as u32);
         Ok(())
     }
 
@@ -137,8 +138,12 @@ impl WindowEffect for Materialize {
             crate::Direction::Close => 1.0 - ctx.progress.as_f64(),
         };
         // Frame constants.
-        let steps = self.steps as f64;
-        let fade = if self.steps > 0 { 1.0 } else { crate::smoothstep(0.0, FADE_TIME, prog) };
+        let steps = f64::from(self.steps.as_u32());
+        let fade = if self.steps.as_u32() > 0 {
+            1.0
+        } else {
+            crate::smoothstep(0.0, FADE_TIME, prog)
+        };
         if steps > 1.0 {
             prog = (prog * steps).floor().min(steps - 1.0) / (steps - 1.0);
         } else if steps > 0.0 {

@@ -5,6 +5,7 @@ use crate::Layers;
 use crate::ParamKind;
 use crate::ParamSpec;
 use crate::ParamValue;
+use crate::Phase;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -96,11 +97,11 @@ const LIGHT_TO: Vec2<()> = Vec2::<()>::new(std::f64::consts::FRAC_1_SQRT_2, std:
 const WIN_SHEET_START: f64 = 0.12;
 const FLOOR_START: f64 = 0.002;
 const FLOOR_RISE: f64 = 1.0;
-const T_SINK: (f64, f64) = (0.0, 0.30);
-const T_WIDEN: (f64, f64) = (0.05, 0.50);
-const T_APPEAR: (f64, f64) = (0.38, 0.48);
-const T_FLAT: (f64, f64) = (0.45, 1.00);
-const T_RISE: (f64, f64) = (0.40, 0.95);
+const T_SINK: Phase = Phase::new(0.0, 0.30);
+const T_WIDEN: Phase = Phase::new(0.05, 0.50);
+const T_APPEAR: Phase = Phase::new(0.38, 0.48);
+const T_FLAT: Phase = Phase::new(0.45, 1.00);
+const T_RISE: Phase = Phase::new(0.40, 0.95);
 const BOUNCE_COUNT: usize = 3;
 const SOLVE_STEPS: usize = 24;
 const FUNNEL_EXTRA: f64 = 80.0;
@@ -326,7 +327,7 @@ impl WindowEffect for Wormhole {
         let mut dip = 0.0;
         let mut landed = false;
         if open_bounce || close_bounce {
-            let knee = if open_bounce { T_FLAT.0 } else { 1.0 - T_SINK.1 };
+            let knee = if open_bounce { T_FLAT.start } else { 1.0 - T_SINK.end };
             let speed = 1.0 + bounce_time(self.bounce.0);
             let fall_dur = (1.0 - knee) / speed;
             let land_at = knee + fall_dur;
@@ -342,31 +343,30 @@ impl WindowEffect for Wormhole {
             }
         }
 
-        let span = |t: (f64, f64)| crate::smoothstep(t.0, t.1, progress_eff);
-        let mut sink = span(T_SINK);
+        let mut sink = T_SINK.at(progress_eff);
         if close_bounce {
-            let x = ((T_SINK.1 - progress_eff) / (T_SINK.1 - T_SINK.0)).clamp(0.0, 1.0);
+            let x = ((T_SINK.end - progress_eff) / T_SINK.len()).clamp(0.0, 1.0);
             sink = 1.0 - x * x + dip;
         }
-        let mut widen = span(T_WIDEN);
-        let fall = |t: (f64, f64)| {
-            let x = ((progress_eff - t.0) / (t.1 - t.0)).clamp(0.0, 1.0);
-            x * x
+        let mut widen = T_WIDEN.at(progress_eff);
+        let mut flat_t = if open_bounce {
+            T_FLAT.at_linear(progress_eff).powi(2) - dip
+        } else {
+            T_FLAT.at(progress_eff)
         };
-        let mut flat_t = if open_bounce { fall(T_FLAT) - dip } else { span(T_FLAT) };
         if close_bounce && landed {
             sink = 1.0;
             widen = 1.0;
             flat_t = 1.0 - dip;
         }
-        let mut rise_t = span(T_RISE);
+        let mut rise_t = T_RISE.at(progress_eff);
         if open_bounce {
             // Fall in real time to the landing so the speed has no
             // kink where the timeline speeds up (BOUNCE_KEEP_INTRO).
-            let knee = T_FLAT.0;
+            let knee = T_FLAT.start;
             let speed = 1.0 + bounce_time(self.bounce.0);
             let land_at = knee + (1.0 - knee) / speed;
-            let x = ((progress - T_RISE.0) / (land_at - T_RISE.0)).clamp(0.0, 1.0);
+            let x = ((progress - T_RISE.start) / (land_at - T_RISE.start)).clamp(0.0, 1.0);
             rise_t = x * x;
         }
         let flatness = 1.0 - flat_t;
@@ -378,7 +378,7 @@ impl WindowEffect for Wormhole {
             fog: FOG_BASE / self.tunnel_depth.0.max(0.05),
             floor: FLOOR_START + FLOOR_RISE * floor_t * floor_t,
             sheet_scale: WIN_SHEET_START.ln().mul_add(1.0 - rise_t, 0.0).exp(),
-            win_alpha: span(T_APPEAR),
+            win_alpha: T_APPEAR.at(progress_eff),
             axes: Vec2::<()>::new(ax * crate::mix(SPREAD_START, 1.0, widen), ay * crate::mix(SPREAD_START, 1.0, widen)),
             center,
         };

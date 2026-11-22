@@ -22,6 +22,7 @@
 
 mod assets;
 mod blur_quality;
+mod brush_size;
 mod context;
 mod cycle_speed;
 mod direction;
@@ -32,8 +33,13 @@ mod layer;
 mod layers;
 mod ops;
 mod param;
+mod phase;
 mod render;
+mod scratch_count;
+mod slat_count;
 mod spec;
+mod step_count;
+mod strip_count;
 
 #[cfg(feature = "gtk4")]
 pub mod gtk;
@@ -41,6 +47,7 @@ mod spoke_count;
 
 pub use assets::FxAssets;
 pub use blur_quality::BlurQuality;
+pub use brush_size::BrushSize;
 pub use context::FxContext;
 pub use cycle_speed::CycleSpeed;
 pub use direction::Direction;
@@ -65,6 +72,7 @@ pub use effects::Incinerate;
 pub use effects::Materialize;
 pub use effects::Matrix;
 pub use effects::Morph;
+pub use effects::MorphStyle;
 pub use effects::Mushroom;
 pub use effects::PaintBrush;
 pub use effects::PixelWheel;
@@ -101,5 +109,10 @@ pub use ops::whirl;
 pub use param::ParamKind;
 pub use param::ParamSpec;
 pub use param::ParamValue;
+pub use phase::Phase;
+pub use scratch_count::ScratchCount;
+pub use slat_count::SlatCount;
 pub use spec::EffectSpec;
 pub use spoke_count::SpokeCount;
+pub use step_count::StepCount;
+pub use strip_count::StripCount;

@@ -3,6 +3,7 @@ use crate::FxError;
 use crate::ParamKind;
 use crate::ParamSpec;
 use crate::ParamValue;
+use crate::SlatCount;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -35,7 +36,7 @@ use smearor_commons_geometry::Vec2;
 pub struct VenetianBlinds {
     /// Slat count (`1..=15`, shader `MAX_SLATS`) - schema `venetian-blinds-slats`, default `9`.
     #[serde(default = "VenetianBlinds::default_slats")]
-    pub slats: u32,
+    pub slats: SlatCount,
     /// Top-to-bottom start delay - schema `venetian-blinds-delay`, default `0.4`.
     #[serde(default = "VenetianBlinds::default_delay")]
     pub delay: Fraction,
@@ -48,8 +49,8 @@ pub struct VenetianBlinds {
 }
 
 impl VenetianBlinds {
-    const fn default_slats() -> u32 {
-        9
+    const fn default_slats() -> SlatCount {
+        SlatCount::new(9)
     }
     const fn default_delay() -> Fraction {
         Fraction::new(0.4)
@@ -170,7 +171,7 @@ impl WindowEffect for VenetianBlinds {
 
     fn values(&self) -> Vec<ParamValue> {
         vec![
-            ParamValue::Int(self.slats as i64),
+            ParamValue::Int(i64::from(self.slats.as_u32())),
             ParamValue::Float(self.delay.as_f64()),
             ParamValue::Bool(self.perspective),
             ParamValue::Bool(self.pull_up),
@@ -182,7 +183,7 @@ impl WindowEffect for VenetianBlinds {
         if values.len() != 4 {
             return Err(FxError::ParamMismatch(format!("venetian-blinds takes 4 parameters, got {}", values.len())));
         }
-        self.slats = values[0].as_i64().ok_or(mismatch(0))?.clamp(1, 15) as u32;
+        self.slats = SlatCount::new(values[0].as_i64().ok_or(mismatch(0))?.clamp(1, 15) as u32);
         self.delay = Fraction::new(values[1].as_f64().ok_or(mismatch(1))?);
         self.perspective = values[2].as_bool().ok_or(mismatch(2))?;
         self.pull_up = values[3].as_bool().ok_or(mismatch(3))?;
@@ -197,7 +198,7 @@ impl WindowEffect for VenetianBlinds {
             crate::Direction::Close => ctx.progress.as_f64(),
         };
         // Frame constants.
-        let slats = self.slats as f64;
+        let slats = f64::from(self.slats.as_u32());
         let delay = self.delay.as_f64();
         let fold = (prog / FOLD_END).clamp(0.0, 1.0);
         let fold_fade = 1.0 - crate::smoothstep(FOLD_END, 1.0, prog);
@@ -214,7 +215,7 @@ impl WindowEffect for VenetianBlinds {
             }
             // Pull-up: the first covering slat wins, upper in front.
             let mut c = Color::<f64>::new_rgba(0.0, 0.0, 0.0, 0.0);
-            for i in 0..self.slats {
+            for i in 0..self.slats.as_u32() {
                 let index = i as f64;
                 let t = slat_progress(index, slats, delay, fold);
                 let e = EasingFunction::EaseInOutCubic.apply(Fraction::new(t)).as_f64();
