@@ -5,6 +5,7 @@ use crate::LayoutStrategy;
 use crate::Placement;
 use serde::Deserialize;
 use serde::Serialize;
+use smearor_commons_geometry::Distance;
 use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::Vec2;
 
@@ -16,26 +17,24 @@ use smearor_commons_geometry::Vec2;
 /// Overflow yields [`LayoutError::DoesNotFit`] - the consumer decides
 /// whether to retry, shrink or leave items unarranged.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct FlowLayout {
+pub struct FlowLayout<U = ()> {
     /// Corner the flow starts from (`horizontal` picks the item
     /// direction, `vertical` the line direction).
     pub anchor: AnchorWeights,
-    /// Gap between adjacent footprints and between lines - a scalar
-    /// in the same coordinate space as `bounds` (pixels for
-    /// `Rect<Pixels>`, millimeters for `Rect<Millimeters>`); `U` is a
-    /// phantom marker, so the unit comes from the call, not the type.
-    pub gap: f64,
+    /// Gap between adjacent footprints and between lines, in the
+    /// `U` coordinate space of `bounds`.
+    pub gap: Distance<U>,
     /// Wrap into a new line when the next item would cross the far
     /// edge. `false` means a single line - an overflowing item is
     /// the reported [`LayoutError::DoesNotFit`].
     pub wrap: bool,
 }
 
-impl Default for FlowLayout {
+impl<U> Default for FlowLayout<U> {
     fn default() -> Self {
         Self {
             anchor: AnchorWeights::TOP_LEFT,
-            gap: 24.0,
+            gap: Distance::new(24.0),
             wrap: true,
         }
     }
@@ -50,11 +49,12 @@ struct Line {
     cross: f64,
 }
 
-impl FlowLayout {
+impl<U> FlowLayout<U> {
     /// Packs items into lines along the main axis. Each line fits the
     /// `main` bounds extent; an item wider than that never fits and
     /// is reported immediately, regardless of `wrap`.
     fn pack_lines(&self, sizes: &[(f64, f64)], main: f64, items: usize) -> Result<Vec<Line>, LayoutError> {
+        let gap = self.gap.as_f64();
         let mut lines: Vec<Line> = Vec::new();
         let mut line = Line {
             indices: Vec::new(),
@@ -65,7 +65,7 @@ impl FlowLayout {
             if item_main > main {
                 return Err(LayoutError::DoesNotFit { index, items });
             }
-            let needed = if line.indices.is_empty() { item_main } else { self.gap + item_main };
+            let needed = if line.indices.is_empty() { item_main } else { gap + item_main };
             if used + needed > main {
                 if !self.wrap {
                     return Err(LayoutError::DoesNotFit { index, items });
@@ -79,7 +79,7 @@ impl FlowLayout {
             }
             line.indices.push(index);
             line.cross = line.cross.max(item_cross);
-            used = if line.indices.len() == 1 { item_main } else { used + self.gap + item_main };
+            used = if line.indices.len() == 1 { item_main } else { used + gap + item_main };
         }
         if !line.indices.is_empty() {
             lines.push(line);
@@ -88,18 +88,19 @@ impl FlowLayout {
     }
 }
 
-impl<U> LayoutStrategy<U> for FlowLayout {
+impl<U> LayoutStrategy<U> for FlowLayout<U> {
     /// Rows run along the axis `anchor.horizontal` picks (left-to-right
     /// or right-to-left), lines stack along `anchor.vertical`. Item
     /// `rotation` passes through unchanged; `seat` is ignored.
     fn arrange(&self, bounds: Rect<U>, items: &[LayoutItem<U>]) -> Result<Vec<Placement<U>>, LayoutError> {
+        let gap = self.gap.as_f64();
         let count = items.len();
         let left_to_right = self.anchor.horizontal.as_f64() < 0.5;
         let top_down = self.anchor.vertical.as_f64() < 0.5;
         // (main, cross) per item along the flow axes.
         let sizes: Vec<(f64, f64)> = items.iter().map(|item| (item.size.x, item.size.y)).collect();
         let lines = self.pack_lines(&sizes, bounds.size.x, count)?;
-        let total_cross = lines.iter().map(|line| line.cross).sum::<f64>() + self.gap * lines.len().saturating_sub(1) as f64;
+        let total_cross = lines.iter().map(|line| line.cross).sum::<f64>() + gap * lines.len().saturating_sub(1) as f64;
         if total_cross > bounds.size.y {
             let index = lines.last().and_then(|line| line.indices.first()).copied().unwrap_or(0);
             return Err(LayoutError::DoesNotFit { index, items: count });
@@ -114,18 +115,18 @@ impl<U> LayoutStrategy<U> for FlowLayout {
                 let (item_main, item_cross) = sizes[index];
                 let (x, y) = if left_to_right {
                     let x = cursor_main;
-                    cursor_main += item_main + self.gap;
+                    cursor_main += item_main + gap;
                     (x, line_min_cross)
                 } else {
-                    cursor_main -= item_main + self.gap;
-                    (cursor_main + self.gap, line_min_cross)
+                    cursor_main -= item_main + gap;
+                    (cursor_main + gap, line_min_cross)
                 };
                 placements[index] = Some(Placement::new(Vec2::new(x + item_main / 2.0, y + item_cross / 2.0), items[index].rotation, items[index].size));
             }
             cursor_cross = if top_down {
-                cursor_cross + line.cross + self.gap
+                cursor_cross + line.cross + gap
             } else {
-                cursor_cross - line.cross - self.gap
+                cursor_cross - line.cross - gap
             };
         }
         placements
@@ -212,7 +213,7 @@ mod tests {
         let items = [item(100.0, 50.0), item(100.0, 50.0)];
         let placements = FlowLayout {
             anchor: AnchorWeights::BOTTOM_RIGHT,
-            gap: 10.0,
+            gap: smearor_commons_geometry::Distance::new(10.0),
             wrap: true,
         }
         .arrange(bounds(), &items)

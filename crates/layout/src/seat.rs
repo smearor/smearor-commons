@@ -2,6 +2,7 @@ use crate::Placement;
 use crate::TableSide;
 use serde::Deserialize;
 use serde::Serialize;
+use smearor_commons_geometry::Distance;
 use smearor_commons_geometry::Fraction;
 use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::Rotation;
@@ -160,7 +161,8 @@ impl Seat {
     /// `footprint` is the item's extent *as displayed at the seat's
     /// rotation* - compute it with [`crate::footprint_for`] when the
     /// placement changes orientation.
-    pub fn placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: f64) -> Placement<U> {
+    pub fn placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: impl Into<Distance<U>>) -> Placement<U> {
+        let margin = margin.into().as_f64();
         let offset = self.offset.unwrap_or(Fraction::HALF).as_f64();
         let center = match self.side {
             TableSide::Bottom => Vec2::new(bounds.min.x + bounds.size.x * offset, bounds.min.y + bounds.size.y - margin - footprint.y / 2.0),
@@ -189,7 +191,16 @@ impl Seat {
     /// `hypot(offset, ROW_JUMP_WEIGHT * depth)`, so a card may leave
     /// the edge lane when the queue there reaches notably farther
     /// from the seat than a spot behind the first row.
-    pub fn fanned_placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: f64, taken: &[(Vec2<U>, Vec2<U>)], gap: f64) -> Placement<U> {
+    pub fn fanned_placement<U>(
+        &self,
+        bounds: Rect<U>,
+        footprint: Vec2<U>,
+        margin: impl Into<Distance<U>>,
+        taken: &[(Vec2<U>, Vec2<U>)],
+        gap: impl Into<Distance<U>>,
+    ) -> Placement<U> {
+        let margin = margin.into().as_f64();
+        let gap = gap.into().as_f64();
         /// Perpendicular depth counts this much when scoring lanes -
         /// staying on the edge is preferred unless the queue there is
         /// notably farther from the seat.

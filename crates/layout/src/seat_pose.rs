@@ -2,6 +2,7 @@ use crate::Placement;
 use crate::Seat;
 use serde::Deserialize;
 use serde::Serialize;
+use smearor_commons_geometry::Distance;
 use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::Rotation;
 use smearor_commons_geometry::RotationRad;
@@ -101,7 +102,7 @@ impl SeatPose {
     /// but rotated to `Rotation::Free(self.orientation)` instead of
     /// the edge's quarter turn - a corner seat's content reads
     /// diagonally to its user.
-    pub fn placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: f64) -> Placement<U> {
+    pub fn placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: impl Into<Distance<U>>) -> Placement<U> {
         let mut placement = self.seat.placement(bounds, footprint, margin);
         placement.rotation = Rotation::Free(self.orientation);
         placement
@@ -110,7 +111,14 @@ impl SeatPose {
     /// Places `footprint` in the best free spot nearest the seat like
     /// [`Seat::fanned_placement`], with the same `Rotation::Free`
     /// override as [`Self::placement`].
-    pub fn fanned_placement<U>(&self, bounds: Rect<U>, footprint: Vec2<U>, margin: f64, taken: &[(Vec2<U>, Vec2<U>)], gap: f64) -> Placement<U> {
+    pub fn fanned_placement<U>(
+        &self,
+        bounds: Rect<U>,
+        footprint: Vec2<U>,
+        margin: impl Into<Distance<U>>,
+        taken: &[(Vec2<U>, Vec2<U>)],
+        gap: impl Into<Distance<U>>,
+    ) -> Placement<U> {
         let mut placement = self.seat.fanned_placement(bounds, footprint, margin, taken, gap);
         placement.rotation = Rotation::Free(self.orientation);
         placement

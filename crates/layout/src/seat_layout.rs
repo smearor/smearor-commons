@@ -8,6 +8,7 @@ use crate::TableSide;
 use crate::footprint_for;
 use serde::Deserialize;
 use serde::Serialize;
+use smearor_commons_geometry::Distance;
 use smearor_commons_geometry::Rect;
 use smearor_commons_geometry::Vec2;
 
@@ -18,28 +19,28 @@ use smearor_commons_geometry::Vec2;
 /// (centered as a group); an explicit [`LayoutItem::seat`] wins over
 /// the `assignment` fallback.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct SeatLayout {
+pub struct SeatLayout<U = ()> {
     /// Assignment for items without an explicit `seat`.
     pub assignment: SeatAssignment,
-    /// Footprint distance to the table edge - scalar in the
-    /// coordinate space of `bounds` (see [`crate::FlowLayout::gap`]).
-    pub edge_margin: f64,
+    /// Footprint distance to the table edge, in the `U` coordinate
+    /// space of `bounds`.
+    pub edge_margin: Distance<U>,
     /// Spacing between items sharing the same side - same space
     /// as `bounds`.
-    pub gap: f64,
+    pub gap: Distance<U>,
 }
 
-impl Default for SeatLayout {
+impl<U> Default for SeatLayout<U> {
     fn default() -> Self {
         Self {
             assignment: SeatAssignment::RoundRobin,
-            edge_margin: 24.0,
-            gap: 24.0,
+            edge_margin: Distance::new(24.0),
+            gap: Distance::new(24.0),
         }
     }
 }
 
-impl SeatLayout {
+impl<U> SeatLayout<U> {
     /// Whether the side's edge runs horizontally (`Bottom`/`Top`) or
     /// vertically (`Left`/`Right`).
     fn horizontal_edge(side: TableSide) -> bool {
@@ -47,7 +48,7 @@ impl SeatLayout {
     }
 }
 
-impl<U> LayoutStrategy<U> for SeatLayout {
+impl<U> LayoutStrategy<U> for SeatLayout<U> {
     /// Per side: pinned seats take their [`Seat::offset`], unpinned
     /// items spread along the edge centered as a group, each
     /// `edge_margin` off the edge, rotated to the side's orientation.
@@ -86,7 +87,7 @@ impl<U> LayoutStrategy<U> for SeatLayout {
                 .iter()
                 .map(|footprint| if Self::horizontal_edge(side) { footprint.x } else { footprint.y })
                 .collect();
-            let span = edge_extents.iter().sum::<f64>() + self.gap * group.len().saturating_sub(1) as f64;
+            let span = edge_extents.iter().sum::<f64>() + self.gap.as_f64() * group.len().saturating_sub(1) as f64;
             let edge_length = if Self::horizontal_edge(side) { bounds.size.x } else { bounds.size.y };
             if span > edge_length {
                 return Err(LayoutError::DoesNotFit { index: group[0], items: count });
@@ -110,7 +111,7 @@ impl<U> LayoutStrategy<U> for SeatLayout {
                     Vec2::new(placement.center.x, cursor + edge_extent / 2.0)
                 };
                 placements[index] = Some(placement);
-                cursor += edge_extent + self.gap;
+                cursor += edge_extent + self.gap.as_f64();
             }
         }
         placements
