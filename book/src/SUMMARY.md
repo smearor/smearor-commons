@@ -32,6 +32,7 @@
   - [Layout](./buffer/layout.md)
   - [Views](./buffer/views.md)
   - [PixelBuffer](./buffer/pixel-buffer.md)
+  - [Sampling](./buffer/sampling.md)
   - [GTK](./buffer/gtk.md)
 - [Drawing](./drawing.md)
   - [Traits](./drawing/traits.md)

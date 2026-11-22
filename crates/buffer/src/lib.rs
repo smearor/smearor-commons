@@ -17,6 +17,7 @@ mod formats;
 pub mod gtk;
 mod metadata;
 mod pixel_buffer;
+mod sampling;
 mod stride;
 mod view;
 mod view_mut;

@@ -2184,6 +2184,7 @@ version = "0.1.0"
 dependencies = [
  "gtk4",
  "serde",
+ "smearor-commons-color 0.1.0",
  "smearor-commons-geometry",
  "thiserror 2.0.21",
 ]

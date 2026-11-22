@@ -18,6 +18,7 @@ gtk4 = ["dep:gtk4"]
 
 [dependencies]
 gtk4 = { workspace = true, optional = true }
+smearor-commons-color.workspace = true
 smearor-commons-geometry.workspace = true
 serde.workspace = true
 thiserror.workspace = true
