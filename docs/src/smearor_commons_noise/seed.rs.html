@@ -1,0 +1,78 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/noise/src/seed.rs`."><title>seed.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="smearor_commons_noise" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">smearor_commons_noise/</div>seed.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `Seed` - deterministic per-run seed for noise-driven effects.
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span><span class="kw">crate</span>::Hash;
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>serde::Deserialize;
+<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span>serde::Serialize;
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span>smearor_commons_geometry::Vec2;
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>smearor_commons_geometry::Vec3;
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>std::time::SystemTime;
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>std::time::UNIX_EPOCH;
+<a href=#10 id=10 data-nosnippet>10</a>
+<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// Deterministic per-run seed - wraps the raw `u64` so call sites
+<a href=#12 id=12 data-nosnippet>12</a>/// cannot accidentally feed an arbitrary offset where the run's seed
+<a href=#13 id=13 data-nosnippet>13</a>/// belongs. Serializes as a plain number.
+<a href=#14 id=14 data-nosnippet>14</a>///
+<a href=#15 id=15 data-nosnippet>15</a>/// Seeding follows the same convention the shader sources use: the
+<a href=#16 id=16 data-nosnippet>16</a>/// seed is folded into the *coordinates* (`offset_2d`/`offset_3d`)
+<a href=#17 id=17 data-nosnippet>17</a>/// rather than re-randomizing the field - which keeps one field
+<a href=#18 id=18 data-nosnippet>18</a>/// instance reusable for any number of seeded runs.
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+<a href=#20 id=20 data-nosnippet>20</a>#[serde(transparent)]
+<a href=#21 id=21 data-nosnippet>21</a>#[cfg_attr(feature = <span class="string">"schemars"</span>, derive(schemars::JsonSchema))]
+<a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">pub struct </span>Seed(<span class="kw">pub </span>u64);
+<a href=#23 id=23 data-nosnippet>23</a>
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">impl </span>Seed {
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="doccomment">/// A nondeterministic seed from the system clock - the
+<a href=#26 id=26 data-nosnippet>26</a>    /// `Math.random()` equivalent for effect runs.
+<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="kw">pub fn </span>random() -&gt; <span class="self">Self </span>{
+<a href=#28 id=28 data-nosnippet>28</a>        <span class="kw">let </span>nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() <span class="kw">as </span>u64).unwrap_or_default();
+<a href=#29 id=29 data-nosnippet>29</a>        <span class="self">Self</span>(nanos ^ <span class="number">0x9E37_79B9_7F4A_7C15</span>)
+<a href=#30 id=30 data-nosnippet>30</a>    }
+<a href=#31 id=31 data-nosnippet>31</a>
+<a href=#32 id=32 data-nosnippet>32</a>    <span class="doccomment">/// A decorrelated sibling seed - for particle systems that want
+<a href=#33 id=33 data-nosnippet>33</a>    /// several independent fields from one run seed.
+<a href=#34 id=34 data-nosnippet>34</a>    </span><span class="kw">pub fn </span>mix(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Seed) -&gt; Seed {
+<a href=#35 id=35 data-nosnippet>35</a>        <span class="kw">let </span><span class="kw-2">mut </span>z = <span class="self">self</span>.<span class="number">0 </span>^ other.<span class="number">0</span>.wrapping_mul(<span class="number">0x9E37_79B9_7F4A_7C15</span>);
+<a href=#36 id=36 data-nosnippet>36</a>        z = (z ^ (z &gt;&gt; <span class="number">30</span>)).wrapping_mul(<span class="number">0xBF58_476D_1CE4_E5B9</span>);
+<a href=#37 id=37 data-nosnippet>37</a>        z = (z ^ (z &gt;&gt; <span class="number">27</span>)).wrapping_mul(<span class="number">0x94D0_49BB_1331_11EB</span>);
+<a href=#38 id=38 data-nosnippet>38</a>        Seed(z ^ (z &gt;&gt; <span class="number">31</span>))
+<a href=#39 id=39 data-nosnippet>39</a>    }
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="doccomment">/// The seed as a `[0, 1)` scalar - the `uSeed` float equivalent.
+<a href=#42 id=42 data-nosnippet>42</a>    </span><span class="kw">pub fn </span>as_f64(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+<a href=#43 id=43 data-nosnippet>43</a>        (<span class="self">self</span>.<span class="number">0 </span>&gt;&gt; <span class="number">11</span>) <span class="kw">as </span>f64 / (<span class="number">1u64 </span>&lt;&lt; <span class="number">53</span>) <span class="kw">as </span>f64
+<a href=#44 id=44 data-nosnippet>44</a>    }
+<a href=#45 id=45 data-nosnippet>45</a>
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="doccomment">/// A deterministic `Vec2` coordinate offset derived from the seed -
+<a href=#47 id=47 data-nosnippet>47</a>    /// add it to sampled coordinates to vary a run without touching the
+<a href=#48 id=48 data-nosnippet>48</a>    /// field.
+<a href=#49 id=49 data-nosnippet>49</a>    </span><span class="kw">pub fn </span>offset_2d(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec2&lt;()&gt; {
+<a href=#50 id=50 data-nosnippet>50</a>        <span class="kw">let </span>unit: Vec2&lt;()&gt; = <span class="self">self</span>.as_f64().hash();
+<a href=#51 id=51 data-nosnippet>51</a>        unit * <span class="number">1000.0
+<a href=#52 id=52 data-nosnippet>52</a>    </span>}
+<a href=#53 id=53 data-nosnippet>53</a>
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="doccomment">/// A deterministic `Vec3` coordinate offset derived from the seed.
+<a href=#55 id=55 data-nosnippet>55</a>    </span><span class="kw">pub fn </span>offset_3d(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec3&lt;()&gt; {
+<a href=#56 id=56 data-nosnippet>56</a>        <span class="kw">let </span>unit: Vec3&lt;()&gt; = <span class="self">self</span>.as_f64().hash();
+<a href=#57 id=57 data-nosnippet>57</a>        unit * <span class="number">1000.0
+<a href=#58 id=58 data-nosnippet>58</a>    </span>}
+<a href=#59 id=59 data-nosnippet>59</a>}
+<a href=#60 id=60 data-nosnippet>60</a>
+<a href=#61 id=61 data-nosnippet>61</a><span class="attr">#[cfg(test)]
+<a href=#62 id=62 data-nosnippet>62</a></span><span class="kw">mod </span>tests {
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#64 id=64 data-nosnippet>64</a>
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="attr">#[test]
+<a href=#66 id=66 data-nosnippet>66</a>    </span><span class="kw">fn </span>mix_is_deterministic_and_decorrelated() {
+<a href=#67 id=67 data-nosnippet>67</a>        <span class="macro">assert_eq!</span>(Seed(<span class="number">1</span>).mix(<span class="kw-2">&amp;</span>Seed(<span class="number">2</span>)), Seed(<span class="number">1</span>).mix(<span class="kw-2">&amp;</span>Seed(<span class="number">2</span>)));
+<a href=#68 id=68 data-nosnippet>68</a>        <span class="macro">assert_ne!</span>(Seed(<span class="number">1</span>).mix(<span class="kw-2">&amp;</span>Seed(<span class="number">2</span>)), Seed(<span class="number">2</span>).mix(<span class="kw-2">&amp;</span>Seed(<span class="number">1</span>)));
+<a href=#69 id=69 data-nosnippet>69</a>    }
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="attr">#[test]
+<a href=#72 id=72 data-nosnippet>72</a>    </span><span class="kw">fn </span>serde_roundtrip_is_a_plain_number() {
+<a href=#73 id=73 data-nosnippet>73</a>        <span class="kw">let </span>json = serde_json::to_string(<span class="kw-2">&amp;</span>Seed(<span class="number">42</span>)).unwrap();
+<a href=#74 id=74 data-nosnippet>74</a>        <span class="macro">assert_eq!</span>(json, <span class="string">"42"</span>);
+<a href=#75 id=75 data-nosnippet>75</a>        <span class="macro">assert_eq!</span>(serde_json::from_str::&lt;Seed&gt;(<span class="kw-2">&amp;</span>json).unwrap(), Seed(<span class="number">42</span>));
+<a href=#76 id=76 data-nosnippet>76</a>    }
+<a href=#77 id=77 data-nosnippet>77</a>}
+</code></pre></div></section></main></body></html>

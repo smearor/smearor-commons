@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Fbm","Gain","Lacunarity","Octaves","Seed","Simplex2D","Simplex2DFractal","Simplex3D","Simplex3DFractal"],"trait":["Field","Hash"]};
