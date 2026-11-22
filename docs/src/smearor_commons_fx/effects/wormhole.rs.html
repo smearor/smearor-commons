@@ -1,0 +1,494 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/fx/src/effects/wormhole.rs`."><title>wormhole.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="smearor_commons_fx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">smearor_commons_fx/effects/</div>wormhole.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::FxContext;
+<a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::FxError;
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::Layer;
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::Layers;
+<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span><span class="kw">crate</span>::ParamKind;
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::ParamSpec;
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span><span class="kw">crate</span>::ParamValue;
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::WindowEffect;
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>serde::Deserialize;
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>serde::Serialize;
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>smearor_commons_buffer::BufferView;
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>smearor_commons_buffer::BufferViewMut;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>smearor_commons_buffer::Rgba;
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>smearor_commons_color::Color;
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>smearor_commons_geometry::Factor;
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span>smearor_commons_geometry::Vec2;
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// The desktop is a rubber sheet that gets sucked into the screen
+<a href=#19 id=19 data-nosnippet>19</a>/// around the window's centre, turning into a fog-darkened tube; a
+<a href=#20 id=20 data-nosnippet>20</a>/// small window lies on the sheet's rising floor and is pushed out
+<a href=#21 id=21 data-nosnippet>21</a>/// as the sheet flattens.
+<a href=#22 id=22 data-nosnippet>22</a>///
+<a href=#23 id=23 data-nosnippet>23</a>/// Behavioral spec (source shader: `wormhole.frag`, re-implemented
+<a href=#24 id=24 data-nosnippet>24</a>/// from semantics in `WINDOW_ON_SHEET` mode with `BOUNCE` and
+<a href=#25 id=25 data-nosnippet>25</a>/// `BOUNCE_ON_CLOSE`): geometry lives in "portal space"
+<a href=#26 id=26 data-nosnippet>26</a>/// (`v = (px - center) / axes`, distance = superellipse norm with
+<a href=#27 id=27 data-nosnippet>27</a>/// `SHAPE_POWER`, so the funnel follows the window's aspect). The
+<a href=#28 id=28 data-nosnippet>28</a>/// camera sits `CAMERA_DIST` above the sheet; a sheet point at depth
+<a href=#29 id=29 data-nosnippet>29</a>/// `z` is seen at `v * dist / (dist + z)` - `unproject` inverts that
+<a href=#30 id=30 data-nosnippet>30</a>/// by bisection (`SOLVE_STEPS`). Sheet depth
+<a href=#31 id=31 data-nosnippet>31</a>/// `amp * (1-u)^2 / (u - throat)^THROAT_EXP` flattens seamlessly at
+<a href=#32 id=32 data-nosnippet>32</a>/// `u = 1` and plunges to the rising floor near the throat; fog
+<a href=#33 id=33 data-nosnippet>33</a>/// `exp(-depth * fog)` darkens it into the void. The window rides on
+<a href=#34 id=34 data-nosnippet>34</a>/// the sheet (`gSheetScale`), fading in over `T_APPEAR`.
+<a href=#35 id=35 data-nosnippet>35</a>/// `wormhole-bounce` (&gt; 0) replaces the eased landing with a
+<a href=#36 id=36 data-nosnippet>36</a>/// physically-timed ball bounce (`BOUNCE_COUNT` dips, restitution =
+<a href=#37 id=37 data-nosnippet>37</a>/// `bounce`) - opening bounces the flattening, closing the funnel's
+<a href=#38 id=38 data-nosnippet>38</a>/// collapse. `uAxes` = `frame_half * funnel_size + FUNNEL_EXTRA`,
+<a href=#39 id=39 data-nosnippet>39</a>/// clamped to the texture, matching `Wormhole.js`.
+<a href=#40 id=40 data-nosnippet>40</a>///
+<a href=#41 id=41 data-nosnippet>41</a>/// Two-pass effect: `Layer::Surface` warps the backdrop, `Layer::Window`
+<a href=#42 id=42 data-nosnippet>42</a>/// rides the sheet - the consumer composites window over surface.
+<a href=#43 id=43 data-nosnippet>43</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+<a href=#44 id=44 data-nosnippet>44</a>#[cfg_attr(feature = <span class="string">"schemars"</span>, derive(schemars::JsonSchema))]
+<a href=#45 id=45 data-nosnippet>45</a></span><span class="kw">pub struct </span>Wormhole {
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="doccomment">/// Throat radius - schema `wormhole-void-size`, default `0.65`.
+<a href=#47 id=47 data-nosnippet>47</a>    </span><span class="attr">#[serde(default = <span class="string">"Wormhole::default_void_size"</span>)]
+<a href=#48 id=48 data-nosnippet>48</a>    </span><span class="kw">pub </span>void_size: Factor,
+<a href=#49 id=49 data-nosnippet>49</a>    <span class="doccomment">/// Visible tube depth - schema `wormhole-tunnel-depth`, default `1.0`.
+<a href=#50 id=50 data-nosnippet>50</a>    </span><span class="attr">#[serde(default = <span class="string">"Wormhole::default_tunnel_depth"</span>)]
+<a href=#51 id=51 data-nosnippet>51</a>    </span><span class="kw">pub </span>tunnel_depth: Factor,
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="doccomment">/// Funnel reach - schema `wormhole-funnel-size`, default `1.35`.
+<a href=#53 id=53 data-nosnippet>53</a>    </span><span class="attr">#[serde(default = <span class="string">"Wormhole::default_funnel_size"</span>)]
+<a href=#54 id=54 data-nosnippet>54</a>    </span><span class="kw">pub </span>funnel_size: Factor,
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="doccomment">/// Landing bounce restitution - schema `wormhole-bounce`, default `0.5`.
+<a href=#56 id=56 data-nosnippet>56</a>    </span><span class="attr">#[serde(default = <span class="string">"Wormhole::default_bounce"</span>)]
+<a href=#57 id=57 data-nosnippet>57</a>    </span><span class="kw">pub </span>bounce: Factor,
+<a href=#58 id=58 data-nosnippet>58</a>}
+<a href=#59 id=59 data-nosnippet>59</a>
+<a href=#60 id=60 data-nosnippet>60</a><span class="kw">impl </span>Wormhole {
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">const fn </span>default_void_size() -&gt; Factor {
+<a href=#62 id=62 data-nosnippet>62</a>        Factor::new(<span class="number">0.65</span>)
+<a href=#63 id=63 data-nosnippet>63</a>    }
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">const fn </span>default_tunnel_depth() -&gt; Factor {
+<a href=#65 id=65 data-nosnippet>65</a>        Factor::new(<span class="number">1.0</span>)
+<a href=#66 id=66 data-nosnippet>66</a>    }
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">const fn </span>default_funnel_size() -&gt; Factor {
+<a href=#68 id=68 data-nosnippet>68</a>        Factor::new(<span class="number">1.35</span>)
+<a href=#69 id=69 data-nosnippet>69</a>    }
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">const fn </span>default_bounce() -&gt; Factor {
+<a href=#71 id=71 data-nosnippet>71</a>        Factor::new(<span class="number">0.5</span>)
+<a href=#72 id=72 data-nosnippet>72</a>    }
+<a href=#73 id=73 data-nosnippet>73</a>}
+<a href=#74 id=74 data-nosnippet>74</a>
+<a href=#75 id=75 data-nosnippet>75</a><span class="kw">impl </span>Default <span class="kw">for </span>Wormhole {
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#77 id=77 data-nosnippet>77</a>        <span class="self">Self </span>{
+<a href=#78 id=78 data-nosnippet>78</a>            void_size: <span class="self">Self</span>::default_void_size(),
+<a href=#79 id=79 data-nosnippet>79</a>            tunnel_depth: <span class="self">Self</span>::default_tunnel_depth(),
+<a href=#80 id=80 data-nosnippet>80</a>            funnel_size: <span class="self">Self</span>::default_funnel_size(),
+<a href=#81 id=81 data-nosnippet>81</a>            bounce: <span class="self">Self</span>::default_bounce(),
+<a href=#82 id=82 data-nosnippet>82</a>        }
+<a href=#83 id=83 data-nosnippet>83</a>    }
+<a href=#84 id=84 data-nosnippet>84</a>}
+<a href=#85 id=85 data-nosnippet>85</a>
+<a href=#86 id=86 data-nosnippet>86</a><span class="kw">const </span>SHAPE_POWER: f64 = <span class="number">2.5</span>;
+<a href=#87 id=87 data-nosnippet>87</a><span class="kw">const </span>CAMERA_DIST: f64 = <span class="number">1.5</span>;
+<a href=#88 id=88 data-nosnippet>88</a><span class="kw">const </span>AMPLITUDE: f64 = <span class="number">0.5</span>;
+<a href=#89 id=89 data-nosnippet>89</a><span class="kw">const </span>THROAT_EXP: f64 = <span class="number">1.0</span>;
+<a href=#90 id=90 data-nosnippet>90</a><span class="kw">const </span>AMP_START: f64 = <span class="number">0.6</span>;
+<a href=#91 id=91 data-nosnippet>91</a><span class="kw">const </span>THROAT_START: f64 = <span class="number">0.35</span>;
+<a href=#92 id=92 data-nosnippet>92</a><span class="kw">const </span>SPREAD_START: f64 = <span class="number">0.55</span>;
+<a href=#93 id=93 data-nosnippet>93</a><span class="kw">const </span>FOG_BASE: f64 = <span class="number">0.9</span>;
+<a href=#94 id=94 data-nosnippet>94</a><span class="kw">const </span>WALL_LIGHT: f64 = <span class="number">0.35</span>;
+<a href=#95 id=95 data-nosnippet>95</a><span class="kw">const </span>LIGHT_TO: Vec2&lt;()&gt; = Vec2::&lt;()&gt;::new(std::f64::consts::FRAC_1_SQRT_2, std::f64::consts::FRAC_1_SQRT_2);
+<a href=#96 id=96 data-nosnippet>96</a><span class="kw">const </span>WIN_SHEET_START: f64 = <span class="number">0.12</span>;
+<a href=#97 id=97 data-nosnippet>97</a><span class="kw">const </span>FLOOR_START: f64 = <span class="number">0.002</span>;
+<a href=#98 id=98 data-nosnippet>98</a><span class="kw">const </span>FLOOR_RISE: f64 = <span class="number">1.0</span>;
+<a href=#99 id=99 data-nosnippet>99</a><span class="kw">const </span>T_SINK: (f64, f64) = (<span class="number">0.0</span>, <span class="number">0.30</span>);
+<a href=#100 id=100 data-nosnippet>100</a><span class="kw">const </span>T_WIDEN: (f64, f64) = (<span class="number">0.05</span>, <span class="number">0.50</span>);
+<a href=#101 id=101 data-nosnippet>101</a><span class="kw">const </span>T_APPEAR: (f64, f64) = (<span class="number">0.38</span>, <span class="number">0.48</span>);
+<a href=#102 id=102 data-nosnippet>102</a><span class="kw">const </span>T_FLAT: (f64, f64) = (<span class="number">0.45</span>, <span class="number">1.00</span>);
+<a href=#103 id=103 data-nosnippet>103</a><span class="kw">const </span>T_RISE: (f64, f64) = (<span class="number">0.40</span>, <span class="number">0.95</span>);
+<a href=#104 id=104 data-nosnippet>104</a><span class="kw">const </span>BOUNCE_COUNT: usize = <span class="number">3</span>;
+<a href=#105 id=105 data-nosnippet>105</a><span class="kw">const </span>SOLVE_STEPS: usize = <span class="number">24</span>;
+<a href=#106 id=106 data-nosnippet>106</a><span class="kw">const </span>FUNNEL_EXTRA: f64 = <span class="number">80.0</span>;
+<a href=#107 id=107 data-nosnippet>107</a>
+<a href=#108 id=108 data-nosnippet>108</a><span class="doccomment">/// `shapeNorm` - superellipse distance, follows the window's aspect.
+<a href=#109 id=109 data-nosnippet>109</a></span><span class="kw">fn </span>shape_norm(v: Vec2&lt;()&gt;) -&gt; f64 {
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">let </span>a = v.x.abs();
+<a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">let </span>b = v.y.abs();
+<a href=#112 id=112 data-nosnippet>112</a>    (a.powf(SHAPE_POWER) + b.powf(SHAPE_POWER)).powf(<span class="number">1.0 </span>/ SHAPE_POWER)
+<a href=#113 id=113 data-nosnippet>113</a>}
+<a href=#114 id=114 data-nosnippet>114</a>
+<a href=#115 id=115 data-nosnippet>115</a><span class="doccomment">/// `bounceTime` - total air time of all dips, in units of the fall.
+<a href=#116 id=116 data-nosnippet>116</a></span><span class="kw">fn </span>bounce_time(restitution: f64) -&gt; f64 {
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span><span class="kw-2">mut </span>total = <span class="number">0.0</span>;
+<a href=#118 id=118 data-nosnippet>118</a>    <span class="kw">let </span><span class="kw-2">mut </span>e = <span class="number">1.0</span>;
+<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">for _ in </span><span class="number">0</span>..BOUNCE_COUNT {
+<a href=#120 id=120 data-nosnippet>120</a>        e <span class="kw-2">*</span>= restitution;
+<a href=#121 id=121 data-nosnippet>121</a>        total += <span class="number">2.0 </span>* e;
+<a href=#122 id=122 data-nosnippet>122</a>    }
+<a href=#123 id=123 data-nosnippet>123</a>    total
+<a href=#124 id=124 data-nosnippet>124</a>}
+<a href=#125 id=125 data-nosnippet>125</a>
+<a href=#126 id=126 data-nosnippet>126</a><span class="doccomment">/// `bounceDip` - depth below "at rest", `s` in units of the fall's
+<a href=#127 id=127 data-nosnippet>127</a>/// duration (the fall covers 1 in time 1, so gravity = 2).
+<a href=#128 id=128 data-nosnippet>128</a></span><span class="kw">fn </span>bounce_dip(s: f64, restitution: f64) -&gt; f64 {
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="kw">let </span><span class="kw-2">mut </span>start = <span class="number">0.0</span>;
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="kw">let </span><span class="kw-2">mut </span>e = <span class="number">1.0</span>;
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">for _ in </span><span class="number">0</span>..BOUNCE_COUNT {
+<a href=#132 id=132 data-nosnippet>132</a>        e <span class="kw-2">*</span>= restitution;
+<a href=#133 id=133 data-nosnippet>133</a>        <span class="kw">let </span>dur = <span class="number">2.0 </span>* e;
+<a href=#134 id=134 data-nosnippet>134</a>        <span class="kw">if </span>s &lt; start + dur {
+<a href=#135 id=135 data-nosnippet>135</a>            <span class="kw">let </span>x = (s - start) / dur;
+<a href=#136 id=136 data-nosnippet>136</a>            <span class="kw">return </span>e * e * <span class="number">4.0 </span>* x * (<span class="number">1.0 </span>- x);
+<a href=#137 id=137 data-nosnippet>137</a>        }
+<a href=#138 id=138 data-nosnippet>138</a>        start += dur;
+<a href=#139 id=139 data-nosnippet>139</a>    }
+<a href=#140 id=140 data-nosnippet>140</a>    <span class="number">0.0
+<a href=#141 id=141 data-nosnippet>141</a></span>}
+<a href=#142 id=142 data-nosnippet>142</a>
+<a href=#143 id=143 data-nosnippet>143</a><span class="doccomment">/// Per-frame funnel state (the shader's `g*` uniforms).
+<a href=#144 id=144 data-nosnippet>144</a></span><span class="kw">struct </span>Funnel {
+<a href=#145 id=145 data-nosnippet>145</a>    amp: f64,
+<a href=#146 id=146 data-nosnippet>146</a>    throat: f64,
+<a href=#147 id=147 data-nosnippet>147</a>    fog: f64,
+<a href=#148 id=148 data-nosnippet>148</a>    floor: f64,
+<a href=#149 id=149 data-nosnippet>149</a>    sheet_scale: f64,
+<a href=#150 id=150 data-nosnippet>150</a>    win_alpha: f64,
+<a href=#151 id=151 data-nosnippet>151</a>    axes: Vec2&lt;()&gt;,
+<a href=#152 id=152 data-nosnippet>152</a>    center: Vec2&lt;()&gt;,
+<a href=#153 id=153 data-nosnippet>153</a>}
+<a href=#154 id=154 data-nosnippet>154</a>
+<a href=#155 id=155 data-nosnippet>155</a><span class="kw">impl </span>Funnel {
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="doccomment">/// `surfaceDepth` - sheet depth at norm `u`, to the floor.
+<a href=#157 id=157 data-nosnippet>157</a>    </span><span class="kw">fn </span>depth(<span class="kw-2">&amp;</span><span class="self">self</span>, u: f64) -&gt; f64 {
+<a href=#158 id=158 data-nosnippet>158</a>        <span class="kw">if </span>u &gt;= <span class="number">1.0 </span>|| <span class="self">self</span>.amp &lt;= <span class="number">0.0 </span>{
+<a href=#159 id=159 data-nosnippet>159</a>            <span class="kw">return </span><span class="number">0.0</span>;
+<a href=#160 id=160 data-nosnippet>160</a>        }
+<a href=#161 id=161 data-nosnippet>161</a>        <span class="kw">let </span>d = (u - <span class="self">self</span>.throat).max(<span class="number">0.0</span>) + <span class="self">self</span>.floor;
+<a href=#162 id=162 data-nosnippet>162</a>        <span class="self">self</span>.amp * (<span class="number">1.0 </span>- u) * (<span class="number">1.0 </span>- u) / d.powf(THROAT_EXP)
+<a href=#163 id=163 data-nosnippet>163</a>    }
+<a href=#164 id=164 data-nosnippet>164</a>
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="doccomment">/// `project` - where a sheet point at norm `u` appears on screen.
+<a href=#166 id=166 data-nosnippet>166</a>    </span><span class="kw">fn </span>project(<span class="kw-2">&amp;</span><span class="self">self</span>, u: f64) -&gt; f64 {
+<a href=#167 id=167 data-nosnippet>167</a>        u * CAMERA_DIST / (CAMERA_DIST + <span class="self">self</span>.depth(u))
+<a href=#168 id=168 data-nosnippet>168</a>    }
+<a href=#169 id=169 data-nosnippet>169</a>
+<a href=#170 id=170 data-nosnippet>170</a>    <span class="doccomment">/// `unproject` - the sheet point seen at screen norm `uq`
+<a href=#171 id=171 data-nosnippet>171</a>    /// (bisection; `project` rises monotonically).
+<a href=#172 id=172 data-nosnippet>172</a>    </span><span class="kw">fn </span>unproject(<span class="kw-2">&amp;</span><span class="self">self</span>, uq: f64) -&gt; f64 {
+<a href=#173 id=173 data-nosnippet>173</a>        <span class="kw">if </span>uq &gt;= <span class="number">1.0 </span>|| <span class="self">self</span>.amp &lt;= <span class="number">0.0 </span>{
+<a href=#174 id=174 data-nosnippet>174</a>            <span class="kw">return </span>uq;
+<a href=#175 id=175 data-nosnippet>175</a>        }
+<a href=#176 id=176 data-nosnippet>176</a>        <span class="kw">let </span>(<span class="kw-2">mut </span>lo, <span class="kw-2">mut </span>hi) = (<span class="number">0.0</span>, <span class="number">1.0</span>);
+<a href=#177 id=177 data-nosnippet>177</a>        <span class="kw">for _ in </span><span class="number">0</span>..SOLVE_STEPS {
+<a href=#178 id=178 data-nosnippet>178</a>            <span class="kw">let </span>mid = <span class="number">0.5 </span>* (lo + hi);
+<a href=#179 id=179 data-nosnippet>179</a>            <span class="kw">if </span><span class="self">self</span>.project(mid) &lt; uq {
+<a href=#180 id=180 data-nosnippet>180</a>                lo = mid;
+<a href=#181 id=181 data-nosnippet>181</a>            } <span class="kw">else </span>{
+<a href=#182 id=182 data-nosnippet>182</a>                hi = mid;
+<a href=#183 id=183 data-nosnippet>183</a>            }
+<a href=#184 id=184 data-nosnippet>184</a>        }
+<a href=#185 id=185 data-nosnippet>185</a>        <span class="number">0.5 </span>* (lo + hi)
+<a href=#186 id=186 data-nosnippet>186</a>    }
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>    <span class="doccomment">/// `sheetAt` - the sheet pixel seen at layer pixel `px`, plus fog
+<a href=#189 id=189 data-nosnippet>189</a>    /// and slope lighting.
+<a href=#190 id=190 data-nosnippet>190</a>    </span><span class="kw">fn </span>sheet_at(<span class="kw-2">&amp;</span><span class="self">self</span>, px: Vec2&lt;()&gt;, v: Vec2&lt;()&gt;, uq: f64) -&gt; (Vec2&lt;()&gt;, f64) {
+<a href=#191 id=191 data-nosnippet>191</a>        <span class="kw">if </span>uq &gt;= <span class="number">1.0 </span>|| <span class="self">self</span>.amp &lt;= <span class="number">0.0 </span>{
+<a href=#192 id=192 data-nosnippet>192</a>            <span class="kw">return </span>(px, <span class="number">1.0</span>);
+<a href=#193 id=193 data-nosnippet>193</a>        }
+<a href=#194 id=194 data-nosnippet>194</a>        <span class="kw">let </span>u = <span class="self">self</span>.unproject(uq);
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">let </span>k = u / uq.max(<span class="number">1e-6</span>);
+<a href=#196 id=196 data-nosnippet>196</a>        <span class="kw">let </span>sheet_px = <span class="self">self</span>.center + Vec2::&lt;()&gt;::new(v.x * k * <span class="self">self</span>.axes.x, v.y * k * <span class="self">self</span>.axes.y);
+<a href=#197 id=197 data-nosnippet>197</a>        <span class="kw">let </span>h = <span class="self">self</span>.depth(u);
+<a href=#198 id=198 data-nosnippet>198</a>        <span class="kw">let </span>slope = ((<span class="self">self</span>.depth(u + <span class="number">1e-3</span>) - h) / -<span class="number">1e-3</span>).max(<span class="number">0.0</span>);
+<a href=#199 id=199 data-nosnippet>199</a>        <span class="kw">let </span>slope = slope / (<span class="number">1.0 </span>+ slope);
+<a href=#200 id=200 data-nosnippet>200</a>        <span class="kw">let </span>dir = <span class="kw">if </span>uq &gt; <span class="number">1e-5 </span>{
+<a href=#201 id=201 data-nosnippet>201</a>            <span class="kw">let </span>l = (v.x * v.x + v.y * v.y).sqrt();
+<a href=#202 id=202 data-nosnippet>202</a>            Vec2::&lt;()&gt;::new(v.x / l, v.y / l)
+<a href=#203 id=203 data-nosnippet>203</a>        } <span class="kw">else </span>{
+<a href=#204 id=204 data-nosnippet>204</a>            Vec2::&lt;()&gt;::new(<span class="number">0.0</span>, <span class="number">0.0</span>)
+<a href=#205 id=205 data-nosnippet>205</a>        };
+<a href=#206 id=206 data-nosnippet>206</a>        <span class="kw">let </span>bright = ((-h * <span class="self">self</span>.fog).exp() * (<span class="number">1.0 </span>+ WALL_LIGHT * (dir.x * LIGHT_TO.x + dir.y * LIGHT_TO.y) * slope)).max(<span class="number">0.0</span>);
+<a href=#207 id=207 data-nosnippet>207</a>        (sheet_px, bright)
+<a href=#208 id=208 data-nosnippet>208</a>    }
+<a href=#209 id=209 data-nosnippet>209</a>}
+<a href=#210 id=210 data-nosnippet>210</a>
+<a href=#211 id=211 data-nosnippet>211</a><span class="doccomment">/// The window's texture read - transparent outside `[0, 1]` (the
+<a href=#212 id=212 data-nosnippet>212</a>/// shader's bounds check), unlike the clamp-to-edge surface read.
+<a href=#213 id=213 data-nosnippet>213</a></span><span class="kw">fn </span>read_window(view: BufferView&lt;<span class="lifetime">'_</span>, Rgba&gt;, uv: Vec2&lt;()&gt;) -&gt; Color&lt;f64&gt; {
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="kw">if </span>!(<span class="number">0.0</span>..=<span class="number">1.0</span>).contains(<span class="kw-2">&amp;</span>uv.x) || !(<span class="number">0.0</span>..=<span class="number">1.0</span>).contains(<span class="kw-2">&amp;</span>uv.y) {
+<a href=#215 id=215 data-nosnippet>215</a>        <span class="kw">return </span>Color::&lt;f64&gt;::new_rgba(<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>);
+<a href=#216 id=216 data-nosnippet>216</a>    }
+<a href=#217 id=217 data-nosnippet>217</a>    view.sample_bilinear(uv)
+<a href=#218 id=218 data-nosnippet>218</a>}
+<a href=#219 id=219 data-nosnippet>219</a>
+<a href=#220 id=220 data-nosnippet>220</a><span class="kw">const </span>PARAMS: <span class="kw-2">&amp;</span>[ParamSpec] = <span class="kw-2">&amp;</span>[
+<a href=#221 id=221 data-nosnippet>221</a>    ParamSpec {
+<a href=#222 id=222 data-nosnippet>222</a>        key: <span class="string">"void_size"</span>,
+<a href=#223 id=223 data-nosnippet>223</a>        label: <span class="string">"Void Size"</span>,
+<a href=#224 id=224 data-nosnippet>224</a>        kind: ParamKind::Float {
+<a href=#225 id=225 data-nosnippet>225</a>            min: <span class="number">0.05</span>,
+<a href=#226 id=226 data-nosnippet>226</a>            max: <span class="number">2.0</span>,
+<a href=#227 id=227 data-nosnippet>227</a>            step: <span class="number">0.05</span>,
+<a href=#228 id=228 data-nosnippet>228</a>            default: <span class="number">0.65</span>,
+<a href=#229 id=229 data-nosnippet>229</a>        },
+<a href=#230 id=230 data-nosnippet>230</a>    },
+<a href=#231 id=231 data-nosnippet>231</a>    ParamSpec {
+<a href=#232 id=232 data-nosnippet>232</a>        key: <span class="string">"tunnel_depth"</span>,
+<a href=#233 id=233 data-nosnippet>233</a>        label: <span class="string">"Tunnel Depth"</span>,
+<a href=#234 id=234 data-nosnippet>234</a>        kind: ParamKind::Float {
+<a href=#235 id=235 data-nosnippet>235</a>            min: <span class="number">0.05</span>,
+<a href=#236 id=236 data-nosnippet>236</a>            max: <span class="number">4.0</span>,
+<a href=#237 id=237 data-nosnippet>237</a>            step: <span class="number">0.05</span>,
+<a href=#238 id=238 data-nosnippet>238</a>            default: <span class="number">1.0</span>,
+<a href=#239 id=239 data-nosnippet>239</a>        },
+<a href=#240 id=240 data-nosnippet>240</a>    },
+<a href=#241 id=241 data-nosnippet>241</a>    ParamSpec {
+<a href=#242 id=242 data-nosnippet>242</a>        key: <span class="string">"funnel_size"</span>,
+<a href=#243 id=243 data-nosnippet>243</a>        label: <span class="string">"Funnel Size"</span>,
+<a href=#244 id=244 data-nosnippet>244</a>        kind: ParamKind::Float {
+<a href=#245 id=245 data-nosnippet>245</a>            min: <span class="number">0.5</span>,
+<a href=#246 id=246 data-nosnippet>246</a>            max: <span class="number">4.0</span>,
+<a href=#247 id=247 data-nosnippet>247</a>            step: <span class="number">0.05</span>,
+<a href=#248 id=248 data-nosnippet>248</a>            default: <span class="number">1.35</span>,
+<a href=#249 id=249 data-nosnippet>249</a>        },
+<a href=#250 id=250 data-nosnippet>250</a>    },
+<a href=#251 id=251 data-nosnippet>251</a>    ParamSpec {
+<a href=#252 id=252 data-nosnippet>252</a>        key: <span class="string">"bounce"</span>,
+<a href=#253 id=253 data-nosnippet>253</a>        label: <span class="string">"Bounce"</span>,
+<a href=#254 id=254 data-nosnippet>254</a>        kind: ParamKind::Float {
+<a href=#255 id=255 data-nosnippet>255</a>            min: <span class="number">0.0</span>,
+<a href=#256 id=256 data-nosnippet>256</a>            max: <span class="number">0.95</span>,
+<a href=#257 id=257 data-nosnippet>257</a>            step: <span class="number">0.05</span>,
+<a href=#258 id=258 data-nosnippet>258</a>            default: <span class="number">0.5</span>,
+<a href=#259 id=259 data-nosnippet>259</a>        },
+<a href=#260 id=260 data-nosnippet>260</a>    },
+<a href=#261 id=261 data-nosnippet>261</a>];
+<a href=#262 id=262 data-nosnippet>262</a>
+<a href=#263 id=263 data-nosnippet>263</a><span class="kw">impl </span>WindowEffect <span class="kw">for </span>Wormhole {
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">fn </span>nick(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#265 id=265 data-nosnippet>265</a>        <span class="string">"wormhole"
+<a href=#266 id=266 data-nosnippet>266</a>    </span>}
+<a href=#267 id=267 data-nosnippet>267</a>
+<a href=#268 id=268 data-nosnippet>268</a>    <span class="kw">fn </span>label(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#269 id=269 data-nosnippet>269</a>        <span class="string">"Wormhole"
+<a href=#270 id=270 data-nosnippet>270</a>    </span>}
+<a href=#271 id=271 data-nosnippet>271</a>
+<a href=#272 id=272 data-nosnippet>272</a>    <span class="kw">fn </span>layers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Layers {
+<a href=#273 id=273 data-nosnippet>273</a>        Layers::SurfaceAndWindow
+<a href=#274 id=274 data-nosnippet>274</a>    }
+<a href=#275 id=275 data-nosnippet>275</a>
+<a href=#276 id=276 data-nosnippet>276</a>    <span class="kw">fn </span>params(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[ParamSpec] {
+<a href=#277 id=277 data-nosnippet>277</a>        PARAMS
+<a href=#278 id=278 data-nosnippet>278</a>    }
+<a href=#279 id=279 data-nosnippet>279</a>
+<a href=#280 id=280 data-nosnippet>280</a>    <span class="kw">fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;ParamValue&gt; {
+<a href=#281 id=281 data-nosnippet>281</a>        <span class="macro">vec!</span>[
+<a href=#282 id=282 data-nosnippet>282</a>            ParamValue::Float(<span class="self">self</span>.void_size.<span class="number">0</span>),
+<a href=#283 id=283 data-nosnippet>283</a>            ParamValue::Float(<span class="self">self</span>.tunnel_depth.<span class="number">0</span>),
+<a href=#284 id=284 data-nosnippet>284</a>            ParamValue::Float(<span class="self">self</span>.funnel_size.<span class="number">0</span>),
+<a href=#285 id=285 data-nosnippet>285</a>            ParamValue::Float(<span class="self">self</span>.bounce.<span class="number">0</span>),
+<a href=#286 id=286 data-nosnippet>286</a>        ]
+<a href=#287 id=287 data-nosnippet>287</a>    }
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">fn </span>set_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>, values: <span class="kw-2">&amp;</span>[ParamValue]) -&gt; <span class="prelude-ty">Result</span>&lt;(), FxError&gt; {
+<a href=#290 id=290 data-nosnippet>290</a>        <span class="kw">let </span>mismatch = |index: usize| FxError::ParamMismatch(<span class="macro">format!</span>(<span class="string">"wormhole param {index}"</span>));
+<a href=#291 id=291 data-nosnippet>291</a>        <span class="kw">if </span>values.len() != <span class="number">4 </span>{
+<a href=#292 id=292 data-nosnippet>292</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(FxError::ParamMismatch(<span class="macro">format!</span>(<span class="string">"wormhole takes 4 parameters, got {}"</span>, values.len())));
+<a href=#293 id=293 data-nosnippet>293</a>        }
+<a href=#294 id=294 data-nosnippet>294</a>        <span class="self">self</span>.void_size = Factor::new(values[<span class="number">0</span>].as_f64().ok_or(mismatch(<span class="number">0</span>))<span class="question-mark">?</span>);
+<a href=#295 id=295 data-nosnippet>295</a>        <span class="self">self</span>.tunnel_depth = Factor::new(values[<span class="number">1</span>].as_f64().ok_or(mismatch(<span class="number">1</span>))<span class="question-mark">?</span>);
+<a href=#296 id=296 data-nosnippet>296</a>        <span class="self">self</span>.funnel_size = Factor::new(values[<span class="number">2</span>].as_f64().ok_or(mismatch(<span class="number">2</span>))<span class="question-mark">?</span>);
+<a href=#297 id=297 data-nosnippet>297</a>        <span class="self">self</span>.bounce = Factor::new(values[<span class="number">3</span>].as_f64().ok_or(mismatch(<span class="number">3</span>))<span class="question-mark">?</span>);
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="prelude-val">Ok</span>(())
+<a href=#299 id=299 data-nosnippet>299</a>    }
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="kw">fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>FxContext&lt;<span class="lifetime">'_</span>&gt;, out: <span class="kw-2">&amp;mut </span>BufferViewMut&lt;<span class="lifetime">'_</span>, Rgba&gt;) {
+<a href=#302 id=302 data-nosnippet>302</a>        <span class="kw">let </span>size = out.size();
+<a href=#303 id=303 data-nosnippet>303</a>        <span class="kw">let </span>(w, h) = (f64::from(size.x), f64::from(size.y));
+<a href=#304 id=304 data-nosnippet>304</a>        <span class="kw">let </span>opening = ctx.direction == <span class="kw">crate</span>::Direction::Open;
+<a href=#305 id=305 data-nosnippet>305</a>        <span class="kw">let </span>progress = ctx.progress.as_f64();
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>        <span class="comment">// Portal geometry: centre = window centre, axes clamp to the
+<a href=#308 id=308 data-nosnippet>308</a>        // texture (the JS clamps to the screen).
+<a href=#309 id=309 data-nosnippet>309</a>        </span><span class="kw">let </span>frame = ctx.window_rect;
+<a href=#310 id=310 data-nosnippet>310</a>        <span class="kw">let </span>center = Vec2::&lt;()&gt;::new(frame.min.x + frame.size.x * <span class="number">0.5</span>, frame.min.y + frame.size.y * <span class="number">0.5</span>);
+<a href=#311 id=311 data-nosnippet>311</a>        <span class="kw">let </span>ax = (frame.size.x * <span class="number">0.5 </span>* <span class="self">self</span>.funnel_size.<span class="number">0 </span>+ FUNNEL_EXTRA)
+<a href=#312 id=312 data-nosnippet>312</a>            .min(center.x)
+<a href=#313 id=313 data-nosnippet>313</a>            .min(w - center.x)
+<a href=#314 id=314 data-nosnippet>314</a>            .max(<span class="number">8.0</span>);
+<a href=#315 id=315 data-nosnippet>315</a>        <span class="kw">let </span>ay = (frame.size.y * <span class="number">0.5 </span>* <span class="self">self</span>.funnel_size.<span class="number">0 </span>+ FUNNEL_EXTRA)
+<a href=#316 id=316 data-nosnippet>316</a>            .min(center.y)
+<a href=#317 id=317 data-nosnippet>317</a>            .min(h - center.y)
+<a href=#318 id=318 data-nosnippet>318</a>            .max(<span class="number">8.0</span>);
+<a href=#319 id=319 data-nosnippet>319</a>
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="comment">// Timeline + bounce (BOUNCE_KEEP_INTRO path: normal pace until
+<a href=#321 id=321 data-nosnippet>321</a>        // the knee, then fall + dips in the time left).
+<a href=#322 id=322 data-nosnippet>322</a>        </span><span class="kw">let </span>bounce_on = <span class="self">self</span>.bounce.<span class="number">0 </span>&gt; <span class="number">0.001</span>;
+<a href=#323 id=323 data-nosnippet>323</a>        <span class="kw">let </span>open_bounce = bounce_on &amp;&amp; opening;
+<a href=#324 id=324 data-nosnippet>324</a>        <span class="kw">let </span>close_bounce = bounce_on &amp;&amp; !opening;
+<a href=#325 id=325 data-nosnippet>325</a>        <span class="kw">let </span><span class="kw-2">mut </span>progress_eff = <span class="kw">if </span>opening { progress } <span class="kw">else </span>{ <span class="number">1.0 </span>- progress };
+<a href=#326 id=326 data-nosnippet>326</a>        <span class="kw">let </span><span class="kw-2">mut </span>dip = <span class="number">0.0</span>;
+<a href=#327 id=327 data-nosnippet>327</a>        <span class="kw">let </span><span class="kw-2">mut </span>landed = <span class="bool-val">false</span>;
+<a href=#328 id=328 data-nosnippet>328</a>        <span class="kw">if </span>open_bounce || close_bounce {
+<a href=#329 id=329 data-nosnippet>329</a>            <span class="kw">let </span>knee = <span class="kw">if </span>open_bounce { T_FLAT.<span class="number">0 </span>} <span class="kw">else </span>{ <span class="number">1.0 </span>- T_SINK.<span class="number">1 </span>};
+<a href=#330 id=330 data-nosnippet>330</a>            <span class="kw">let </span>speed = <span class="number">1.0 </span>+ bounce_time(<span class="self">self</span>.bounce.<span class="number">0</span>);
+<a href=#331 id=331 data-nosnippet>331</a>            <span class="kw">let </span>fall_dur = (<span class="number">1.0 </span>- knee) / speed;
+<a href=#332 id=332 data-nosnippet>332</a>            <span class="kw">let </span>land_at = knee + fall_dur;
+<a href=#333 id=333 data-nosnippet>333</a>            <span class="kw">let </span>p = <span class="kw">if </span>progress &lt;= knee {
+<a href=#334 id=334 data-nosnippet>334</a>                progress
+<a href=#335 id=335 data-nosnippet>335</a>            } <span class="kw">else </span>{
+<a href=#336 id=336 data-nosnippet>336</a>                (knee + (progress - knee) * speed).min(<span class="number">1.0</span>)
+<a href=#337 id=337 data-nosnippet>337</a>            };
+<a href=#338 id=338 data-nosnippet>338</a>            progress_eff = <span class="kw">if </span>opening { p } <span class="kw">else </span>{ <span class="number">1.0 </span>- p };
+<a href=#339 id=339 data-nosnippet>339</a>            <span class="kw">if </span>progress &gt; land_at {
+<a href=#340 id=340 data-nosnippet>340</a>                landed = <span class="bool-val">true</span>;
+<a href=#341 id=341 data-nosnippet>341</a>                dip = bounce_dip((progress - land_at) / fall_dur, <span class="self">self</span>.bounce.<span class="number">0</span>);
+<a href=#342 id=342 data-nosnippet>342</a>            }
+<a href=#343 id=343 data-nosnippet>343</a>        }
+<a href=#344 id=344 data-nosnippet>344</a>
+<a href=#345 id=345 data-nosnippet>345</a>        <span class="kw">let </span>span = |t: (f64, f64)| <span class="kw">crate</span>::smoothstep(t.<span class="number">0</span>, t.<span class="number">1</span>, progress_eff);
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="kw">let </span><span class="kw-2">mut </span>sink = span(T_SINK);
+<a href=#347 id=347 data-nosnippet>347</a>        <span class="kw">if </span>close_bounce {
+<a href=#348 id=348 data-nosnippet>348</a>            <span class="kw">let </span>x = ((T_SINK.<span class="number">1 </span>- progress_eff) / (T_SINK.<span class="number">1 </span>- T_SINK.<span class="number">0</span>)).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>);
+<a href=#349 id=349 data-nosnippet>349</a>            sink = <span class="number">1.0 </span>- x * x + dip;
+<a href=#350 id=350 data-nosnippet>350</a>        }
+<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw">let </span><span class="kw-2">mut </span>widen = span(T_WIDEN);
+<a href=#352 id=352 data-nosnippet>352</a>        <span class="kw">let </span>fall = |t: (f64, f64)| {
+<a href=#353 id=353 data-nosnippet>353</a>            <span class="kw">let </span>x = ((progress_eff - t.<span class="number">0</span>) / (t.<span class="number">1 </span>- t.<span class="number">0</span>)).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>);
+<a href=#354 id=354 data-nosnippet>354</a>            x * x
+<a href=#355 id=355 data-nosnippet>355</a>        };
+<a href=#356 id=356 data-nosnippet>356</a>        <span class="kw">let </span><span class="kw-2">mut </span>flat_t = <span class="kw">if </span>open_bounce { fall(T_FLAT) - dip } <span class="kw">else </span>{ span(T_FLAT) };
+<a href=#357 id=357 data-nosnippet>357</a>        <span class="kw">if </span>close_bounce &amp;&amp; landed {
+<a href=#358 id=358 data-nosnippet>358</a>            sink = <span class="number">1.0</span>;
+<a href=#359 id=359 data-nosnippet>359</a>            widen = <span class="number">1.0</span>;
+<a href=#360 id=360 data-nosnippet>360</a>            flat_t = <span class="number">1.0 </span>- dip;
+<a href=#361 id=361 data-nosnippet>361</a>        }
+<a href=#362 id=362 data-nosnippet>362</a>        <span class="kw">let </span><span class="kw-2">mut </span>rise_t = span(T_RISE);
+<a href=#363 id=363 data-nosnippet>363</a>        <span class="kw">if </span>open_bounce {
+<a href=#364 id=364 data-nosnippet>364</a>            <span class="comment">// Fall in real time to the landing so the speed has no
+<a href=#365 id=365 data-nosnippet>365</a>            // kink where the timeline speeds up (BOUNCE_KEEP_INTRO).
+<a href=#366 id=366 data-nosnippet>366</a>            </span><span class="kw">let </span>knee = T_FLAT.<span class="number">0</span>;
+<a href=#367 id=367 data-nosnippet>367</a>            <span class="kw">let </span>speed = <span class="number">1.0 </span>+ bounce_time(<span class="self">self</span>.bounce.<span class="number">0</span>);
+<a href=#368 id=368 data-nosnippet>368</a>            <span class="kw">let </span>land_at = knee + (<span class="number">1.0 </span>- knee) / speed;
+<a href=#369 id=369 data-nosnippet>369</a>            <span class="kw">let </span>x = ((progress - T_RISE.<span class="number">0</span>) / (land_at - T_RISE.<span class="number">0</span>)).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>);
+<a href=#370 id=370 data-nosnippet>370</a>            rise_t = x * x;
+<a href=#371 id=371 data-nosnippet>371</a>        }
+<a href=#372 id=372 data-nosnippet>372</a>        <span class="kw">let </span>flatness = <span class="number">1.0 </span>- flat_t;
+<a href=#373 id=373 data-nosnippet>373</a>        <span class="kw">let </span>floor_t = <span class="kw">if </span>close_bounce { flat_t.max(<span class="number">1.0 </span>- sink) } <span class="kw">else </span>{ flat_t };
+<a href=#374 id=374 data-nosnippet>374</a>
+<a href=#375 id=375 data-nosnippet>375</a>        <span class="kw">let </span>funnel = Funnel {
+<a href=#376 id=376 data-nosnippet>376</a>            amp: AMPLITUDE * sink * <span class="kw">crate</span>::mix(AMP_START, <span class="number">1.0</span>, widen) * flatness,
+<a href=#377 id=377 data-nosnippet>377</a>            throat: <span class="self">self</span>.void_size.<span class="number">0 </span>* sink * <span class="kw">crate</span>::mix(THROAT_START, <span class="number">1.0</span>, widen) * flatness,
+<a href=#378 id=378 data-nosnippet>378</a>            fog: FOG_BASE / <span class="self">self</span>.tunnel_depth.<span class="number">0</span>.max(<span class="number">0.05</span>),
+<a href=#379 id=379 data-nosnippet>379</a>            floor: FLOOR_START + FLOOR_RISE * floor_t * floor_t,
+<a href=#380 id=380 data-nosnippet>380</a>            sheet_scale: WIN_SHEET_START.ln().mul_add(<span class="number">1.0 </span>- rise_t, <span class="number">0.0</span>).exp(),
+<a href=#381 id=381 data-nosnippet>381</a>            win_alpha: span(T_APPEAR),
+<a href=#382 id=382 data-nosnippet>382</a>            axes: Vec2::&lt;()&gt;::new(ax * <span class="kw">crate</span>::mix(SPREAD_START, <span class="number">1.0</span>, widen), ay * <span class="kw">crate</span>::mix(SPREAD_START, <span class="number">1.0</span>, widen)),
+<a href=#383 id=383 data-nosnippet>383</a>            center,
+<a href=#384 id=384 data-nosnippet>384</a>        };
+<a href=#385 id=385 data-nosnippet>385</a>
+<a href=#386 id=386 data-nosnippet>386</a>        <span class="kw">let </span>surface_pass = ctx.layer == Layer::Surface;
+<a href=#387 id=387 data-nosnippet>387</a>        <span class="kw">let </span>source = <span class="kw">if </span>surface_pass { ctx.surface } <span class="kw">else </span>{ <span class="prelude-val">Some</span>(ctx.window) };
+<a href=#388 id=388 data-nosnippet>388</a>        <span class="kw">crate</span>::render::fill(out, |x, y| {
+<a href=#389 id=389 data-nosnippet>389</a>            <span class="kw">let </span>px = Vec2::&lt;()&gt;::new(x <span class="kw">as </span>f64 + <span class="number">0.5</span>, y <span class="kw">as </span>f64 + <span class="number">0.5</span>);
+<a href=#390 id=390 data-nosnippet>390</a>            <span class="kw">let </span>uv0 = Vec2::&lt;()&gt;::new(px.x / w, px.y / h);
+<a href=#391 id=391 data-nosnippet>391</a>            <span class="kw">let </span><span class="prelude-val">Some</span>(view) = source <span class="kw">else </span>{
+<a href=#392 id=392 data-nosnippet>392</a>                <span class="kw">return </span>Color::&lt;f64&gt;::new_rgba(<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>);
+<a href=#393 id=393 data-nosnippet>393</a>            };
+<a href=#394 id=394 data-nosnippet>394</a>            <span class="kw">let </span>v = Vec2::&lt;()&gt;::new((px.x - center.x) / funnel.axes.x, (px.y - center.y) / funnel.axes.y);
+<a href=#395 id=395 data-nosnippet>395</a>            <span class="kw">let </span>uq = shape_norm(v);
+<a href=#396 id=396 data-nosnippet>396</a>            <span class="kw">if </span>surface_pass {
+<a href=#397 id=397 data-nosnippet>397</a>                <span class="kw">if </span>uq &gt;= <span class="number">1.0 </span>|| funnel.amp &lt;= <span class="number">0.0 </span>{
+<a href=#398 id=398 data-nosnippet>398</a>                    <span class="kw">return </span>view.sample_bilinear(uv0);
+<a href=#399 id=399 data-nosnippet>399</a>                }
+<a href=#400 id=400 data-nosnippet>400</a>                <span class="kw">let </span>(sheet_px, bright) = funnel.sheet_at(px, v, uq);
+<a href=#401 id=401 data-nosnippet>401</a>                <span class="kw">let </span><span class="kw-2">mut </span>c = view.sample_bilinear(Vec2::&lt;()&gt;::new(sheet_px.x / w, sheet_px.y / h));
+<a href=#402 id=402 data-nosnippet>402</a>                c.r <span class="kw-2">*</span>= bright;
+<a href=#403 id=403 data-nosnippet>403</a>                c.g <span class="kw-2">*</span>= bright;
+<a href=#404 id=404 data-nosnippet>404</a>                c.b <span class="kw-2">*</span>= bright;
+<a href=#405 id=405 data-nosnippet>405</a>                c.a = <span class="number">1.0</span>;
+<a href=#406 id=406 data-nosnippet>406</a>                c
+<a href=#407 id=407 data-nosnippet>407</a>            } <span class="kw">else </span>{
+<a href=#408 id=408 data-nosnippet>408</a>                <span class="kw">if </span>funnel.amp &lt;= <span class="number">0.0 </span>&amp;&amp; funnel.sheet_scale &gt;= <span class="number">0.9999 </span>&amp;&amp; funnel.win_alpha &gt;= <span class="number">1.0 </span>{
+<a href=#409 id=409 data-nosnippet>409</a>                    <span class="kw">return </span>view.sample_bilinear(uv0);
+<a href=#410 id=410 data-nosnippet>410</a>                }
+<a href=#411 id=411 data-nosnippet>411</a>                <span class="kw">let </span>(sheet_px, bright) = funnel.sheet_at(px, v, uq);
+<a href=#412 id=412 data-nosnippet>412</a>                <span class="kw">let </span>src_px = Vec2::&lt;()&gt;::new(
+<a href=#413 id=413 data-nosnippet>413</a>                    center.x + (sheet_px.x - center.x) / funnel.sheet_scale.max(<span class="number">1e-4</span>),
+<a href=#414 id=414 data-nosnippet>414</a>                    center.y + (sheet_px.y - center.y) / funnel.sheet_scale.max(<span class="number">1e-4</span>),
+<a href=#415 id=415 data-nosnippet>415</a>                );
+<a href=#416 id=416 data-nosnippet>416</a>                <span class="kw">let </span><span class="kw-2">mut </span>c = read_window(view, Vec2::&lt;()&gt;::new(src_px.x / w, src_px.y / h));
+<a href=#417 id=417 data-nosnippet>417</a>                c.r <span class="kw-2">*</span>= bright;
+<a href=#418 id=418 data-nosnippet>418</a>                c.g <span class="kw-2">*</span>= bright;
+<a href=#419 id=419 data-nosnippet>419</a>                c.b <span class="kw-2">*</span>= bright;
+<a href=#420 id=420 data-nosnippet>420</a>                c.a <span class="kw-2">*</span>= funnel.win_alpha;
+<a href=#421 id=421 data-nosnippet>421</a>                c
+<a href=#422 id=422 data-nosnippet>422</a>            }
+<a href=#423 id=423 data-nosnippet>423</a>        });
+<a href=#424 id=424 data-nosnippet>424</a>    }
+<a href=#425 id=425 data-nosnippet>425</a>}
+<a href=#426 id=426 data-nosnippet>426</a>
+<a href=#427 id=427 data-nosnippet>427</a><span class="attr">#[cfg(test)]
+<a href=#428 id=428 data-nosnippet>428</a></span><span class="kw">mod </span>tests {
+<a href=#429 id=429 data-nosnippet>429</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">use </span><span class="kw">crate</span>::Direction;
+<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">use </span><span class="kw">crate</span>::Layer;
+<a href=#432 id=432 data-nosnippet>432</a>    <span class="kw">use </span>smearor_commons_buffer::PixelBuffer;
+<a href=#433 id=433 data-nosnippet>433</a>    <span class="kw">use </span>smearor_commons_geometry::Fraction;
+<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">use </span>smearor_commons_geometry::Pixels;
+<a href=#435 id=435 data-nosnippet>435</a>    <span class="kw">use </span>smearor_commons_geometry::Rect;
+<a href=#436 id=436 data-nosnippet>436</a>    <span class="kw">use </span>smearor_commons_geometry::Size;
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">use </span>smearor_commons_noise::Seed;
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">use </span>std::time::Duration;
+<a href=#439 id=439 data-nosnippet>439</a>
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="kw">fn </span>solid(size: u32) -&gt; PixelBuffer&lt;Rgba&gt; {
+<a href=#441 id=441 data-nosnippet>441</a>        <span class="kw">let </span><span class="kw-2">mut </span>buffer = PixelBuffer::&lt;Rgba&gt;::new(Size::new(size, size));
+<a href=#442 id=442 data-nosnippet>442</a>        <span class="kw">let </span><span class="kw-2">mut </span>view = buffer.view_mut();
+<a href=#443 id=443 data-nosnippet>443</a>        <span class="kw">let </span>c = Color::&lt;f64&gt;::new_rgba(<span class="number">0.5</span>, <span class="number">0.5</span>, <span class="number">0.5</span>, <span class="number">1.0</span>);
+<a href=#444 id=444 data-nosnippet>444</a>        <span class="kw">for </span>y <span class="kw">in </span><span class="number">0</span>..size {
+<a href=#445 id=445 data-nosnippet>445</a>            <span class="kw">for </span>x <span class="kw">in </span><span class="number">0</span>..size {
+<a href=#446 id=446 data-nosnippet>446</a>                view.put_color(Pixels::new(x), Pixels::new(y), c);
+<a href=#447 id=447 data-nosnippet>447</a>            }
+<a href=#448 id=448 data-nosnippet>448</a>        }
+<a href=#449 id=449 data-nosnippet>449</a>        buffer
+<a href=#450 id=450 data-nosnippet>450</a>    }
+<a href=#451 id=451 data-nosnippet>451</a>
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">fn </span>ctx_of&lt;<span class="lifetime">'a</span>&gt;(window: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PixelBuffer&lt;Rgba&gt;, surface: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>PixelBuffer&lt;Rgba&gt;&gt;, layer: Layer, progress: f64, direction: Direction) -&gt; FxContext&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#453 id=453 data-nosnippet>453</a>        <span class="kw">let </span>size = window.size();
+<a href=#454 id=454 data-nosnippet>454</a>        FxContext {
+<a href=#455 id=455 data-nosnippet>455</a>            progress: Fraction::new(progress),
+<a href=#456 id=456 data-nosnippet>456</a>            duration: Duration::from_secs_f64(<span class="number">2.0</span>),
+<a href=#457 id=457 data-nosnippet>457</a>            seed: Seed(<span class="number">0xABCD_EF01_2345_6789</span>),
+<a href=#458 id=458 data-nosnippet>458</a>            direction,
+<a href=#459 id=459 data-nosnippet>459</a>            layer,
+<a href=#460 id=460 data-nosnippet>460</a>            window: window.view(),
+<a href=#461 id=461 data-nosnippet>461</a>            surface: surface.map(|s| s.view()),
+<a href=#462 id=462 data-nosnippet>462</a>            assets: <span class="kw">crate</span>::FxAssets::default(),
+<a href=#463 id=463 data-nosnippet>463</a>            pointer: <span class="prelude-val">None</span>,
+<a href=#464 id=464 data-nosnippet>464</a>            fullscreen: <span class="bool-val">false</span>,
+<a href=#465 id=465 data-nosnippet>465</a>            padding: Pixels::new(<span class="number">0.0</span>),
+<a href=#466 id=466 data-nosnippet>466</a>            window_rect: Rect::from_xywh(<span class="number">4.0</span>, <span class="number">4.0</span>, f64::from(size.x) - <span class="number">8.0</span>, f64::from(size.y) - <span class="number">8.0</span>),
+<a href=#467 id=467 data-nosnippet>467</a>        }
+<a href=#468 id=468 data-nosnippet>468</a>    }
+<a href=#469 id=469 data-nosnippet>469</a>
+<a href=#470 id=470 data-nosnippet>470</a>    <span class="doccomment">/// Open end: window at rest; close end: gone into the void.
+<a href=#471 id=471 data-nosnippet>471</a>    </span><span class="attr">#[test]
+<a href=#472 id=472 data-nosnippet>472</a>    </span><span class="kw">fn </span>window_pass_endpoints() {
+<a href=#473 id=473 data-nosnippet>473</a>        <span class="kw">let </span>window = solid(<span class="number">48</span>);
+<a href=#474 id=474 data-nosnippet>474</a>        <span class="kw">let </span>surface = solid(<span class="number">48</span>);
+<a href=#475 id=475 data-nosnippet>475</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = PixelBuffer::&lt;Rgba&gt;::new(Size::new(<span class="number">48</span>, <span class="number">48</span>));
+<a href=#476 id=476 data-nosnippet>476</a>        <span class="kw">let </span>fx = Wormhole::default();
+<a href=#477 id=477 data-nosnippet>477</a>        fx.apply(<span class="kw-2">&amp;</span>ctx_of(<span class="kw-2">&amp;</span>window, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>surface), Layer::Window, <span class="number">1.0</span>, Direction::Open), <span class="kw-2">&amp;mut </span>out.view_mut());
+<a href=#478 id=478 data-nosnippet>478</a>        <span class="macro">assert_eq!</span>(out.view().sample_bilinear(Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>)).a, <span class="number">1.0</span>);
+<a href=#479 id=479 data-nosnippet>479</a>        fx.apply(<span class="kw-2">&amp;</span>ctx_of(<span class="kw-2">&amp;</span>window, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>surface), Layer::Window, <span class="number">1.0</span>, Direction::Close), <span class="kw-2">&amp;mut </span>out.view_mut());
+<a href=#480 id=480 data-nosnippet>480</a>        <span class="macro">assert_eq!</span>(out.view().sample_bilinear(Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>)).a, <span class="number">0.0</span>);
+<a href=#481 id=481 data-nosnippet>481</a>    }
+<a href=#482 id=482 data-nosnippet>482</a>
+<a href=#483 id=483 data-nosnippet>483</a>    <span class="doccomment">/// The surface pass leaves the sheet alone when the funnel is
+<a href=#484 id=484 data-nosnippet>484</a>    /// flat (close start / open end).
+<a href=#485 id=485 data-nosnippet>485</a>    </span><span class="attr">#[test]
+<a href=#486 id=486 data-nosnippet>486</a>    </span><span class="kw">fn </span>surface_pass_flat_at_rest() {
+<a href=#487 id=487 data-nosnippet>487</a>        <span class="kw">let </span>window = solid(<span class="number">48</span>);
+<a href=#488 id=488 data-nosnippet>488</a>        <span class="kw">let </span>surface = solid(<span class="number">48</span>);
+<a href=#489 id=489 data-nosnippet>489</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = PixelBuffer::&lt;Rgba&gt;::new(Size::new(<span class="number">48</span>, <span class="number">48</span>));
+<a href=#490 id=490 data-nosnippet>490</a>        Wormhole::default().apply(<span class="kw-2">&amp;</span>ctx_of(<span class="kw-2">&amp;</span>window, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>surface), Layer::Surface, <span class="number">0.0</span>, Direction::Close), <span class="kw-2">&amp;mut </span>out.view_mut());
+<a href=#491 id=491 data-nosnippet>491</a>        <span class="macro">assert_eq!</span>(out.view().sample_bilinear(Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>)).a, <span class="number">1.0</span>);
+<a href=#492 id=492 data-nosnippet>492</a>    }
+<a href=#493 id=493 data-nosnippet>493</a>}
+</code></pre></div></section></main></body></html>

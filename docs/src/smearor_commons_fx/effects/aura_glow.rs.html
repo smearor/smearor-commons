@@ -1,0 +1,376 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/fx/src/effects/aura_glow.rs`."><title>aura_glow.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="smearor_commons_fx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">smearor_commons_fx/effects/</div>aura_glow.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::CycleSpeed;
+<a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::FxContext;
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::FxError;
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::ParamKind;
+<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span><span class="kw">crate</span>::ParamSpec;
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::ParamValue;
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span><span class="kw">crate</span>::WindowEffect;
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>serde::Deserialize;
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>serde::Serialize;
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>smearor_commons_animation::EasingFunction;
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>smearor_commons_buffer::BufferView;
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>smearor_commons_buffer::BufferViewMut;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>smearor_commons_buffer::Rgba;
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>smearor_commons_color::Color;
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>smearor_commons_color::Saturation;
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span>smearor_commons_geometry::Fraction;
+<a href=#17 id=17 data-nosnippet>17</a><span class="kw">use </span>smearor_commons_geometry::Pixels;
+<a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span>smearor_commons_geometry::Vec2;
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span>smearor_commons_noise::Field;
+<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span>smearor_commons_noise::Hash;
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>smearor_commons_noise::Simplex2D;
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="doccomment">/// A glowing aura blooms around the window while it shrinks into a
+<a href=#24 id=24 data-nosnippet>24</a>/// soft-edged shape - radial blur, cos-palette hue cycling and an
+<a href=#25 id=25 data-nosnippet>25</a>/// aspect-corrected superellipse crop.
+<a href=#26 id=26 data-nosnippet>26</a>///
+<a href=#27 id=27 data-nosnippet>27</a>/// Behavioral spec (source shader: `aura-glow.frag`, re-implemented
+<a href=#28 id=28 data-nosnippet>28</a>/// from semantics): for `Close` the progress is inverted (the glow
+<a href=#29 id=29 data-nosnippet>29</a>/// grows while the window leaves). The content uv is de-padded by
+<a href=#30 id=30 data-nosnippet>30</a>/// `uPadding` and blended toward a 1:1-aspect `oneToOneUV` as progress
+<a href=#31 id=31 data-nosnippet>31</a>/// advances, so the final crop is circular regardless of window
+<a href=#32 id=32 data-nosnippet>32</a>/// aspect. `gradient` is a superellipse distance (`|uv-0.5|^shape`,
+<a href=#33 id=33 data-nosnippet>33</a>/// `shape` sweeping 2 -&gt; 100 over `progress⁵`) plus a
+<a href=#34 id=34 data-nosnippet>34</a>/// `Simplex2D` noise term keyed by the seed. `glowMask` rides the
+<a href=#35 id=35 data-nosnippet>35</a>/// gradient edge; the window is radial-blurred while it zooms slightly;
+<a href=#36 id=36 data-nosnippet>36</a>/// the glow color is a `cos(progress*speed + uv.xyx + (0,2,4))`
+<a href=#37 id=37 data-nosnippet>37</a>/// palette hue-offset by `start_hue` (or a seed hash). The crop blends
+<a href=#38 id=38 data-nosnippet>38</a>/// soft/hard `smoothstep` edges by `edge_hardness` and is guarded by
+<a href=#39 id=39 data-nosnippet>39</a>/// in/out `easeInSine`/`easeOutSine` tails.
+<a href=#40 id=40 data-nosnippet>40</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+<a href=#41 id=41 data-nosnippet>41</a>#[cfg_attr(feature = <span class="string">"schemars"</span>, derive(schemars::JsonSchema))]
+<a href=#42 id=42 data-nosnippet>42</a></span><span class="kw">pub struct </span>AuraGlow {
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="doccomment">/// Cos-palette cycles over progress - schema `aura-glow-speed`, default `2.5`.
+<a href=#44 id=44 data-nosnippet>44</a>    </span><span class="attr">#[serde(default = <span class="string">"AuraGlow::default_speed"</span>)]
+<a href=#45 id=45 data-nosnippet>45</a>    </span><span class="kw">pub </span>speed: CycleSpeed,
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="doccomment">/// Hash the start hue from the seed - schema `aura-glow-random-color`, default `false`.
+<a href=#47 id=47 data-nosnippet>47</a>    </span><span class="attr">#[serde(default)]
+<a href=#48 id=48 data-nosnippet>48</a>    </span><span class="kw">pub </span>random_color: bool,
+<a href=#49 id=49 data-nosnippet>49</a>    <span class="doccomment">/// Start hue as a fraction of the hue circle - schema
+<a href=#50 id=50 data-nosnippet>50</a>    /// `aura-glow-start-hue`, default `0.0`. BMW's `hueOffset` is a
+<a href=#51 id=51 data-nosnippet>51</a>    /// `0..1` fraction, which is why this is `Fraction`, not `Hue`
+<a href=#52 id=52 data-nosnippet>52</a>    /// (degrees).
+<a href=#53 id=53 data-nosnippet>53</a>    </span><span class="attr">#[serde(default = <span class="string">"AuraGlow::default_start_hue"</span>)]
+<a href=#54 id=54 data-nosnippet>54</a>    </span><span class="kw">pub </span>start_hue: Fraction,
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="doccomment">/// Glow saturation multiplier - schema `aura-glow-saturation`, default `0.75`.
+<a href=#56 id=56 data-nosnippet>56</a>    </span><span class="attr">#[serde(default = <span class="string">"AuraGlow::default_saturation"</span>)]
+<a href=#57 id=57 data-nosnippet>57</a>    </span><span class="kw">pub </span>saturation: Saturation,
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="doccomment">/// Glow width `0..=1` - schema `aura-glow-edge-size`, default `0.75`.
+<a href=#59 id=59 data-nosnippet>59</a>    </span><span class="attr">#[serde(default = <span class="string">"AuraGlow::default_edge_size"</span>)]
+<a href=#60 id=60 data-nosnippet>60</a>    </span><span class="kw">pub </span>edge_size: Fraction,
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="doccomment">/// Soft/hard crop blend `0..=1` - schema `aura-glow-edge-hardness`, default `0.25`.
+<a href=#62 id=62 data-nosnippet>62</a>    </span><span class="attr">#[serde(default = <span class="string">"AuraGlow::default_edge_hardness"</span>)]
+<a href=#63 id=63 data-nosnippet>63</a>    </span><span class="kw">pub </span>edge_hardness: Fraction,
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="doccomment">/// Radial blur radius in px at progress 0 - schema `aura-glow-blur`, default `15.0`.
+<a href=#65 id=65 data-nosnippet>65</a>    </span><span class="attr">#[serde(default = <span class="string">"AuraGlow::default_blur"</span>)]
+<a href=#66 id=66 data-nosnippet>66</a>    </span><span class="kw">pub </span>blur: Pixels&lt;f64&gt;,
+<a href=#67 id=67 data-nosnippet>67</a>}
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a><span class="kw">impl </span>AuraGlow {
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">const fn </span>default_speed() -&gt; CycleSpeed {
+<a href=#71 id=71 data-nosnippet>71</a>        CycleSpeed::new(<span class="number">2.5</span>)
+<a href=#72 id=72 data-nosnippet>72</a>    }
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="kw">const fn </span>default_start_hue() -&gt; Fraction {
+<a href=#74 id=74 data-nosnippet>74</a>        Fraction::new(<span class="number">0.0</span>)
+<a href=#75 id=75 data-nosnippet>75</a>    }
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">fn </span>default_saturation() -&gt; Saturation {
+<a href=#77 id=77 data-nosnippet>77</a>        Saturation::new(<span class="number">0.75</span>)
+<a href=#78 id=78 data-nosnippet>78</a>    }
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">const fn </span>default_edge_size() -&gt; Fraction {
+<a href=#80 id=80 data-nosnippet>80</a>        Fraction::new(<span class="number">0.75</span>)
+<a href=#81 id=81 data-nosnippet>81</a>    }
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="kw">const fn </span>default_edge_hardness() -&gt; Fraction {
+<a href=#83 id=83 data-nosnippet>83</a>        Fraction::new(<span class="number">0.25</span>)
+<a href=#84 id=84 data-nosnippet>84</a>    }
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="kw">const fn </span>default_blur() -&gt; Pixels&lt;f64&gt; {
+<a href=#86 id=86 data-nosnippet>86</a>        Pixels::new(<span class="number">15.0</span>)
+<a href=#87 id=87 data-nosnippet>87</a>    }
+<a href=#88 id=88 data-nosnippet>88</a>}
+<a href=#89 id=89 data-nosnippet>89</a>
+<a href=#90 id=90 data-nosnippet>90</a><span class="kw">impl </span>Default <span class="kw">for </span>AuraGlow {
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#92 id=92 data-nosnippet>92</a>        <span class="self">Self </span>{
+<a href=#93 id=93 data-nosnippet>93</a>            speed: <span class="self">Self</span>::default_speed(),
+<a href=#94 id=94 data-nosnippet>94</a>            random_color: <span class="bool-val">false</span>,
+<a href=#95 id=95 data-nosnippet>95</a>            start_hue: <span class="self">Self</span>::default_start_hue(),
+<a href=#96 id=96 data-nosnippet>96</a>            saturation: <span class="self">Self</span>::default_saturation(),
+<a href=#97 id=97 data-nosnippet>97</a>            edge_size: <span class="self">Self</span>::default_edge_size(),
+<a href=#98 id=98 data-nosnippet>98</a>            edge_hardness: <span class="self">Self</span>::default_edge_hardness(),
+<a href=#99 id=99 data-nosnippet>99</a>            blur: <span class="self">Self</span>::default_blur(),
+<a href=#100 id=100 data-nosnippet>100</a>        }
+<a href=#101 id=101 data-nosnippet>101</a>    }
+<a href=#102 id=102 data-nosnippet>102</a>}
+<a href=#103 id=103 data-nosnippet>103</a>
+<a href=#104 id=104 data-nosnippet>104</a><span class="kw">const </span>PARAMS: <span class="kw-2">&amp;</span>[ParamSpec] = <span class="kw-2">&amp;</span>[
+<a href=#105 id=105 data-nosnippet>105</a>    ParamSpec {
+<a href=#106 id=106 data-nosnippet>106</a>        key: <span class="string">"speed"</span>,
+<a href=#107 id=107 data-nosnippet>107</a>        label: <span class="string">"Speed"</span>,
+<a href=#108 id=108 data-nosnippet>108</a>        kind: ParamKind::Float {
+<a href=#109 id=109 data-nosnippet>109</a>            min: <span class="number">0.0</span>,
+<a href=#110 id=110 data-nosnippet>110</a>            max: <span class="number">10.0</span>,
+<a href=#111 id=111 data-nosnippet>111</a>            step: <span class="number">0.1</span>,
+<a href=#112 id=112 data-nosnippet>112</a>            default: <span class="number">2.5</span>,
+<a href=#113 id=113 data-nosnippet>113</a>        },
+<a href=#114 id=114 data-nosnippet>114</a>    },
+<a href=#115 id=115 data-nosnippet>115</a>    ParamSpec {
+<a href=#116 id=116 data-nosnippet>116</a>        key: <span class="string">"random_color"</span>,
+<a href=#117 id=117 data-nosnippet>117</a>        label: <span class="string">"Random Color"</span>,
+<a href=#118 id=118 data-nosnippet>118</a>        kind: ParamKind::Toggle { default: <span class="bool-val">false </span>},
+<a href=#119 id=119 data-nosnippet>119</a>    },
+<a href=#120 id=120 data-nosnippet>120</a>    ParamSpec {
+<a href=#121 id=121 data-nosnippet>121</a>        key: <span class="string">"start_hue"</span>,
+<a href=#122 id=122 data-nosnippet>122</a>        label: <span class="string">"Start Hue"</span>,
+<a href=#123 id=123 data-nosnippet>123</a>        kind: ParamKind::Float {
+<a href=#124 id=124 data-nosnippet>124</a>            min: <span class="number">0.0</span>,
+<a href=#125 id=125 data-nosnippet>125</a>            max: <span class="number">1.0</span>,
+<a href=#126 id=126 data-nosnippet>126</a>            step: <span class="number">0.05</span>,
+<a href=#127 id=127 data-nosnippet>127</a>            default: <span class="number">0.0</span>,
+<a href=#128 id=128 data-nosnippet>128</a>        },
+<a href=#129 id=129 data-nosnippet>129</a>    },
+<a href=#130 id=130 data-nosnippet>130</a>    ParamSpec {
+<a href=#131 id=131 data-nosnippet>131</a>        key: <span class="string">"saturation"</span>,
+<a href=#132 id=132 data-nosnippet>132</a>        label: <span class="string">"Saturation"</span>,
+<a href=#133 id=133 data-nosnippet>133</a>        kind: ParamKind::Float {
+<a href=#134 id=134 data-nosnippet>134</a>            min: <span class="number">0.0</span>,
+<a href=#135 id=135 data-nosnippet>135</a>            max: <span class="number">1.0</span>,
+<a href=#136 id=136 data-nosnippet>136</a>            step: <span class="number">0.05</span>,
+<a href=#137 id=137 data-nosnippet>137</a>            default: <span class="number">0.75</span>,
+<a href=#138 id=138 data-nosnippet>138</a>        },
+<a href=#139 id=139 data-nosnippet>139</a>    },
+<a href=#140 id=140 data-nosnippet>140</a>    ParamSpec {
+<a href=#141 id=141 data-nosnippet>141</a>        key: <span class="string">"edge_size"</span>,
+<a href=#142 id=142 data-nosnippet>142</a>        label: <span class="string">"Edge Size"</span>,
+<a href=#143 id=143 data-nosnippet>143</a>        kind: ParamKind::Float {
+<a href=#144 id=144 data-nosnippet>144</a>            min: <span class="number">0.0</span>,
+<a href=#145 id=145 data-nosnippet>145</a>            max: <span class="number">1.0</span>,
+<a href=#146 id=146 data-nosnippet>146</a>            step: <span class="number">0.05</span>,
+<a href=#147 id=147 data-nosnippet>147</a>            default: <span class="number">0.75</span>,
+<a href=#148 id=148 data-nosnippet>148</a>        },
+<a href=#149 id=149 data-nosnippet>149</a>    },
+<a href=#150 id=150 data-nosnippet>150</a>    ParamSpec {
+<a href=#151 id=151 data-nosnippet>151</a>        key: <span class="string">"edge_hardness"</span>,
+<a href=#152 id=152 data-nosnippet>152</a>        label: <span class="string">"Edge Hardness"</span>,
+<a href=#153 id=153 data-nosnippet>153</a>        kind: ParamKind::Float {
+<a href=#154 id=154 data-nosnippet>154</a>            min: <span class="number">0.0</span>,
+<a href=#155 id=155 data-nosnippet>155</a>            max: <span class="number">1.0</span>,
+<a href=#156 id=156 data-nosnippet>156</a>            step: <span class="number">0.05</span>,
+<a href=#157 id=157 data-nosnippet>157</a>            default: <span class="number">0.25</span>,
+<a href=#158 id=158 data-nosnippet>158</a>        },
+<a href=#159 id=159 data-nosnippet>159</a>    },
+<a href=#160 id=160 data-nosnippet>160</a>    ParamSpec {
+<a href=#161 id=161 data-nosnippet>161</a>        key: <span class="string">"blur"</span>,
+<a href=#162 id=162 data-nosnippet>162</a>        label: <span class="string">"Blur"</span>,
+<a href=#163 id=163 data-nosnippet>163</a>        kind: ParamKind::Float {
+<a href=#164 id=164 data-nosnippet>164</a>            min: <span class="number">0.0</span>,
+<a href=#165 id=165 data-nosnippet>165</a>            max: <span class="number">50.0</span>,
+<a href=#166 id=166 data-nosnippet>166</a>            step: <span class="number">1.0</span>,
+<a href=#167 id=167 data-nosnippet>167</a>            default: <span class="number">15.0</span>,
+<a href=#168 id=168 data-nosnippet>168</a>        },
+<a href=#169 id=169 data-nosnippet>169</a>    },
+<a href=#170 id=170 data-nosnippet>170</a>];
+<a href=#171 id=171 data-nosnippet>171</a>
+<a href=#172 id=172 data-nosnippet>172</a><span class="kw">impl </span>WindowEffect <span class="kw">for </span>AuraGlow {
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="kw">fn </span>nick(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#174 id=174 data-nosnippet>174</a>        <span class="string">"aura-glow"
+<a href=#175 id=175 data-nosnippet>175</a>    </span>}
+<a href=#176 id=176 data-nosnippet>176</a>
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">fn </span>label(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#178 id=178 data-nosnippet>178</a>        <span class="string">"Aura Glow"
+<a href=#179 id=179 data-nosnippet>179</a>    </span>}
+<a href=#180 id=180 data-nosnippet>180</a>
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="kw">fn </span>params(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[ParamSpec] {
+<a href=#182 id=182 data-nosnippet>182</a>        PARAMS
+<a href=#183 id=183 data-nosnippet>183</a>    }
+<a href=#184 id=184 data-nosnippet>184</a>
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="kw">fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;ParamValue&gt; {
+<a href=#186 id=186 data-nosnippet>186</a>        <span class="macro">vec!</span>[
+<a href=#187 id=187 data-nosnippet>187</a>            ParamValue::Float(<span class="self">self</span>.speed.<span class="number">0</span>),
+<a href=#188 id=188 data-nosnippet>188</a>            ParamValue::Bool(<span class="self">self</span>.random_color),
+<a href=#189 id=189 data-nosnippet>189</a>            ParamValue::Float(<span class="self">self</span>.start_hue.<span class="number">0</span>),
+<a href=#190 id=190 data-nosnippet>190</a>            ParamValue::Float(<span class="self">self</span>.saturation.as_f64()),
+<a href=#191 id=191 data-nosnippet>191</a>            ParamValue::Float(<span class="self">self</span>.edge_size.<span class="number">0</span>),
+<a href=#192 id=192 data-nosnippet>192</a>            ParamValue::Float(<span class="self">self</span>.edge_hardness.<span class="number">0</span>),
+<a href=#193 id=193 data-nosnippet>193</a>            ParamValue::Float(<span class="self">self</span>.blur.<span class="number">0</span>),
+<a href=#194 id=194 data-nosnippet>194</a>        ]
+<a href=#195 id=195 data-nosnippet>195</a>    }
+<a href=#196 id=196 data-nosnippet>196</a>
+<a href=#197 id=197 data-nosnippet>197</a>    <span class="kw">fn </span>set_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>, values: <span class="kw-2">&amp;</span>[ParamValue]) -&gt; <span class="prelude-ty">Result</span>&lt;(), FxError&gt; {
+<a href=#198 id=198 data-nosnippet>198</a>        <span class="kw">let </span>mismatch = |index: usize| FxError::ParamMismatch(<span class="macro">format!</span>(<span class="string">"aura-glow param {index}"</span>));
+<a href=#199 id=199 data-nosnippet>199</a>        <span class="kw">if </span>values.len() != <span class="number">7 </span>{
+<a href=#200 id=200 data-nosnippet>200</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(FxError::ParamMismatch(<span class="macro">format!</span>(<span class="string">"aura-glow takes 7 parameters, got {}"</span>, values.len())));
+<a href=#201 id=201 data-nosnippet>201</a>        }
+<a href=#202 id=202 data-nosnippet>202</a>        <span class="kw">let </span>float = |index: usize| values[index].as_f64().ok_or(mismatch(index));
+<a href=#203 id=203 data-nosnippet>203</a>        <span class="self">self</span>.speed = CycleSpeed(float(<span class="number">0</span>)<span class="question-mark">?</span>);
+<a href=#204 id=204 data-nosnippet>204</a>        <span class="self">self</span>.random_color = values[<span class="number">1</span>].as_bool().ok_or(mismatch(<span class="number">1</span>))<span class="question-mark">?</span>;
+<a href=#205 id=205 data-nosnippet>205</a>        <span class="self">self</span>.start_hue = Fraction::new(float(<span class="number">2</span>)<span class="question-mark">?</span>);
+<a href=#206 id=206 data-nosnippet>206</a>        <span class="self">self</span>.saturation = Saturation::new(float(<span class="number">3</span>)<span class="question-mark">?</span>);
+<a href=#207 id=207 data-nosnippet>207</a>        <span class="self">self</span>.edge_size = Fraction::new(float(<span class="number">4</span>)<span class="question-mark">?</span>);
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="self">self</span>.edge_hardness = Fraction::new(float(<span class="number">5</span>)<span class="question-mark">?</span>);
+<a href=#209 id=209 data-nosnippet>209</a>        <span class="self">self</span>.blur = Pixels::new(float(<span class="number">6</span>)<span class="question-mark">?</span>);
+<a href=#210 id=210 data-nosnippet>210</a>        <span class="prelude-val">Ok</span>(())
+<a href=#211 id=211 data-nosnippet>211</a>    }
+<a href=#212 id=212 data-nosnippet>212</a>
+<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>FxContext&lt;<span class="lifetime">'_</span>&gt;, out: <span class="kw-2">&amp;mut </span>BufferViewMut&lt;<span class="lifetime">'_</span>, Rgba&gt;) {
+<a href=#214 id=214 data-nosnippet>214</a>        <span class="kw">let </span>size = ctx.window.size();
+<a href=#215 id=215 data-nosnippet>215</a>        <span class="kw">let </span>size_px = Vec2::&lt;()&gt;::new(size.x <span class="kw">as </span>f64, size.y <span class="kw">as </span>f64);
+<a href=#216 id=216 data-nosnippet>216</a>        <span class="kw">let </span>progress = <span class="kw">match </span>ctx.direction {
+<a href=#217 id=217 data-nosnippet>217</a>            <span class="kw">crate</span>::Direction::Open =&gt; ctx.progress.as_f64(),
+<a href=#218 id=218 data-nosnippet>218</a>            <span class="kw">crate</span>::Direction::Close =&gt; <span class="number">1.0 </span>- ctx.progress.as_f64(),
+<a href=#219 id=219 data-nosnippet>219</a>        };
+<a href=#220 id=220 data-nosnippet>220</a>        <span class="comment">// Frame constants - everything below depends only on
+<a href=#221 id=221 data-nosnippet>221</a>        // progress, size, seed or parameters, so it lifts out of the
+<a href=#222 id=222 data-nosnippet>222</a>        // pixel loop.
+<a href=#223 id=223 data-nosnippet>223</a>        </span><span class="kw">let </span>seed_uv = ctx.seed.offset_2d();
+<a href=#224 id=224 data-nosnippet>224</a>        <span class="kw">let </span>content_fraction = Vec2::&lt;()&gt;::new(<span class="number">1.0</span>, <span class="number">1.0</span>) - Vec2::&lt;()&gt;::new(<span class="number">2.0 </span>* ctx.padding.<span class="number">0</span>, <span class="number">2.0 </span>* ctx.padding.<span class="number">0</span>) / size_px;
+<a href=#225 id=225 data-nosnippet>225</a>        <span class="kw">let </span>inv_content = Vec2::&lt;()&gt;::new(<span class="number">1.0 </span>/ content_fraction.x, <span class="number">1.0 </span>/ content_fraction.y);
+<a href=#226 id=226 data-nosnippet>226</a>        <span class="kw">let </span>aspect = Vec2::&lt;()&gt;::new(
+<a href=#227 id=227 data-nosnippet>227</a>            <span class="kw">if </span>size_px.x &gt; size_px.y { <span class="number">1.0 </span>} <span class="kw">else </span>{ size_px.x / size_px.y },
+<a href=#228 id=228 data-nosnippet>228</a>            <span class="kw">if </span>size_px.x &gt; size_px.y { size_px.y / size_px.x } <span class="kw">else </span>{ <span class="number">1.0 </span>},
+<a href=#229 id=229 data-nosnippet>229</a>        );
+<a href=#230 id=230 data-nosnippet>230</a>        <span class="kw">let </span>shape = <span class="kw">crate</span>::mix(<span class="number">2.0</span>, <span class="number">100.0</span>, progress.powi(<span class="number">5</span>));
+<a href=#231 id=231 data-nosnippet>231</a>        <span class="kw">let </span>out_fade = EasingFunction::EaseOutSine.apply(Fraction::new(((<span class="number">1.0 </span>- progress) * <span class="number">4.0</span>).min(<span class="number">1.0</span>))).as_f64();
+<a href=#232 id=232 data-nosnippet>232</a>        <span class="kw">let </span>in_fade = EasingFunction::EaseInSine.apply(Fraction::new((progress * <span class="number">2.0</span>).min(<span class="number">1.0</span>))).as_f64();
+<a href=#233 id=233 data-nosnippet>233</a>        <span class="kw">let </span>zoom = <span class="kw">crate</span>::mix(<span class="number">1.1</span>, <span class="number">1.0</span>, EasingFunction::EaseOutCubic.apply(Fraction::new(progress)).as_f64());
+<a href=#234 id=234 data-nosnippet>234</a>        <span class="kw">let </span>color_offset = <span class="kw">if </span><span class="self">self</span>.random_color {
+<a href=#235 id=235 data-nosnippet>235</a>            Hash::&lt;f64&gt;::hash(<span class="kw-2">&amp;</span>seed_uv) + <span class="number">0.1
+<a href=#236 id=236 data-nosnippet>236</a>        </span>} <span class="kw">else </span>{
+<a href=#237 id=237 data-nosnippet>237</a>            <span class="self">self</span>.start_hue.<span class="number">0 </span>+ <span class="number">0.1
+<a href=#238 id=238 data-nosnippet>238</a>        </span>};
+<a href=#239 id=239 data-nosnippet>239</a>        <span class="kw">let </span>phase = progress * <span class="self">self</span>.speed.<span class="number">0</span>;
+<a href=#240 id=240 data-nosnippet>240</a>        <span class="kw">let </span>edge_width = <span class="self">self</span>.edge_size.<span class="number">0 </span>+ <span class="number">0.1</span>;
+<a href=#241 id=241 data-nosnippet>241</a>        <span class="kw">let </span>saturation = <span class="self">self</span>.saturation.as_f64();
+<a href=#242 id=242 data-nosnippet>242</a>        <span class="comment">// The cone rays are frame-constant - precompute the offset
+<a href=#243 id=243 data-nosnippet>243</a>        // table once instead of trig per pixel per tap. Below half a
+<a href=#244 id=244 data-nosnippet>244</a>        // pixel of radius the blur degenerates to the plain tap.
+<a href=#245 id=245 data-nosnippet>245</a>        </span><span class="kw">let </span>blur_px = (<span class="number">1.0 </span>- progress) * <span class="self">self</span>.blur.<span class="number">0</span>;
+<a href=#246 id=246 data-nosnippet>246</a>        <span class="kw">let </span>cone = <span class="kw">match </span>blur_px &gt; <span class="number">0.5 </span>{
+<a href=#247 id=247 data-nosnippet>247</a>            <span class="bool-val">true </span>=&gt; BufferView::&lt;Rgba&gt;::cone_offsets(Vec2::&lt;()&gt;::new(blur_px / size_px.x, blur_px / size_px.y), <span class="number">15</span>, <span class="number">3</span>),
+<a href=#248 id=248 data-nosnippet>248</a>            <span class="bool-val">false </span>=&gt; Vec::new(),
+<a href=#249 id=249 data-nosnippet>249</a>        };
+<a href=#250 id=250 data-nosnippet>250</a>        <span class="kw">crate</span>::render::fill(out, |x, y| {
+<a href=#251 id=251 data-nosnippet>251</a>            <span class="kw">let </span>i_tex = Vec2::&lt;()&gt;::new((x <span class="kw">as </span>f64 + <span class="number">0.5</span>) / size_px.x, (y <span class="kw">as </span>f64 + <span class="number">0.5</span>) / size_px.y);
+<a href=#252 id=252 data-nosnippet>252</a>            <span class="comment">// De-padded content uv: (i_tex-0.5)*size/content/size+0.5.
+<a href=#253 id=253 data-nosnippet>253</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>uv = (i_tex - Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>)).component_mul(<span class="kw-2">&amp;</span>inv_content) + Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>);
+<a href=#254 id=254 data-nosnippet>254</a>
+<a href=#255 id=255 data-nosnippet>255</a>            <span class="comment">// 1:1 aspect blend - the crop ends circular.
+<a href=#256 id=256 data-nosnippet>256</a>            </span><span class="kw">let </span>one_to_one = (uv - Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>)).component_mul(<span class="kw-2">&amp;</span>aspect) + Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>);
+<a href=#257 id=257 data-nosnippet>257</a>            uv = one_to_one * (<span class="number">1.0 </span>- progress) + uv * progress;
+<a href=#258 id=258 data-nosnippet>258</a>
+<a href=#259 id=259 data-nosnippet>259</a>            <span class="comment">// Superellipse gradient + noise wobble.
+<a href=#260 id=260 data-nosnippet>260</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>gradient = ((uv.x - <span class="number">0.5</span>).abs() * <span class="number">2.0</span>).powf(shape) + ((uv.y - <span class="number">0.5</span>).abs() * <span class="number">2.0</span>).powf(shape);
+<a href=#261 id=261 data-nosnippet>261</a>            gradient += Simplex2D.at(i_tex + seed_uv) * <span class="number">0.5</span>;
+<a href=#262 id=262 data-nosnippet>262</a>
+<a href=#263 id=263 data-nosnippet>263</a>            <span class="kw">let </span><span class="kw-2">mut </span>glow_mask = <span class="number">1.0 </span>- ((progress - gradient) / edge_width).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>);
+<a href=#264 id=264 data-nosnippet>264</a>            glow_mask <span class="kw-2">*</span>= out_fade;
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>            <span class="comment">// Zoom + progressive blur over the precomputed cone.
+<a href=#267 id=267 data-nosnippet>267</a>            </span><span class="kw">let </span>window_uv = (i_tex - Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>)) * zoom + Vec2::&lt;()&gt;::new(<span class="number">0.5</span>, <span class="number">0.5</span>);
+<a href=#268 id=268 data-nosnippet>268</a>            <span class="kw">let </span><span class="kw-2">mut </span>window_color = ctx.window.sample_cone(window_uv, <span class="kw-2">&amp;</span>cone);
+<a href=#269 id=269 data-nosnippet>269</a>            glow_mask <span class="kw-2">*</span>= window_color.a;
+<a href=#270 id=270 data-nosnippet>270</a>
+<a href=#271 id=271 data-nosnippet>271</a>            <span class="comment">// Cos palette + hue offset, saturation-scaled.
+<a href=#272 id=272 data-nosnippet>272</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>glow_color = Color::&lt;f64&gt;::new_rgba((phase + uv.x).cos(), (phase + uv.y + <span class="number">2.0</span>).cos(), (phase + uv.x + <span class="number">4.0</span>).cos(), <span class="number">1.0</span>);
+<a href=#273 id=273 data-nosnippet>273</a>            glow_color = <span class="kw">crate</span>::offset_hue(glow_color, color_offset);
+<a href=#274 id=274 data-nosnippet>274</a>            <span class="kw">let </span>glow = Color::&lt;f64&gt;::new_rgba(
+<a href=#275 id=275 data-nosnippet>275</a>                (glow_color.r * saturation).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>),
+<a href=#276 id=276 data-nosnippet>276</a>                (glow_color.g * saturation).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>),
+<a href=#277 id=277 data-nosnippet>277</a>                (glow_color.b * saturation).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>),
+<a href=#278 id=278 data-nosnippet>278</a>                <span class="number">1.0</span>,
+<a href=#279 id=279 data-nosnippet>279</a>            );
+<a href=#280 id=280 data-nosnippet>280</a>
+<a href=#281 id=281 data-nosnippet>281</a>            window_color = Color::&lt;f64&gt;::new_rgba(
+<a href=#282 id=282 data-nosnippet>282</a>                window_color.r + glow.r * glow_mask,
+<a href=#283 id=283 data-nosnippet>283</a>                window_color.g + glow.g * glow_mask,
+<a href=#284 id=284 data-nosnippet>284</a>                window_color.b + glow.b * glow_mask,
+<a href=#285 id=285 data-nosnippet>285</a>                window_color.a,
+<a href=#286 id=286 data-nosnippet>286</a>            );
+<a href=#287 id=287 data-nosnippet>287</a>            window_color = Color::&lt;f64&gt;::new_rgba(glow.r, glow.g, glow.b, glow_mask * <span class="number">0.2</span>).alpha_over(<span class="kw-2">&amp;</span>window_color);
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>            <span class="comment">// Superellipse crop, soft/hard blended.
+<a href=#290 id=290 data-nosnippet>290</a>            </span><span class="kw">let </span>soft_crop = <span class="number">1.0 </span>- <span class="kw">crate</span>::smoothstep(progress - <span class="number">0.5</span>, progress + <span class="number">0.5</span>, gradient);
+<a href=#291 id=291 data-nosnippet>291</a>            <span class="kw">let </span>hard_crop = <span class="number">1.0 </span>- <span class="kw">crate</span>::smoothstep(progress - <span class="number">0.05</span>, progress + <span class="number">0.05</span>, gradient);
+<a href=#292 id=292 data-nosnippet>292</a>            <span class="kw">let </span><span class="kw-2">mut </span>crop_mask = <span class="kw">crate</span>::mix(soft_crop, hard_crop, <span class="self">self</span>.edge_hardness.<span class="number">0</span>);
+<a href=#293 id=293 data-nosnippet>293</a>            crop_mask <span class="kw-2">*</span>= in_fade;
+<a href=#294 id=294 data-nosnippet>294</a>            crop_mask = crop_mask.max(<span class="number">1.0 </span>- out_fade);
+<a href=#295 id=295 data-nosnippet>295</a>            window_color.a <span class="kw-2">*</span>= crop_mask;
+<a href=#296 id=296 data-nosnippet>296</a>            window_color
+<a href=#297 id=297 data-nosnippet>297</a>        });
+<a href=#298 id=298 data-nosnippet>298</a>    }
+<a href=#299 id=299 data-nosnippet>299</a>}
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a><span class="attr">#[cfg(test)]
+<a href=#302 id=302 data-nosnippet>302</a></span><span class="kw">mod </span>tests {
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#304 id=304 data-nosnippet>304</a>    <span class="kw">use </span><span class="kw">crate</span>::Direction;
+<a href=#305 id=305 data-nosnippet>305</a>    <span class="kw">use </span><span class="kw">crate</span>::Layer;
+<a href=#306 id=306 data-nosnippet>306</a>    <span class="kw">use </span>smearor_commons_buffer::BufferView;
+<a href=#307 id=307 data-nosnippet>307</a>    <span class="kw">use </span>smearor_commons_buffer::PixelBuffer;
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">use </span>smearor_commons_geometry::Rect;
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="kw">use </span>smearor_commons_geometry::Size;
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="kw">use </span>smearor_commons_noise::Seed;
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="kw">use </span>std::time::Duration;
+<a href=#312 id=312 data-nosnippet>312</a>
+<a href=#313 id=313 data-nosnippet>313</a>    <span class="kw">fn </span>ctx_for&lt;<span class="lifetime">'a</span>&gt;(window: BufferView&lt;<span class="lifetime">'a</span>, Rgba&gt;, progress: f64) -&gt; FxContext&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#314 id=314 data-nosnippet>314</a>        FxContext {
+<a href=#315 id=315 data-nosnippet>315</a>            progress: Fraction::new(progress),
+<a href=#316 id=316 data-nosnippet>316</a>            duration: Duration::from_millis(<span class="number">1500</span>),
+<a href=#317 id=317 data-nosnippet>317</a>            seed: Seed(<span class="number">1</span>),
+<a href=#318 id=318 data-nosnippet>318</a>            direction: Direction::Open,
+<a href=#319 id=319 data-nosnippet>319</a>            layer: Layer::Window,
+<a href=#320 id=320 data-nosnippet>320</a>            window,
+<a href=#321 id=321 data-nosnippet>321</a>            surface: <span class="prelude-val">None</span>,
+<a href=#322 id=322 data-nosnippet>322</a>            assets: <span class="kw">crate</span>::FxAssets::default(),
+<a href=#323 id=323 data-nosnippet>323</a>            pointer: <span class="prelude-val">None</span>,
+<a href=#324 id=324 data-nosnippet>324</a>            fullscreen: <span class="bool-val">false</span>,
+<a href=#325 id=325 data-nosnippet>325</a>            padding: Pixels::new(<span class="number">0.0</span>),
+<a href=#326 id=326 data-nosnippet>326</a>            window_rect: Rect::from_xywh(<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">32.0</span>, <span class="number">32.0</span>),
+<a href=#327 id=327 data-nosnippet>327</a>        }
+<a href=#328 id=328 data-nosnippet>328</a>    }
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a>    <span class="doccomment">/// `edge_hardness = 1` yields a hard crop: interior alpha is either
+<a href=#331 id=331 data-nosnippet>331</a>    /// fully kept or fully cut (no half-transparent crop zone).
+<a href=#332 id=332 data-nosnippet>332</a>    </span><span class="attr">#[test]
+<a href=#333 id=333 data-nosnippet>333</a>    </span><span class="kw">fn </span>aura_glow_crop() {
+<a href=#334 id=334 data-nosnippet>334</a>        <span class="kw">let </span>data = [<span class="number">200</span>, <span class="number">200</span>, <span class="number">200</span>, <span class="number">255</span>].repeat(<span class="number">32 </span>* <span class="number">32</span>);
+<a href=#335 id=335 data-nosnippet>335</a>        <span class="kw">let </span>window = BufferView::&lt;Rgba&gt;::from_packed(<span class="kw-2">&amp;</span>data, Size::new(<span class="number">32</span>, <span class="number">32</span>)).unwrap();
+<a href=#336 id=336 data-nosnippet>336</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = PixelBuffer::&lt;Rgba&gt;::new(Size::new(<span class="number">32</span>, <span class="number">32</span>));
+<a href=#337 id=337 data-nosnippet>337</a>        <span class="kw">let </span>glow = AuraGlow {
+<a href=#338 id=338 data-nosnippet>338</a>            edge_hardness: Fraction::new(<span class="number">1.0</span>),
+<a href=#339 id=339 data-nosnippet>339</a>            ..Default::default()
+<a href=#340 id=340 data-nosnippet>340</a>        };
+<a href=#341 id=341 data-nosnippet>341</a>        glow.apply(<span class="kw-2">&amp;</span>ctx_for(window, <span class="number">0.6</span>), <span class="kw-2">&amp;mut </span>out.view_mut());
+<a href=#342 id=342 data-nosnippet>342</a>        <span class="comment">// At 0.6 progress the crop is hard: alpha is ~0 or ~255 modulo
+<a href=#343 id=343 data-nosnippet>343</a>        // the glow overlay's small additive alpha.
+<a href=#344 id=344 data-nosnippet>344</a>        </span><span class="kw">let </span>alphas: Vec&lt;u8&gt; = out.view().data().iter().skip(<span class="number">3</span>).step_by(<span class="number">4</span>).copied().collect();
+<a href=#345 id=345 data-nosnippet>345</a>        <span class="kw">let </span>extreme = alphas.iter().filter(|a| <span class="kw-2">**</span>a &lt; <span class="number">40 </span>|| <span class="kw-2">**</span>a &gt; <span class="number">215</span>).count();
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="macro">assert!</span>(extreme <span class="kw">as </span>f64 / alphas.len() <span class="kw">as </span>f64 &gt; <span class="number">0.6</span>, <span class="string">"hard crop: most alphas near 0/255"</span>);
+<a href=#347 id=347 data-nosnippet>347</a>    }
+<a href=#348 id=348 data-nosnippet>348</a>
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="doccomment">/// `blur = 0` bypasses radial blur: on a checkerboard input the
+<a href=#350 id=350 data-nosnippet>350</a>    /// sharp sample differs from the blurred one.
+<a href=#351 id=351 data-nosnippet>351</a>    </span><span class="attr">#[test]
+<a href=#352 id=352 data-nosnippet>352</a>    </span><span class="kw">fn </span>aura_glow_blur_radius() {
+<a href=#353 id=353 data-nosnippet>353</a>        <span class="kw">let </span><span class="kw-2">mut </span>data = Vec::with_capacity(<span class="number">32 </span>* <span class="number">32 </span>* <span class="number">4</span>);
+<a href=#354 id=354 data-nosnippet>354</a>        <span class="kw">for </span>y <span class="kw">in </span><span class="number">0</span>..<span class="number">32 </span>{
+<a href=#355 id=355 data-nosnippet>355</a>            <span class="kw">for </span>x <span class="kw">in </span><span class="number">0</span>..<span class="number">32 </span>{
+<a href=#356 id=356 data-nosnippet>356</a>                <span class="kw">let </span>v = <span class="kw">if </span>(x / <span class="number">4 </span>+ y / <span class="number">4</span>) % <span class="number">2 </span>== <span class="number">0 </span>{ <span class="number">255 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
+<a href=#357 id=357 data-nosnippet>357</a>                data.extend_from_slice(<span class="kw-2">&amp;</span>[v, v, v, <span class="number">255</span>]);
+<a href=#358 id=358 data-nosnippet>358</a>            }
+<a href=#359 id=359 data-nosnippet>359</a>        }
+<a href=#360 id=360 data-nosnippet>360</a>        <span class="kw">let </span>window = BufferView::&lt;Rgba&gt;::from_packed(<span class="kw-2">&amp;</span>data, Size::new(<span class="number">32</span>, <span class="number">32</span>)).unwrap();
+<a href=#361 id=361 data-nosnippet>361</a>        <span class="kw">let </span><span class="kw-2">mut </span>out_sharp = PixelBuffer::&lt;Rgba&gt;::new(Size::new(<span class="number">32</span>, <span class="number">32</span>));
+<a href=#362 id=362 data-nosnippet>362</a>        <span class="kw">let </span><span class="kw-2">mut </span>out_blur = PixelBuffer::&lt;Rgba&gt;::new(Size::new(<span class="number">32</span>, <span class="number">32</span>));
+<a href=#363 id=363 data-nosnippet>363</a>        AuraGlow {
+<a href=#364 id=364 data-nosnippet>364</a>            blur: Pixels::new(<span class="number">0.0</span>),
+<a href=#365 id=365 data-nosnippet>365</a>            ..Default::default()
+<a href=#366 id=366 data-nosnippet>366</a>        }
+<a href=#367 id=367 data-nosnippet>367</a>        .apply(<span class="kw-2">&amp;</span>ctx_for(window, <span class="number">0.5</span>), <span class="kw-2">&amp;mut </span>out_sharp.view_mut());
+<a href=#368 id=368 data-nosnippet>368</a>        AuraGlow {
+<a href=#369 id=369 data-nosnippet>369</a>            blur: Pixels::new(<span class="number">30.0</span>),
+<a href=#370 id=370 data-nosnippet>370</a>            ..Default::default()
+<a href=#371 id=371 data-nosnippet>371</a>        }
+<a href=#372 id=372 data-nosnippet>372</a>        .apply(<span class="kw-2">&amp;</span>ctx_for(window, <span class="number">0.5</span>), <span class="kw-2">&amp;mut </span>out_blur.view_mut());
+<a href=#373 id=373 data-nosnippet>373</a>        <span class="macro">assert_ne!</span>(out_sharp.view().data(), out_blur.view().data(), <span class="string">"blur=0 must differ from blur=30 on sharp input"</span>);
+<a href=#374 id=374 data-nosnippet>374</a>    }
+<a href=#375 id=375 data-nosnippet>375</a>}
+</code></pre></div></section></main></body></html>

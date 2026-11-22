@@ -1,2 +1,2 @@
-window.ALL_CRATES = ["smearor_commons_animation","smearor_commons_buffer","smearor_commons_color","smearor_commons_drawing","smearor_commons_font","smearor_commons_geometry","smearor_commons_layer","smearor_commons_layout","smearor_commons_noise"];
-//{"start":21,"fragment_lengths":[27,25,24,26,23,27,24,25,24]}
+window.ALL_CRATES = ["smearor_commons_animation","smearor_commons_buffer","smearor_commons_color","smearor_commons_drawing","smearor_commons_font","smearor_commons_fx","smearor_commons_geometry","smearor_commons_layer","smearor_commons_layout","smearor_commons_noise"];
+//{"start":21,"fragment_lengths":[27,25,24,26,23,21,27,24,25,24]}
