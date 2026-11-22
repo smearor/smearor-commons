@@ -7,7 +7,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::Rgba;
-use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Vec2;
 
 /// Cross-fade between `window` and transparent - the canonical
@@ -44,21 +43,12 @@ impl WindowEffect for Crossfade {
     fn apply(&self, ctx: &FxContext<'_>, out: &mut BufferViewMut<'_, Rgba>) {
         let weight = ctx.direction.weight(ctx.progress.0);
         let size = ctx.window.size();
-        for y in 0..size.y {
-            for x in 0..size.x {
-                let uv = Vec2::<()>::new((x as f64 + 0.5) / size.x as f64, (y as f64 + 0.5) / size.y as f64);
-                let c = ctx.window.sample_bilinear(uv);
-                let pixel = [
-                    (c.r * 255.0).round() as u8,
-                    (c.g * 255.0).round() as u8,
-                    (c.b * 255.0).round() as u8,
-                    (c.a * weight * 255.0).round() as u8,
-                ];
-                if let Some(offset) = out.pixel_offset(Pixels::new(x), Pixels::new(y)) {
-                    out.data_mut()[offset..offset + 4].copy_from_slice(&pixel);
-                }
-            }
-        }
+        let (w, h) = (size.x as f64, size.y as f64);
+        crate::render::fill(out, |x, y| {
+            let uv = Vec2::<()>::new((x as f64 + 0.5) / w, (y as f64 + 0.5) / h);
+            let c = ctx.window.sample_bilinear(uv);
+            c.with_alpha(c.a * weight)
+        });
     }
 }
 
@@ -70,6 +60,7 @@ mod tests {
     use smearor_commons_buffer::BufferView;
     use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_geometry::Fraction;
+    use smearor_commons_geometry::Pixels;
     use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::Size;
     use smearor_commons_noise::Seed;

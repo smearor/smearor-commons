@@ -8,6 +8,7 @@ use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
 use smearor_commons_animation::EasingFunction;
+use smearor_commons_buffer::BufferView;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
@@ -216,86 +217,84 @@ impl WindowEffect for AuraGlow {
             crate::Direction::Open => ctx.progress.as_f64(),
             crate::Direction::Close => 1.0 - ctx.progress.as_f64(),
         };
+        // Frame constants - everything below depends only on
+        // progress, size, seed or parameters, so it lifts out of the
+        // pixel loop.
         let seed_uv = ctx.seed.offset_2d();
-        for y in 0..size.y {
-            for x in 0..size.x {
-                let i_tex = Vec2::<()>::new((x as f64 + 0.5) / size_px.x, (y as f64 + 0.5) / size_px.y);
-                // De-padded content uv: drop the padding margin, re-normalize.
-                let content_fraction = Vec2::<()>::new(1.0, 1.0) - Vec2::<()>::new(2.0 * ctx.padding.0, 2.0 * ctx.padding.0) / size_px;
-                let mut uv = (i_tex - Vec2::<()>::new(0.5, 0.5)).component_mul(&size_px) / content_fraction;
-                uv = uv / size_px + Vec2::<()>::new(0.5, 0.5);
+        let content_fraction = Vec2::<()>::new(1.0, 1.0) - Vec2::<()>::new(2.0 * ctx.padding.0, 2.0 * ctx.padding.0) / size_px;
+        let inv_content = Vec2::<()>::new(1.0 / content_fraction.x, 1.0 / content_fraction.y);
+        let aspect = Vec2::<()>::new(
+            if size_px.x > size_px.y { 1.0 } else { size_px.x / size_px.y },
+            if size_px.x > size_px.y { size_px.y / size_px.x } else { 1.0 },
+        );
+        let shape = crate::mix(2.0, 100.0, progress.powi(5));
+        let out_fade = EasingFunction::EaseOutSine.apply(Fraction::new(((1.0 - progress) * 4.0).min(1.0))).as_f64();
+        let in_fade = EasingFunction::EaseInSine.apply(Fraction::new((progress * 2.0).min(1.0))).as_f64();
+        let zoom = crate::mix(1.1, 1.0, EasingFunction::EaseOutCubic.apply(Fraction::new(progress)).as_f64());
+        let color_offset = if self.random_color {
+            Hash::<f64>::hash(&seed_uv) + 0.1
+        } else {
+            self.start_hue.0 + 0.1
+        };
+        let phase = progress * self.speed.0;
+        let edge_width = self.edge_size.0 + 0.1;
+        let saturation = self.saturation.as_f64();
+        // The cone rays are frame-constant - precompute the offset
+        // table once instead of trig per pixel per tap. Below half a
+        // pixel of radius the blur degenerates to the plain tap.
+        let blur_px = (1.0 - progress) * self.blur.0;
+        let cone = match blur_px > 0.5 {
+            true => BufferView::<Rgba>::cone_offsets(Vec2::<()>::new(blur_px / size_px.x, blur_px / size_px.y), 15, 3),
+            false => Vec::new(),
+        };
+        crate::render::fill(out, |x, y| {
+            let i_tex = Vec2::<()>::new((x as f64 + 0.5) / size_px.x, (y as f64 + 0.5) / size_px.y);
+            // De-padded content uv: (i_tex-0.5)*size/content/size+0.5.
+            let mut uv = (i_tex - Vec2::<()>::new(0.5, 0.5)).component_mul(&inv_content) + Vec2::<()>::new(0.5, 0.5);
 
-                // 1:1 aspect blend - the crop ends circular.
-                let mut one_to_one = uv - Vec2::<()>::new(0.5, 0.5);
-                if size_px.x > size_px.y {
-                    one_to_one.y *= size_px.y / size_px.x;
-                } else {
-                    one_to_one.x *= size_px.x / size_px.y;
-                }
-                let one_to_one = one_to_one + Vec2::<()>::new(0.5, 0.5);
-                uv = one_to_one * (1.0 - progress) + uv * progress;
+            // 1:1 aspect blend - the crop ends circular.
+            let one_to_one = (uv - Vec2::<()>::new(0.5, 0.5)).component_mul(&aspect) + Vec2::<()>::new(0.5, 0.5);
+            uv = one_to_one * (1.0 - progress) + uv * progress;
 
-                // Superellipse gradient + noise wobble.
-                let shape = crate::mix(2.0, 100.0, progress.powi(5));
-                let mut gradient = (uv.x - 0.5).abs().mul_add(2.0, 0.0).powf(shape) + (uv.y - 0.5).abs().mul_add(2.0, 0.0).powf(shape);
-                gradient += Simplex2D.at(i_tex + seed_uv) * 0.5;
+            // Superellipse gradient + noise wobble.
+            let mut gradient = ((uv.x - 0.5).abs() * 2.0).powf(shape) + ((uv.y - 0.5).abs() * 2.0).powf(shape);
+            gradient += Simplex2D.at(i_tex + seed_uv) * 0.5;
 
-                let mut glow_mask = 1.0 - ((progress - gradient) / (self.edge_size.0 + 0.1)).clamp(0.0, 1.0);
-                glow_mask *= EasingFunction::EaseOutSine.apply(Fraction::new(((1.0 - progress) * 4.0).min(1.0))).as_f64();
+            let mut glow_mask = 1.0 - ((progress - gradient) / edge_width).clamp(0.0, 1.0);
+            glow_mask *= out_fade;
 
-                // Zoom + progressive blur.
-                let zoom = crate::mix(1.1, 1.0, EasingFunction::EaseOutCubic.apply(Fraction::new(progress)).as_f64());
-                let window_uv = (i_tex - Vec2::<()>::new(0.5, 0.5)) * zoom + Vec2::<()>::new(0.5, 0.5);
-                let mut window_color = match self.blur.0 > 0.0 {
-                    true => ctx.window.sample_radial_blur(
-                        window_uv,
-                        Vec2::<()>::new((1.0 - progress) * self.blur.0 / size_px.x, (1.0 - progress) * self.blur.0 / size_px.y),
-                        15,
-                        3,
-                    ),
-                    false => ctx.window.sample_bilinear(window_uv),
-                };
-                glow_mask *= window_color.a;
+            // Zoom + progressive blur over the precomputed cone.
+            let window_uv = (i_tex - Vec2::<()>::new(0.5, 0.5)) * zoom + Vec2::<()>::new(0.5, 0.5);
+            let mut window_color = ctx.window.sample_cone(window_uv, &cone);
+            glow_mask *= window_color.a;
 
-                // Cos palette + hue offset, saturation-scaled.
-                let mut glow_color = Color::<f64>::new_rgba(
-                    (progress * self.speed.0 + uv.x + 0.0).cos(),
-                    (progress * self.speed.0 + uv.y + 2.0).cos(),
-                    (progress * self.speed.0 + uv.x + 4.0).cos(),
-                    1.0,
-                );
-                let color_offset = if self.random_color {
-                    Hash::<f64>::hash(&ctx.seed.offset_2d())
-                } else {
-                    self.start_hue.0
-                };
-                glow_color = crate::offset_hue(glow_color, color_offset + 0.1);
-                let glow = Color::<f64>::new_rgba(
-                    (glow_color.r * self.saturation.as_f64()).clamp(0.0, 1.0),
-                    (glow_color.g * self.saturation.as_f64()).clamp(0.0, 1.0),
-                    (glow_color.b * self.saturation.as_f64()).clamp(0.0, 1.0),
-                    1.0,
-                );
+            // Cos palette + hue offset, saturation-scaled.
+            let mut glow_color = Color::<f64>::new_rgba((phase + uv.x).cos(), (phase + uv.y + 2.0).cos(), (phase + uv.x + 4.0).cos(), 1.0);
+            glow_color = crate::offset_hue(glow_color, color_offset);
+            let glow = Color::<f64>::new_rgba(
+                (glow_color.r * saturation).clamp(0.0, 1.0),
+                (glow_color.g * saturation).clamp(0.0, 1.0),
+                (glow_color.b * saturation).clamp(0.0, 1.0),
+                1.0,
+            );
 
-                window_color = Color::<f64>::new_rgba(
-                    window_color.r + glow.r * glow_mask,
-                    window_color.g + glow.g * glow_mask,
-                    window_color.b + glow.b * glow_mask,
-                    window_color.a,
-                );
-                window_color = Color::<f64>::new_rgba(glow.r, glow.g, glow.b, glow_mask * 0.2).alpha_over(&window_color);
+            window_color = Color::<f64>::new_rgba(
+                window_color.r + glow.r * glow_mask,
+                window_color.g + glow.g * glow_mask,
+                window_color.b + glow.b * glow_mask,
+                window_color.a,
+            );
+            window_color = Color::<f64>::new_rgba(glow.r, glow.g, glow.b, glow_mask * 0.2).alpha_over(&window_color);
 
-                // Superellipse crop, soft/hard blended.
-                let soft_crop = 1.0 - crate::smoothstep(progress - 0.5, progress + 0.5, gradient);
-                let hard_crop = 1.0 - crate::smoothstep(progress - 0.05, progress + 0.05, gradient);
-                let mut crop_mask = crate::mix(soft_crop, hard_crop, self.edge_hardness.0);
-                crop_mask *= EasingFunction::EaseInSine.apply(Fraction::new((progress * 2.0).min(1.0))).as_f64();
-                crop_mask = crop_mask.max(1.0 - EasingFunction::EaseOutSine.apply(Fraction::new(((1.0 - progress) * 4.0).min(1.0))).as_f64());
-                window_color.a *= crop_mask;
-
-                out.put_color(Pixels::new(x), Pixels::new(y), window_color);
-            }
-        }
+            // Superellipse crop, soft/hard blended.
+            let soft_crop = 1.0 - crate::smoothstep(progress - 0.5, progress + 0.5, gradient);
+            let hard_crop = 1.0 - crate::smoothstep(progress - 0.05, progress + 0.05, gradient);
+            let mut crop_mask = crate::mix(soft_crop, hard_crop, self.edge_hardness.0);
+            crop_mask *= in_fade;
+            crop_mask = crop_mask.max(1.0 - out_fade);
+            window_color.a *= crop_mask;
+            window_color
+        });
     }
 }
 

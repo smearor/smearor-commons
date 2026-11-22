@@ -224,36 +224,35 @@ impl WindowEffect for Matrix {
 
 impl Matrix {
     /// `apply` against a custom [`GlyphSource`] - the point where a
-    /// consumer plugs a real bitmap font atlas.
-    pub fn apply_with_glyphs(&self, ctx: &FxContext<'_>, out: &mut BufferViewMut<'_, Rgba>, glyphs: &impl GlyphSource) {
+    /// consumer plugs a real bitmap font atlas. `Sync` because the
+    /// render driver shares the source across row-band workers.
+    pub fn apply_with_glyphs(&self, ctx: &FxContext<'_>, out: &mut BufferViewMut<'_, Rgba>, glyphs: &(impl GlyphSource + Sync)) {
         let size = ctx.window.size();
         let size_px = Vec2::<()>::new(size.x as f64, size.y as f64);
         let final_fade = 1.0 - ((ctx.progress.as_f64() - rain::FINAL_FADE_START_TIME) / (1.0 - rain::FINAL_FADE_START_TIME)).clamp(0.0, 1.0);
-        for y in 0..size.y {
-            for x in 0..size.x {
-                let uv = Vec2::<()>::new((x as f64 + 0.5) / size_px.x, (y as f64 + 0.5) / size_px.y);
-                let mut coords = uv;
-                coords.y = coords.y * (self.overshoot.0 + 1.0) - self.overshoot.0 * 0.5;
-                let px = Vec2::<()>::new(coords.x * size_px.x, coords.y * size_px.y);
-                let px_orig = Vec2::<()>::new(uv.x * size_px.x, uv.y * size_px.y);
+        crate::render::fill(out, |x, y| {
+            let uv = Vec2::<()>::new((x as f64 + 0.5) / size_px.x, (y as f64 + 0.5) / size_px.y);
+            let mut coords = uv;
+            coords.y = coords.y * (self.overshoot.0 + 1.0) - self.overshoot.0 * 0.5;
+            let px = Vec2::<()>::new(coords.x * size_px.x, coords.y * size_px.y);
+            let px_orig = Vec2::<()>::new(uv.x * size_px.x, uv.y * size_px.y);
 
-                let (rain_alpha, window_alpha) = self.rain(ctx, uv, px_orig, size_px);
-                let text_alpha = self.text_mask(ctx, px, glyphs);
-                let rain = final_fade * rain_alpha;
+            let (rain_alpha, window_alpha) = self.rain(ctx, uv, px_orig, size_px);
+            let text_alpha = self.text_mask(ctx, px, glyphs);
+            let rain = final_fade * rain_alpha;
 
-                let mut window = ctx.window.sample_bilinear(coords);
-                window.a *= window_alpha;
+            let mut window = ctx.window.sample_bilinear(coords);
+            window.a *= window_alpha;
 
-                let blend = (rain + 0.1).powi(4).min(1.0);
-                let text = Color::<f64>::new_rgba(
-                    crate::mix(self.trail_color.r, self.tip_color.r, blend),
-                    crate::mix(self.trail_color.g, self.tip_color.g, blend),
-                    crate::mix(self.trail_color.b, self.tip_color.b, blend),
-                    rain * text_alpha,
-                );
-                out.put_color(Pixels::new(x), Pixels::new(y), text.alpha_over(&window));
-            }
-        }
+            let blend = (rain + 0.1).powi(4).min(1.0);
+            let text = Color::<f64>::new_rgba(
+                crate::mix(self.trail_color.r, self.tip_color.r, blend),
+                crate::mix(self.trail_color.g, self.tip_color.g, blend),
+                crate::mix(self.trail_color.b, self.tip_color.b, blend),
+                rain * text_alpha,
+            );
+            text.alpha_over(&window)
+        });
     }
 }
 

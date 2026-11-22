@@ -12,77 +12,145 @@
 //!   unpremultiplied on read, so samplers always see straight alpha.
 //!
 //! Samples return normalized [`Color<f64>`] channels (`0.0..=1.0`).
+//! The hot paths work on raw `[f64; 4]` channels with view
+//! dimensions hoisted out of the per-tap loop - `sample_cone` taps
+//! are only a clamp, an offset and a weighted sum each.
 
 use crate::BufferView;
 use crate::PixelFormat;
 use smearor_commons_color::Color;
-use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Vec2;
 use std::f64::consts::TAU;
 
+/// Normalized-channel scale - `u8 -> 0..=1`.
+const INV_BYTE: f64 = 1.0 / 255.0;
+
+/// Transparent black - the empty-view read.
+const EMPTY: [f64; 4] = [0.0, 0.0, 0.0, 0.0];
+
 impl<F: PixelFormat> BufferView<'_, F> {
-    /// The texel at integer pixel coordinates as normalized color -
-    /// `None` outside the view.
-    fn texel(&self, x: i64, y: i64) -> Option<Color<f64>> {
-        let size = self.size();
-        if x < 0 || y < 0 || x >= size.x as i64 || y >= size.y as i64 {
-            return None;
-        }
-        let offset = self.pixel_offset(Pixels::new(x as u32), Pixels::new(y as u32))?;
-        let [r, g, b, a] = F::read_pixel(&self.data()[offset..offset + F::BYTES_PER_PIXEL]);
-        Some(Color::<f64>::new_rgba(r as f64 / 255.0, g as f64 / 255.0, b as f64 / 255.0, a as f64 / 255.0))
+    /// The clamped texel at integer coordinates as normalized
+    /// channels - the hot-path read behind every sampler. `width`
+    /// and `height` must be at least 1 (the public front-ends guard
+    /// the empty view).
+    #[inline]
+    fn texel_clamped(&self, width: i64, height: i64, x: i64, y: i64) -> [f64; 4] {
+        let x = x.clamp(0, width - 1) as usize;
+        let y = y.clamp(0, height - 1) as usize;
+        let offset = y * self.metadata.stride.as_usize() + x * F::BYTES_PER_PIXEL;
+        let [r, g, b, a] = F::read_pixel(&self.data[offset..offset + F::BYTES_PER_PIXEL]);
+        [r as f64 * INV_BYTE, g as f64 * INV_BYTE, b as f64 * INV_BYTE, a as f64 * INV_BYTE]
     }
 
-    /// The clamped texel read - out-of-range coordinates read the
-    /// nearest edge texel. Only defined for non-empty views; empty
-    /// views yield transparent black.
-    fn texel_clamped(&self, x: i64, y: i64) -> Color<f64> {
+    /// The bilinear tap at `uv` as normalized channels, clamp-to-edge
+    /// on every texel - the shared inner loop of `sample_bilinear`
+    /// and `sample_cone`. Same `width`/`height >= 1` contract as
+    /// [`texel_clamped`](Self::texel_clamped).
+    #[inline]
+    fn bilinear(&self, width: i64, height: i64, uv: Vec2<()>) -> [f64; 4] {
+        let x = uv.x * width as f64 - 0.5;
+        let y = uv.y * height as f64 - 0.5;
+        let (x0, y0) = (x.floor() as i64, y.floor() as i64);
+        let (tx, ty) = (x - x0 as f64, y - y0 as f64);
+        let tl = self.texel_clamped(width, height, x0, y0);
+        let tr = self.texel_clamped(width, height, x0 + 1, y0);
+        let bl = self.texel_clamped(width, height, x0, y0 + 1);
+        let br = self.texel_clamped(width, height, x0 + 1, y0 + 1);
+        let lerp = |a: [f64; 4], b: [f64; 4], t: f64| {
+            [
+                a[0] + (b[0] - a[0]) * t,
+                a[1] + (b[1] - a[1]) * t,
+                a[2] + (b[2] - a[2]) * t,
+                a[3] + (b[3] - a[3]) * t,
+            ]
+        };
+        lerp(lerp(tl, tr, tx), lerp(bl, br, tx), ty)
+    }
+
+    /// View dimensions for the samplers - `None` on empty views.
+    #[inline]
+    fn dims(&self) -> Option<(i64, i64)> {
         let size = self.size();
-        let x = x.clamp(0, size.x as i64 - 1);
-        let y = y.clamp(0, size.y as i64 - 1);
-        self.texel(x, y).unwrap_or(Color::<f64>::BLACK.with_alpha(0.0))
+        (size.x > 0 && size.y > 0).then_some((size.x as i64, size.y as i64))
     }
 
     /// Nearest-texel sampling - the texel whose center is closest to
-    /// `uv` (pixelate-style, no interpolation).
+    /// `uv` (pixelate-style, no interpolation). Empty views yield
+    /// transparent black.
     pub fn sample_nearest(&self, uv: Vec2<()>) -> Color<f64> {
-        let size = self.size();
-        self.texel_clamped((uv.x * size.x as f64 - 0.5).round() as i64, (uv.y * size.y as f64 - 0.5).round() as i64)
+        let Some((width, height)) = self.dims() else {
+            return Color::<f64>::BLACK.with_alpha(0.0);
+        };
+        let [r, g, b, a] = self.texel_clamped(width, height, (uv.x * width as f64 - 0.5).round() as i64, (uv.y * height as f64 - 0.5).round() as i64);
+        Color::<f64>::new_rgba(r, g, b, a)
     }
 
     /// Bilinear sampling - the weighted mean of the four surrounding
-    /// texels, clamp-to-edge on every tap.
+    /// texels, clamp-to-edge on every tap. Empty views yield
+    /// transparent black.
     pub fn sample_bilinear(&self, uv: Vec2<()>) -> Color<f64> {
-        let size = self.size();
-        let x = uv.x * size.x as f64 - 0.5;
-        let y = uv.y * size.y as f64 - 0.5;
-        let (x0, y0) = (x.floor() as i64, y.floor() as i64);
-        let (tx, ty) = (x - x0 as f64, y - y0 as f64);
-        let top = self.texel_clamped(x0, y0).lerp(&self.texel_clamped(x0 + 1, y0), tx);
-        let bottom = self.texel_clamped(x0, y0 + 1).lerp(&self.texel_clamped(x0 + 1, y0 + 1), tx);
-        top.lerp(&bottom, ty)
+        let Some((width, height)) = self.dims() else {
+            return Color::<f64>::BLACK.with_alpha(0.0);
+        };
+        let [r, g, b, a] = self.bilinear(width, height, uv);
+        Color::<f64>::new_rgba(r, g, b, a)
+    }
+
+    /// The ray offsets of a radial (cone) blur: `taps` samples along
+    /// each of `directions` evenly spaced rays of `radius` uv units
+    /// around the sample point. The radius is a `Vec2`, so
+    /// anisotropic (elliptical) blurs like `radius_px / size` are
+    /// expressible. Compute once per frame - the same offsets serve
+    /// every pixel's [`sample_cone`](Self::sample_cone) call.
+    pub fn cone_offsets(radius: Vec2<()>, directions: u32, taps: u32) -> Vec<Vec2<()>> {
+        if directions == 0 || taps == 0 || (radius.x <= 0.0 && radius.y <= 0.0) {
+            return Vec::new();
+        }
+        let mut offsets = Vec::with_capacity((directions * taps) as usize);
+        for direction in 0..directions {
+            let angle = direction as f64 / directions as f64 * TAU;
+            let (cos, sin) = (angle.cos(), angle.sin());
+            for tap in 1..=taps {
+                let t = tap as f64 / taps as f64;
+                offsets.push(Vec2::<()>::new(cos * radius.x * t, sin * radius.y * t));
+            }
+        }
+        offsets
+    }
+
+    /// Cone-blur sampling - the mean of bilinear taps at `uv` plus
+    /// each precomputed `offsets` entry (see
+    /// [`cone_offsets`](Self::cone_offsets)). An empty offset list
+    /// degenerates to the plain [`sample_bilinear`](Self::sample_bilinear)
+    /// tap.
+    pub fn sample_cone(&self, uv: Vec2<()>, offsets: &[Vec2<()>]) -> Color<f64> {
+        let Some((width, height)) = self.dims() else {
+            return Color::<f64>::BLACK.with_alpha(0.0);
+        };
+        if offsets.is_empty() {
+            let [r, g, b, a] = self.bilinear(width, height, uv);
+            return Color::<f64>::new_rgba(r, g, b, a);
+        }
+        let mut acc = EMPTY;
+        for offset in offsets {
+            let c = self.bilinear(width, height, uv + *offset);
+            acc[0] += c[0];
+            acc[1] += c[1];
+            acc[2] += c[2];
+            acc[3] += c[3];
+        }
+        let count = offsets.len() as f64;
+        Color::<f64>::new_rgba(acc[0] / count, acc[1] / count, acc[2] / count, acc[3] / count)
     }
 
     /// Radial-blur sampling - the mean of `taps` bilinear samples
     /// along `directions` evenly spaced rays of `radius` uv units
-    /// around `uv`. The radius is a `Vec2`, so anisotropic (elliptical)
-    /// blurs like `radius_px / size` are expressible; a zero component
-    /// degenerates to the center texel.
+    /// around `uv`. A zero component degenerates to the center texel.
+    /// For per-pixel use prefer [`cone_offsets`](Self::cone_offsets)
+    /// + [`sample_cone`](Self::sample_cone): this convenience
+    ///   recomputes the ray table on every call.
     pub fn sample_radial_blur(&self, uv: Vec2<()>, radius: Vec2<()>, directions: u32, taps: u32) -> Color<f64> {
-        if directions == 0 || taps == 0 || (radius.x <= 0.0 && radius.y <= 0.0) {
-            return self.sample_bilinear(uv);
-        }
-        let mut acc = Color::<f64>::new_rgba(0.0, 0.0, 0.0, 0.0);
-        for direction in 0..directions {
-            let angle = direction as f64 / directions as f64 * TAU;
-            for tap in 1..=taps {
-                let r = radius * (tap as f64 / taps as f64);
-                let c = self.sample_bilinear(Vec2::<()>::new(uv.x + angle.cos() * r.x, uv.y + angle.sin() * r.y));
-                acc = Color::<f64>::new_rgba(acc.r + c.r, acc.g + c.g, acc.b + c.b, acc.a + c.a);
-            }
-        }
-        let count = (directions * taps) as f64;
-        Color::<f64>::new_rgba(acc.r / count, acc.g / count, acc.b / count, acc.a / count)
+        self.sample_cone(uv, &Self::cone_offsets(radius, directions, taps))
     }
 }
 
@@ -129,11 +197,12 @@ mod tests {
     #[test]
     fn radial_blur_averages_the_neighborhood() {
         let (_data, view) = checker();
-        let v = view.sample_radial_blur(Vec2::<()>::new(0.5, 0.5), Vec2::<()>::new(0.3, 0.3), 8, 2);
+        let offsets = BufferView::<Rgba>::cone_offsets(Vec2::<()>::new(0.3, 0.3), 8, 2);
+        let v = view.sample_cone(Vec2::<()>::new(0.5, 0.5), &offsets);
         // Mean of an all-four-texel neighborhood in a checker is ~0.5 per channel.
         assert!((v.r - 0.5).abs() < 0.3, "radial r = {}", v.r);
         assert_eq!(
-            view.sample_radial_blur(Vec2::<()>::new(0.25, 0.25), Vec2::<()>::new(0.0, 0.0), 8, 2),
+            view.sample_cone(Vec2::<()>::new(0.25, 0.25), &[]),
             Color::<f64>::new_rgba(0.0, 0.0, 0.0, 1.0)
         );
     }

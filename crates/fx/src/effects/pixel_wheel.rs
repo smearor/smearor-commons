@@ -107,25 +107,25 @@ impl WindowEffect for PixelWheel {
         let size = ctx.window.size();
         let pixel_size = (self.pixel_size.0 * progress + 1.0).ceil();
         let grid = Vec2::<()>::new(pixel_size / size.x as f64, pixel_size / size.y as f64);
-        for y in 0..size.y {
-            for x in 0..size.x {
-                let uv = Vec2::<()>::new((x as f64 + 0.5) / size.x as f64, (y as f64 + 0.5) / size.y as f64);
-                // Cell-center uv - the whole block samples one texel.
-                let texcoord = Vec2::<()>::new(uv.x - (uv.x % grid.x) + grid.x * 0.5, uv.y - (uv.y % grid.y) + grid.y * 0.5);
-                let mut c = ctx.window.sample_bilinear(texcoord);
-                // Spoke mask: angle to the downward direction, mirrored at x = 0.
-                let dir = (texcoord - Vec2::<()>::new(0.5, 0.5)).normalized();
-                let mut angle = 0.5 * dir.y.clamp(-1.0, 1.0).acos() / PI;
-                if dir.x < 0.0 {
-                    angle = 1.0 - angle;
-                }
-                let threshold = crate::fract(angle * self.spoke_count.0 as f64);
-                if progress > threshold {
-                    c.a = 0.0;
-                }
-                out.put_color(Pixels::new(x), Pixels::new(y), c);
+        let (w, h) = (size.x as f64, size.y as f64);
+        let spokes = self.spoke_count.0 as f64;
+        crate::render::fill(out, |x, y| {
+            let uv = Vec2::<()>::new((x as f64 + 0.5) / w, (y as f64 + 0.5) / h);
+            // Cell-center uv - the whole block samples one texel.
+            let texcoord = Vec2::<()>::new(uv.x - (uv.x % grid.x) + grid.x * 0.5, uv.y - (uv.y % grid.y) + grid.y * 0.5);
+            let mut c = ctx.window.sample_bilinear(texcoord);
+            // Spoke mask: angle to the downward direction, mirrored at x = 0.
+            let dir = (texcoord - Vec2::<()>::new(0.5, 0.5)).normalized();
+            let mut angle = 0.5 * dir.y.clamp(-1.0, 1.0).acos() / PI;
+            if dir.x < 0.0 {
+                angle = 1.0 - angle;
             }
-        }
+            let threshold = crate::fract(angle * spokes);
+            if progress > threshold {
+                c.a = 0.0;
+            }
+            c
+        });
     }
 }
 

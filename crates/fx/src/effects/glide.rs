@@ -10,7 +10,6 @@ use smearor_commons_animation::EasingFunction;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_geometry::Factor;
-use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::ScaleFactor;
 use smearor_commons_geometry::Vec2;
 
@@ -157,20 +156,27 @@ impl WindowEffect for Glide {
             crate::Direction::Close => (1.0 - ctx.progress.as_f64()).powi(2),
         };
         let size = ctx.window.size();
-        for y in 0..size.y {
-            for x in 0..size.x {
-                let uv = Vec2::<()>::new((x as f64 + 0.5) / size.x as f64, (y as f64 + 0.5) / size.y as f64);
-                let mut coords = uv * 2.0 - Vec2::<()>::new(1.0, 1.0);
-                coords = coords / crate::mix(1.0, self.scale.0, progress);
-                coords.y /= crate::mix(1.0, 1.0 - 0.2 * self.squish.0, progress);
-                coords.x /= crate::mix(1.0, 1.0 - 0.1 * self.tilt.0 * coords.y, progress);
-                coords.y += self.shift.0 * progress;
-                coords = coords * 0.5 + Vec2::<()>::new(0.5, 0.5);
-                let mut c = ctx.window.sample_bilinear(coords);
-                c.a *= alpha;
-                out.put_color(Pixels::new(x), Pixels::new(y), c);
-            }
-        }
+        let (w, h) = (size.x as f64, size.y as f64);
+        // Frame constants - the scale/squish denominators and the
+        // shift step depend on progress alone.
+        let scale = crate::mix(1.0, self.scale.0, progress);
+        let squish = crate::mix(1.0, 1.0 - 0.2 * self.squish.0, progress);
+        let tilt = 0.1 * self.tilt.0 * progress;
+        let shift = self.shift.0 * progress;
+        crate::render::fill(out, |x, y| {
+            let uv = Vec2::<()>::new((x as f64 + 0.5) / w, (y as f64 + 0.5) / h);
+            let mut coords = uv * 2.0 - Vec2::<()>::new(1.0, 1.0);
+            coords = coords / scale;
+            coords.y /= squish;
+            // mix(1, 1 - tilt_k*coords.y, progress) is linear:
+            // 1 - tilt*progress*coords.y.
+            coords.x /= 1.0 - tilt * coords.y;
+            coords.y += shift;
+            coords = coords * 0.5 + Vec2::<()>::new(0.5, 0.5);
+            let mut c = ctx.window.sample_bilinear(coords);
+            c.a *= alpha;
+            c
+        });
     }
 }
 

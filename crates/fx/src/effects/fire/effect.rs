@@ -15,7 +15,6 @@ use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
 use smearor_commons_color::Palette;
 use smearor_commons_geometry::Factor;
-use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::ScaleFactor;
 use smearor_commons_geometry::Vec2;
 use smearor_commons_geometry::Vec3;
@@ -241,27 +240,27 @@ impl WindowEffect for Fire {
         let size_px = Vec2::<()>::new(size.x as f64, size.y as f64);
         let colors = if self.random_color { self.random_colors(ctx) } else { self.ramp_colors() };
         let drift = ctx.progress.as_f64() * ctx.duration.as_secs_f64() * self.movement_speed.0;
-        for y in 0..size.y {
-            for x in 0..size.x {
-                let px = Vec2::<()>::new(x as f64 + 0.5, y as f64 + 0.5);
-                let uv = px / size_px;
-                // Noise domain: BMW's 400x600-normalized aspect-corrected uv.
-                let mut n_uv = px / Vec2::<()>::new(400.0, 600.0) / self.scale.0;
-                n_uv += ctx.seed.offset_2d();
-                n_uv.y += drift;
-                let mut noise = match self.noise_3d {
-                    true => Simplex3DFractal.at(Vec3::<()>::new(n_uv.x * 4.0, n_uv.y * 4.0, drift * 1.5)),
-                    false => Simplex2DFractal.at(n_uv * 4.0),
-                };
-                let mask = EffectMask::at(ctx, self.bottom_to_top(ctx), px, size_px);
-                noise *= mask.effect;
+        let bottom_to_top = self.bottom_to_top(ctx);
+        let seed_offset = ctx.seed.offset_2d();
+        crate::render::fill(out, |x, y| {
+            let px = Vec2::<()>::new(x as f64 + 0.5, y as f64 + 0.5);
+            let uv = px / size_px;
+            // Noise domain: BMW's 400x600-normalized aspect-corrected uv.
+            let mut n_uv = px / Vec2::<()>::new(400.0, 600.0) / self.scale.0;
+            n_uv += seed_offset;
+            n_uv.y += drift;
+            let mut noise = match self.noise_3d {
+                true => Simplex3DFractal.at(Vec3::<()>::new(n_uv.x * 4.0, n_uv.y * 4.0, drift * 1.5)),
+                false => Simplex2DFractal.at(n_uv * 4.0),
+            };
+            let mask = EffectMask::at(ctx, bottom_to_top, px, size_px);
+            noise *= mask.effect;
 
-                let fire = fire_ramp(noise, &colors);
-                let mut window = ctx.window.sample_bilinear(uv);
-                window.a *= mask.window;
-                out.put_color(Pixels::new(x), Pixels::new(y), fire.alpha_over(&window));
-            }
-        }
+            let fire = fire_ramp(noise, &colors);
+            let mut window = ctx.window.sample_bilinear(uv);
+            window.a *= mask.window;
+            fire.alpha_over(&window)
+        });
     }
 }
 
@@ -275,6 +274,7 @@ mod tests {
     use smearor_commons_buffer::BufferView;
     use smearor_commons_buffer::PixelBuffer;
     use smearor_commons_geometry::Fraction;
+    use smearor_commons_geometry::Pixels;
     use smearor_commons_geometry::Rect;
     use smearor_commons_geometry::Size;
     use smearor_commons_noise::Seed;

@@ -30,6 +30,7 @@ mod layer;
 mod layers;
 mod ops;
 mod param;
+mod render;
 mod spec;
 mod spoke_count;
 
