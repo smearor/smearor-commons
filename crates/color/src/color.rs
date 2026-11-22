@@ -634,6 +634,26 @@ impl<'de> Deserialize<'de> for Color<u8> {
     }
 }
 
+/// The schema mirrors the serde wire format: the hex string
+/// `"#rgb"`, `"#rgba"`, `"#rrggbb"` or `"#rrggbbaa"`.
+#[cfg(feature = "schemars")]
+impl<T> schemars::JsonSchema for Color<T> {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Color".into()
+    }
+
+    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}([0-9a-fA-F]{2})?)$",
+        })
+    }
+
+    fn inline_schema() -> bool {
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
