@@ -105,18 +105,31 @@ fn every_spec_lands_in_the_envelope() {
         let mut restored = options.clone();
         restored.insert("effect".to_string(), serde_json::Value::from(spec.nick()));
         let back: EffectSpec = serde_json::from_value(serde_json::Value::Object(restored)).unwrap();
-        assert_eq!(serde_json::to_value(&back).unwrap(), payload);
+        let again = serde_json::to_value(&back).unwrap();
+        assert_eq!(again, payload, "{} drifted", spec.nick());
     }
 }
 
 #[test]
 fn seed_replays_the_frame_bitwise() {
     let card = card(Size::new(64, 48));
-    for nick in ["glide", "pixel-wheel", "fire", "matrix", "aura-glow"] {
-        let spec = EffectSpec::by_nick(nick).unwrap();
+    for spec in EffectSpec::all() {
         let first = render(&spec, &card, 0.5, 9001);
         let second = render(&spec, &card, 0.5, 9001);
-        assert_eq!(first.pixels(), second.pixels(), "{nick} must replay deterministically");
+        assert_eq!(first.pixels(), second.pixels(), "{} must replay deterministically", spec.nick());
+    }
+}
+
+/// Mid-animation every spec must leave the window visible or
+/// visibly altered somewhere - catches silently-empty shaders.
+#[test]
+fn every_spec_renders_something_mid_animation() {
+    let card = card(Size::new(64, 48));
+    let untouched = card.pixels().to_vec();
+    for spec in EffectSpec::all() {
+        let frame = render(&spec, &card, 0.5, 9001);
+        let changed = frame.pixels().iter().zip(untouched.iter()).any(|(a, b)| a != b);
+        assert!(changed, "{} rendered a bit-identical frame at progress 0.5", spec.nick());
     }
 }
 

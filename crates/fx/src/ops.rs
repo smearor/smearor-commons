@@ -65,6 +65,46 @@ pub fn offset_hue(color: Color<f64>, offset: f64) -> Color<f64> {
     Color::<f64>::from(hsv)
 }
 
+/// BMW `whirl` - swirl distortion: rotates `coords` around the
+/// origin by an angle which falls off quadratically with distance
+/// (`warping` scales the falloff, `rotation` adds a constant spin).
+/// The geeks3d swirl-post-processing filter.
+pub fn whirl(coords: Vec2<()>, warping: f64, rotation: f64) -> Vec2<()> {
+    // (1-len)^2 stays positive outside the radius - powi(2), not max(0).
+    let angle = (1.0 - coords.x.mul_add(coords.x, coords.y * coords.y).sqrt()).powi(2) * warping + rotation;
+    let (sin, cos) = angle.sin_cos();
+    Vec2::<()>::new(coords.x * cos - coords.y * sin, coords.x * sin + coords.y * cos)
+}
+
+/// BMW `getRelativeEdgeMask` - fades `uv` (unit space) to zero at the
+/// actor boundaries over `fade` relative units; pure uv math, no
+/// pixel context.
+pub fn relative_edge_mask(uv: Vec2<()>, fade: f64) -> f64 {
+    Rect::new(Vec2::<()>::new(0.0, 0.0), Vec2::<()>::new(1.0, 1.0)).edge_fade(uv, fade)
+}
+
+/// BMW `darken` - scales color toward black by `fac`.
+pub fn darken(color: Color<f64>, fac: f64) -> Color<f64> {
+    let t = 1.0 - fac;
+    Color::<f64>::new_rgba(color.r * t, color.g * t, color.b * t, color.a)
+}
+
+/// BMW `lighten` - lerps color toward white by `fac`.
+pub fn lighten(color: Color<f64>, fac: f64) -> Color<f64> {
+    Color::<f64>::new_rgba(color.r + (1.0 - color.r) * fac, color.g + (1.0 - color.g) * fac, color.b + (1.0 - color.b) * fac, color.a)
+}
+
+/// BMW `alphaOver` - source-over compositing: `src` over `dst`,
+/// straight-alpha semantics.
+pub fn alpha_over(dst: Color<f64>, src: Color<f64>) -> Color<f64> {
+    let a = src.a + dst.a * (1.0 - src.a);
+    if a <= 0.0 {
+        return Color::<f64>::new_rgba(0.0, 0.0, 0.0, 0.0);
+    }
+    let over = |s: f64, d: f64| (s * src.a + d * dst.a * (1.0 - src.a)) / a;
+    Color::<f64>::new_rgba(over(src.r, dst.r), over(src.g, dst.g), over(src.b, dst.b), a)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

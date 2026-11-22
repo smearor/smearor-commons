@@ -201,9 +201,6 @@ mod tests {
         let v = view.sample_cone(Vec2::<()>::new(0.5, 0.5), &offsets);
         // Mean of an all-four-texel neighborhood in a checker is ~0.5 per channel.
         assert!((v.r - 0.5).abs() < 0.3, "radial r = {}", v.r);
-        assert_eq!(
-            view.sample_cone(Vec2::<()>::new(0.25, 0.25), &[]),
-            Color::<f64>::new_rgba(0.0, 0.0, 0.0, 1.0)
-        );
+        assert_eq!(view.sample_cone(Vec2::<()>::new(0.25, 0.25), &[]), Color::<f64>::new_rgba(0.0, 0.0, 0.0, 1.0));
     }
 }

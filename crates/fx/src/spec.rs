@@ -1,11 +1,24 @@
+use crate::Apparition;
 use crate::AuraGlow;
 use crate::Crossfade;
+use crate::Doom;
+use crate::EnergizeA;
+use crate::EnergizeB;
 use crate::Fire;
 use crate::FxError;
 use crate::Glide;
+use crate::Glitch;
+use crate::Materialize;
 use crate::Matrix;
+use crate::Mushroom;
 use crate::ParamValue;
 use crate::PixelWheel;
+use crate::Portal;
+use crate::RgbWarp;
+use crate::Shredder;
+use crate::Tv;
+use crate::TvGlitch;
+use crate::VenetianBlinds;
 use crate::WindowEffect;
 use serde::Deserialize;
 use serde::Serialize;
@@ -31,7 +44,35 @@ pub enum EffectSpec {
     Matrix(Matrix),
     /// Radial blur + cos-palette glow + superellipse crop.
     AuraGlow(AuraGlow),
-    // Doom, Incinerate, ... - appended by phase 4
+    /// Pixelated column melt (DOOM screen melt).
+    Doom(Doom),
+    /// Shake + suction + whirl dematerialization.
+    Apparition(Apparition),
+    /// Portal swirl + window travel.
+    Portal(Portal),
+    /// CRT collapse to the center line.
+    Tv(Tv),
+    /// CRT collapse overlaid with glitch rows.
+    TvGlitch(TvGlitch),
+    /// Row shear + interference + grain + RGB split.
+    Glitch(Glitch),
+    /// Turning/folding horizontal slats.
+    VenetianBlinds(VenetianBlinds),
+    /// Falling paper strips with torn edges.
+    Shredder(Shredder),
+    /// Quantized panel growth + tint reveal.
+    Materialize(Materialize),
+    /// Radial atom burst dissolve.
+    EnergizeA(EnergizeA),
+    /// Top-down shower + streak + atom dissolve.
+    EnergizeB(EnergizeB),
+    /// Vertical channel-split peel + brightness pulse. BMW's nick
+    /// is the odd unhyphenated `rgbwarp`.
+    #[serde(rename = "rgbwarp")]
+    RgbWarp(RgbWarp),
+    /// 8-bit scale + sparks + rays + star rings.
+    Mushroom(Mushroom),
+    // Incinerate, Wisps, ... - appended by phase 4
 }
 
 impl EffectSpec {
@@ -45,6 +86,19 @@ impl EffectSpec {
             EffectSpec::Fire(Fire::default()),
             EffectSpec::Matrix(Matrix::default()),
             EffectSpec::AuraGlow(AuraGlow::default()),
+            EffectSpec::Doom(Doom::default()),
+            EffectSpec::Apparition(Apparition::default()),
+            EffectSpec::Portal(Portal::default()),
+            EffectSpec::Tv(Tv::default()),
+            EffectSpec::TvGlitch(TvGlitch::default()),
+            EffectSpec::Glitch(Glitch::default()),
+            EffectSpec::VenetianBlinds(VenetianBlinds::default()),
+            EffectSpec::Shredder(Shredder::default()),
+            EffectSpec::Materialize(Materialize::default()),
+            EffectSpec::EnergizeA(EnergizeA::default()),
+            EffectSpec::EnergizeB(EnergizeB::default()),
+            EffectSpec::RgbWarp(RgbWarp::default()),
+            EffectSpec::Mushroom(Mushroom::default()),
         ]
     }
 
@@ -67,6 +121,19 @@ impl EffectSpec {
             Self::Fire(effect) => effect.nick(),
             Self::Matrix(effect) => effect.nick(),
             Self::AuraGlow(effect) => effect.nick(),
+            Self::Doom(effect) => effect.nick(),
+            Self::Apparition(effect) => effect.nick(),
+            Self::Portal(effect) => effect.nick(),
+            Self::Tv(effect) => effect.nick(),
+            Self::TvGlitch(effect) => effect.nick(),
+            Self::Glitch(effect) => effect.nick(),
+            Self::VenetianBlinds(effect) => effect.nick(),
+            Self::Shredder(effect) => effect.nick(),
+            Self::Materialize(effect) => effect.nick(),
+            Self::EnergizeA(effect) => effect.nick(),
+            Self::EnergizeB(effect) => effect.nick(),
+            Self::RgbWarp(effect) => effect.nick(),
+            Self::Mushroom(effect) => effect.nick(),
         }
     }
 
@@ -79,6 +146,19 @@ impl EffectSpec {
             Self::Fire(effect) => Box::new(effect.clone()),
             Self::Matrix(effect) => Box::new(effect.clone()),
             Self::AuraGlow(effect) => Box::new(*effect),
+            Self::Doom(effect) => Box::new(*effect),
+            Self::Apparition(effect) => Box::new(*effect),
+            Self::Portal(effect) => Box::new(*effect),
+            Self::Tv(effect) => Box::new(*effect),
+            Self::TvGlitch(effect) => Box::new(*effect),
+            Self::Glitch(effect) => Box::new(*effect),
+            Self::VenetianBlinds(effect) => Box::new(*effect),
+            Self::Shredder(effect) => Box::new(*effect),
+            Self::Materialize(effect) => Box::new(*effect),
+            Self::EnergizeA(effect) => Box::new(*effect),
+            Self::EnergizeB(effect) => Box::new(*effect),
+            Self::RgbWarp(effect) => Box::new(*effect),
+            Self::Mushroom(effect) => Box::new(effect.clone()),
         }
     }
 
@@ -92,6 +172,19 @@ impl EffectSpec {
             Self::Fire(effect) => effect.set_values(values),
             Self::Matrix(effect) => effect.set_values(values),
             Self::AuraGlow(effect) => effect.set_values(values),
+            Self::Doom(effect) => effect.set_values(values),
+            Self::Apparition(effect) => effect.set_values(values),
+            Self::Portal(effect) => effect.set_values(values),
+            Self::Tv(effect) => effect.set_values(values),
+            Self::TvGlitch(effect) => effect.set_values(values),
+            Self::Glitch(effect) => effect.set_values(values),
+            Self::VenetianBlinds(effect) => effect.set_values(values),
+            Self::Shredder(effect) => effect.set_values(values),
+            Self::Materialize(effect) => effect.set_values(values),
+            Self::EnergizeA(effect) => effect.set_values(values),
+            Self::EnergizeB(effect) => effect.set_values(values),
+            Self::RgbWarp(effect) => effect.set_values(values),
+            Self::Mushroom(effect) => effect.set_values(values),
         }
     }
 
@@ -157,6 +250,24 @@ mod tests {
                 assert!(found, "{}: param `{}` does not resolve in the serde payload", spec.nick(), param.key);
             }
             let _ = effect.values(); // every effect reports values
+        }
+    }
+
+    /// `values()` ↔ `params()` length parity + `set_values(values())`
+    /// is a no-op for every shipped spec.
+    #[test]
+    fn values_roundtrip_through_set_values() {
+        for spec in EffectSpec::all() {
+            let effect = spec.build();
+            let values = effect.values();
+            assert_eq!(values.len(), effect.params().len(), "{}: values/params length mismatch", spec.nick());
+            let mut restored = spec.clone();
+            restored
+                .set_values(&values)
+                .unwrap_or_else(|err| panic!("{}: set_values failed: {err}", spec.nick()));
+            let after = serde_json::to_value(&restored).unwrap();
+            let before = serde_json::to_value(&spec).unwrap();
+            assert_eq!(before, after, "{}: set_values(values()) drifted", spec.nick());
         }
     }
 }

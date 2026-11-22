@@ -1,19 +1,46 @@
 //! The shipped effects - one struct per file, the `EffectSpec`
 //! variant payloads.
 
+mod apparition;
 mod aura_glow;
 mod crossfade;
+mod doom;
+mod energize_a;
+mod energize_b;
 mod fire;
 mod glide;
+mod glitch;
+mod materialize;
 mod matrix;
+mod mushroom;
 mod pixel_wheel;
+mod portal;
+mod rgbwarp;
+mod shredder;
+mod tv;
+mod tv_glitch;
+mod venetian_blinds;
 
+pub use apparition::Apparition;
 pub use aura_glow::AuraGlow;
 pub use crossfade::Crossfade;
+pub use doom::Doom;
+pub use energize_a::EnergizeA;
+pub use energize_b::EnergizeB;
 pub use fire::Fire;
 pub use fire::FireColor;
 pub use glide::Glide;
+pub use glitch::Glitch;
+pub use materialize::Materialize;
 pub use matrix::GlyphSource;
 pub use matrix::Matrix;
 pub use matrix::ProceduralGlyphAtlas;
+pub use mushroom::Mushroom;
+pub use mushroom::StarColor;
 pub use pixel_wheel::PixelWheel;
+pub use portal::Portal;
+pub use rgbwarp::RgbWarp;
+pub use shredder::Shredder;
+pub use tv::Tv;
+pub use tv_glitch::TvGlitch;
+pub use venetian_blinds::VenetianBlinds;

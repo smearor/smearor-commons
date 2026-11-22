@@ -29,13 +29,27 @@ a `TimedAnimation` driven by the consumer.
 | `fire` | `Fire` | Fractal-noise burn front with a 5-stop flame ramp. |
 | `matrix` | `Matrix` | Glyph rain + trail composite over a falling window mask; glyphs come from a `GlyphSource` (bundled `ProceduralGlyphAtlas` with an embedded 5x7 bitmap font). |
 | `aura-glow` | `AuraGlow` | Radial blur + cos-palette glow + superellipse crop. |
+| `doom` | `Doom` | Pixelated column melt (DOOM screen melt). |
+| `apparition` | `Apparition` | Shake + suction + whirl dematerialization. |
+| `portal` | `Portal` | Five-layer swirl portal + window travel. |
+| `tv` | `Tv` | CRT collapse to the center line. |
+| `tv-glitch` | `TvGlitch` | CRT collapse overlaid with glitch rows. |
+| `glitch` | `Glitch` | Row shear + interference + grain + RGB split. |
+| `venetian-blinds` | `VenetianBlinds` | Turning or folding horizontal slats. |
+| `shredder` | `Shredder` | Falling paper strips with torn edges. |
+| `materialize` | `Materialize` | Quantized panel growth + tint reveal. |
+| `energize-a` | `EnergizeA` | Radial atom burst dissolve. |
+| `energize-b` | `EnergizeB` | Top-down shower + streak + atom dissolve. |
+| `rgbwarp` | `RgbWarp` | Vertical channel-split peel + brightness pulse. |
+| `mushroom` | `Mushroom` | 8-bit scale + rising sparks + rays + star rings. |
 
-All six are reachable through `EffectSpec::by_nick`/`build` and survive
-JSON round trips. Each rustdoc states the behavioral spec and names
-its source shader in the Burn-My-Windows checkout for provenance; the
-implementations are semantic re-implementations on our ops (`mix`,
-`smoothstep`, `absolute_edge_mask`, `offset_hue`, `BufferView`
-sampling, `Color::alpha_over`), not line ports.
+All nineteen are reachable through `EffectSpec::by_nick`/`build` and
+survive JSON round trips. Each rustdoc states the behavioral spec and
+names its source shader in the Burn-My-Windows checkout for
+provenance; the implementations are semantic re-implementations on our
+ops (`mix`, `smoothstep`, `absolute_edge_mask`, `relative_edge_mask`,
+`offset_hue`, `whirl`, `darken`, `lighten`, `alpha_over`,
+`BufferView` sampling), not line ports.
 
 ## The `fx` experimenter
 
@@ -83,4 +97,4 @@ smearor-commons-fx --features gtk4 --example dump_card`:
 Rendered frames (all deterministic for a fixed seed/progress) come
 from `cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- <effect> <progress> <direction>`:
 
-<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;">
+<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;">
