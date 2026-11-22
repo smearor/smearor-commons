@@ -94,6 +94,19 @@ pub fn lighten(color: Color<f64>, fac: f64) -> Color<f64> {
     Color::<f64>::new_rgba(color.r + (1.0 - color.r) * fac, color.g + (1.0 - color.g) * fac, color.b + (1.0 - color.b) * fac, color.a)
 }
 
+/// BMW `tritone` - maps `val` through a three-stop gradient:
+/// shadows → midtones over the lower half, midtones → highlights
+/// over the upper half, each leg smoothed. Used by `incinerate`
+/// and `wisps`.
+pub fn tritone(val: f64, shadows: Color<f64>, midtones: Color<f64>, highlights: Color<f64>) -> Color<f64> {
+    let mix_rgb = |a: Color<f64>, b: Color<f64>, t: f64| Color::<f64>::new(mix(a.r, b.r, t), mix(a.g, b.g, t), mix(a.b, b.b, t));
+    if val < 0.5 {
+        mix_rgb(shadows, midtones, smoothstep(0.0, 1.0, val * 2.0))
+    } else {
+        mix_rgb(midtones, highlights, smoothstep(0.0, 1.0, val * 2.0 - 1.0))
+    }
+}
+
 /// BMW `alphaOver` - source-over compositing: `src` over `dst`,
 /// straight-alpha semantics.
 pub fn alpha_over(dst: Color<f64>, src: Color<f64>) -> Color<f64> {

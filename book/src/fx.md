@@ -42,13 +42,18 @@ a `TimedAnimation` driven by the consumer.
 | `energize-b` | `EnergizeB` | Top-down shower + streak + atom dissolve. |
 | `rgbwarp` | `RgbWarp` | Vertical channel-split peel + brightness pulse. |
 | `mushroom` | `Mushroom` | 8-bit scale + rising sparks + rays + star rings. |
+| `pixelate` | `Pixelate` | Cell-dropout pixel dissolve. |
+| `pixel-wipe` | `PixelWipe` | Radial pixel wipe from the pointer (window center when absent). |
+| `hexagon` | `Hexagon` | Shrinking hexagonal tiles + glow lines, additive or over-blended. |
+| `incinerate` | `Incinerate` | Fiery-edge burn from the pointer or a random edge, with smoke and embers. |
+| `wisps` | `Wisps` | Orbiting light dots + shrinking noise dissolve. |
 
-All nineteen are reachable through `EffectSpec::by_nick`/`build` and
+All 24 are reachable through `EffectSpec::by_nick`/`build` and
 survive JSON round trips. Each rustdoc states the behavioral spec and
 names its source shader in the Burn-My-Windows checkout for
 provenance; the implementations are semantic re-implementations on our
 ops (`mix`, `smoothstep`, `absolute_edge_mask`, `relative_edge_mask`,
-`offset_hue`, `whirl`, `darken`, `lighten`, `alpha_over`,
+`offset_hue`, `whirl`, `darken`, `lighten`, `alpha_over`, `tritone`,
 `BufferView` sampling), not line ports.
 
 ## The `fx` experimenter
@@ -97,4 +102,4 @@ smearor-commons-fx --features gtk4 --example dump_card`:
 Rendered frames (all deterministic for a fixed seed/progress) come
 from `cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- <effect> <progress> <direction>`:
 
-<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;">
+<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/hexagon.png" alt="hexagon at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixelate.png" alt="pixelate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/incinerate.png" alt="incinerate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wisps.png" alt="wisps at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;">

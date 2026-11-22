@@ -121,15 +121,18 @@ fn seed_replays_the_frame_bitwise() {
 }
 
 /// Mid-animation every spec must leave the window visible or
-/// visibly altered somewhere - catches silently-empty shaders.
+/// visibly altered somewhere - catches silently-empty shaders. Some
+/// effects touch only a thin moving band (e.g. incinerate's scorch
+/// zone), so several progress points are sampled.
 #[test]
 fn every_spec_renders_something_mid_animation() {
     let card = card(Size::new(64, 48));
     let untouched = card.pixels().to_vec();
     for spec in EffectSpec::all() {
-        let frame = render(&spec, &card, 0.5, 9001);
-        let changed = frame.pixels().iter().zip(untouched.iter()).any(|(a, b)| a != b);
-        assert!(changed, "{} rendered a bit-identical frame at progress 0.5", spec.nick());
+        let changed = [0.25, 0.5, 0.75]
+            .iter()
+            .any(|&p| render(&spec, &card, p, 9001).pixels().iter().zip(untouched.iter()).any(|(a, b)| a != b));
+        assert!(changed, "{} rendered a bit-identical frame at every mid progress", spec.nick());
     }
 }
 

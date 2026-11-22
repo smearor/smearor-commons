@@ -8,11 +8,15 @@ use crate::Fire;
 use crate::FxError;
 use crate::Glide;
 use crate::Glitch;
+use crate::Hexagon;
+use crate::Incinerate;
 use crate::Materialize;
 use crate::Matrix;
 use crate::Mushroom;
 use crate::ParamValue;
 use crate::PixelWheel;
+use crate::PixelWipe;
+use crate::Pixelate;
 use crate::Portal;
 use crate::RgbWarp;
 use crate::Shredder;
@@ -20,6 +24,7 @@ use crate::Tv;
 use crate::TvGlitch;
 use crate::VenetianBlinds;
 use crate::WindowEffect;
+use crate::Wisps;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -72,6 +77,16 @@ pub enum EffectSpec {
     RgbWarp(RgbWarp),
     /// 8-bit scale + sparks + rays + star rings.
     Mushroom(Mushroom),
+    /// Cell-dropout pixel dissolve.
+    Pixelate(Pixelate),
+    /// Radial pixel wipe from the pointer.
+    PixelWipe(PixelWipe),
+    /// Shrinking hexagonal tiles + glow lines.
+    Hexagon(Hexagon),
+    /// Fiery-edge burn with smoke + embers.
+    Incinerate(Incinerate),
+    /// Orbiting light dots + noise dissolve.
+    Wisps(Wisps),
     // Incinerate, Wisps, ... - appended by phase 4
 }
 
@@ -99,6 +114,11 @@ impl EffectSpec {
             EffectSpec::EnergizeB(EnergizeB::default()),
             EffectSpec::RgbWarp(RgbWarp::default()),
             EffectSpec::Mushroom(Mushroom::default()),
+            EffectSpec::Pixelate(Pixelate::default()),
+            EffectSpec::PixelWipe(PixelWipe::default()),
+            EffectSpec::Hexagon(Hexagon::default()),
+            EffectSpec::Incinerate(Incinerate::default()),
+            EffectSpec::Wisps(Wisps::default()),
         ]
     }
 
@@ -134,6 +154,11 @@ impl EffectSpec {
             Self::EnergizeB(effect) => effect.nick(),
             Self::RgbWarp(effect) => effect.nick(),
             Self::Mushroom(effect) => effect.nick(),
+            Self::Pixelate(effect) => effect.nick(),
+            Self::PixelWipe(effect) => effect.nick(),
+            Self::Hexagon(effect) => effect.nick(),
+            Self::Incinerate(effect) => effect.nick(),
+            Self::Wisps(effect) => effect.nick(),
         }
     }
 
@@ -159,6 +184,11 @@ impl EffectSpec {
             Self::EnergizeB(effect) => Box::new(*effect),
             Self::RgbWarp(effect) => Box::new(*effect),
             Self::Mushroom(effect) => Box::new(effect.clone()),
+            Self::Pixelate(effect) => Box::new(*effect),
+            Self::PixelWipe(effect) => Box::new(*effect),
+            Self::Hexagon(effect) => Box::new(effect.clone()),
+            Self::Incinerate(effect) => Box::new(effect.clone()),
+            Self::Wisps(effect) => Box::new(effect.clone()),
         }
     }
 
@@ -185,6 +215,11 @@ impl EffectSpec {
             Self::EnergizeB(effect) => effect.set_values(values),
             Self::RgbWarp(effect) => effect.set_values(values),
             Self::Mushroom(effect) => effect.set_values(values),
+            Self::Pixelate(effect) => effect.set_values(values),
+            Self::PixelWipe(effect) => effect.set_values(values),
+            Self::Hexagon(effect) => effect.set_values(values),
+            Self::Incinerate(effect) => effect.set_values(values),
+            Self::Wisps(effect) => effect.set_values(values),
         }
     }
 
