@@ -45,30 +45,49 @@ fn main() {
     let card = common::test_card(size);
     let desktop = common::desktop(size);
     let mut out = PixelBuffer::<Rgba>::new(size);
-    let ctx = FxContext {
+    let mut ctx = FxContext {
         progress: Fraction::new(progress.clamp(0.0, 1.0)),
         duration: Duration::from_secs_f64(3.0),
         seed: Seed(0x5EED_CAFE_F00D_1234),
         direction,
         layer: Layer::Window,
         window: card.view(),
-        surface: None,
+        surface: Some(desktop.view()),
         assets: smearor_commons_fx::FxAssets::default(),
         pointer: None,
         fullscreen: false,
         padding: Pixels::new(12.0),
         window_rect: common::card_rect(size),
     };
-    spec.build().apply(&ctx, &mut out.view_mut());
-    // the compositor pass: `out` source-over `desktop`
+    let effect = spec.build();
+    ctx.layer = if effect.layers() == smearor_commons_fx::Layers::SurfaceAndWindow {
+        Layer::Surface
+    } else {
+        Layer::Window
+    };
+    effect.apply(&ctx, &mut out.view_mut());
+    let mut out_window = PixelBuffer::<Rgba>::new(size);
+    if effect.layers() == smearor_commons_fx::Layers::SurfaceAndWindow {
+        ctx.layer = Layer::Window;
+        effect.apply(&ctx, &mut out_window.view_mut());
+    }
+    // the compositor pass: window pass over surface pass over `desktop`
     let mut display = PixelBuffer::<Rgba>::new(size);
     let inv = Vec2::<()>::new(1.0 / f64::from(size.x), 1.0 / f64::from(size.y));
     for y in 0..size.y {
         for x in 0..size.x {
             let uv = Vec2::<()>::new((x as f64 + 0.5) * inv.x, (y as f64 + 0.5) * inv.y);
-            let over = out.view().sample_nearest(uv);
-            let under = desktop.view().sample_nearest(uv);
-            display.view_mut().put_color(Pixels::new(x), Pixels::new(y), over.alpha_over(&under));
+            let top = if effect.layers() == smearor_commons_fx::Layers::SurfaceAndWindow {
+                &out_window
+            } else {
+                &out
+            };
+            let over = top.view().sample_nearest(uv);
+            let under = out.view().sample_nearest(uv);
+            let base = desktop.view().sample_nearest(uv);
+            display
+                .view_mut()
+                .put_color(Pixels::new(x), Pixels::new(y), over.alpha_over(&under.alpha_over(&base)));
         }
     }
     let texture: gtk4::gdk::Texture = display.to_memory_texture().upcast();

@@ -73,6 +73,9 @@ struct FxDemo {
     /// The frame output the effect writes into - card-shaped alpha
     /// on transparency.
     out: PixelBuffer<Rgba>,
+    /// The window pass of a `SurfaceAndWindow` effect - composited
+    /// over `out` (the surface pass) before `out` lands on `desktop`.
+    out_window: PixelBuffer<Rgba>,
     /// `out` composited over `desktop` - what the canvas shows (the
     /// compositor's job).
     display: PixelBuffer<Rgba>,
@@ -92,6 +95,7 @@ impl FxDemo {
             card: test_card(CARD),
             desktop: desktop(CARD),
             out: PixelBuffer::<Rgba>::new(CARD),
+            out_window: PixelBuffer::<Rgba>::new(CARD),
             display: PixelBuffer::<Rgba>::new(CARD),
             animation: TimedAnimation::new(Span::new(0.0, 1.0), duration, EasingFunction::Linear),
             direction: Direction::Open,
@@ -102,14 +106,14 @@ impl FxDemo {
     /// Renders one frame of the configured spec into `out`, then
     /// composites it over the desktop backdrop into `display`.
     fn render(&mut self) {
-        let ctx = FxContext {
+        let mut ctx = FxContext {
             progress: self.animation.progress().unwrap_or_else(|| Fraction::new(0.0)),
             duration: self.animation.duration,
             seed: self.seed,
             direction: self.direction,
             layer: Layer::Window,
             window: self.card.view(),
-            surface: None,
+            surface: Some(self.desktop.view()),
             assets: smearor_commons_fx::FxAssets::default(),
             pointer: None,
             fullscreen: false,
@@ -118,15 +122,33 @@ impl FxDemo {
             padding: Pixels::new(12.0),
             window_rect: card_rect(CARD),
         };
-        self.spec.build().apply(&ctx, &mut self.out.view_mut());
-        // the compositor pass: `out` source-over `desktop`
+        let effect = self.spec.build();
+        ctx.layer = if effect.layers() == smearor_commons_fx::Layers::SurfaceAndWindow {
+            Layer::Surface
+        } else {
+            Layer::Window
+        };
+        effect.apply(&ctx, &mut self.out.view_mut());
+        // The compositor pass: `out` source-over `desktop`. Layered
+        // effects stack a second (window) pass on top of the first
+        // (surface) pass.
+        let layered = effect.layers() == smearor_commons_fx::Layers::SurfaceAndWindow;
+        if layered {
+            ctx.layer = Layer::Window;
+            effect.apply(&ctx, &mut self.out_window.view_mut());
+        }
         let size = self.display.size();
         let inv = Vec2::<()>::new(1.0 / f64::from(size.x), 1.0 / f64::from(size.y));
         for y in 0..size.y {
             for x in 0..size.x {
                 let uv = Vec2::<()>::new((x as f64 + 0.5) * inv.x, (y as f64 + 0.5) * inv.y);
-                let over = self.out.view().sample_nearest(uv);
-                let under = self.desktop.view().sample_nearest(uv);
+                let over = if layered { &self.out_window } else { &self.out }.view().sample_nearest(uv);
+                let base = self.desktop.view().sample_nearest(uv);
+                let under = if layered {
+                    self.out.view().sample_nearest(uv).alpha_over(&base)
+                } else {
+                    base
+                };
                 self.display.view_mut().put_color(Pixels::new(x), Pixels::new(y), over.alpha_over(&under));
             }
         }
@@ -363,7 +385,7 @@ fn main() -> glib::ExitCode {
             let canvas = canvas.clone();
             let demo = Rc::clone(&demo);
             canvas.add_tick_callback(move |canvas, _| {
-                canvas.set_paintable(Some(&demo.borrow().out.to_memory_texture()));
+                canvas.set_paintable(Some(&demo.borrow().display.to_memory_texture()));
                 glib::ControlFlow::Continue
             });
         }

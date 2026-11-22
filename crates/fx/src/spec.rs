@@ -1,3 +1,4 @@
+use crate::AperturePanels;
 use crate::Apparition;
 use crate::AuraGlow;
 use crate::BrokenGlass;
@@ -13,6 +14,7 @@ use crate::Hexagon;
 use crate::Incinerate;
 use crate::Materialize;
 use crate::Matrix;
+use crate::Morph;
 use crate::Mushroom;
 use crate::PaintBrush;
 use crate::ParamValue;
@@ -30,6 +32,7 @@ use crate::TvGlitch;
 use crate::VenetianBlinds;
 use crate::WindowEffect;
 use crate::Wisps;
+use crate::Wormhole;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -102,7 +105,12 @@ pub enum EffectSpec {
     PaintBrush(PaintBrush),
     /// Shattered shards + gravity drift.
     BrokenGlass(BrokenGlass),
-    // Incinerate, Wisps, ... - appended by phase 4
+    /// Portal wall panels flipping the window in/out.
+    AperturePanels(AperturePanels),
+    /// Curl-noise / edge-melt / pixel-block morph.
+    Morph(Morph),
+    /// Rubber-sheet funnel + window pushed out of the void.
+    Wormhole(Wormhole),
 }
 
 impl EffectSpec {
@@ -139,6 +147,9 @@ impl EffectSpec {
             EffectSpec::Snap(Snap::default()),
             EffectSpec::PaintBrush(PaintBrush::default()),
             EffectSpec::BrokenGlass(BrokenGlass::default()),
+            EffectSpec::AperturePanels(AperturePanels::default()),
+            EffectSpec::Morph(Morph::default()),
+            EffectSpec::Wormhole(Wormhole::default()),
         ]
     }
 
@@ -184,6 +195,9 @@ impl EffectSpec {
             Self::Snap(effect) => effect.nick(),
             Self::PaintBrush(effect) => effect.nick(),
             Self::BrokenGlass(effect) => effect.nick(),
+            Self::AperturePanels(effect) => effect.nick(),
+            Self::Morph(effect) => effect.nick(),
+            Self::Wormhole(effect) => effect.nick(),
         }
     }
 
@@ -219,6 +233,9 @@ impl EffectSpec {
             Self::Snap(effect) => Box::new(*effect),
             Self::PaintBrush(effect) => Box::new(*effect),
             Self::BrokenGlass(effect) => Box::new(*effect),
+            Self::AperturePanels(effect) => Box::new(*effect),
+            Self::Morph(effect) => Box::new(*effect),
+            Self::Wormhole(effect) => Box::new(*effect),
         }
     }
 
@@ -255,6 +272,9 @@ impl EffectSpec {
             Self::Snap(effect) => effect.set_values(values),
             Self::PaintBrush(effect) => effect.set_values(values),
             Self::BrokenGlass(effect) => effect.set_values(values),
+            Self::AperturePanels(effect) => effect.set_values(values),
+            Self::Morph(effect) => effect.set_values(values),
+            Self::Wormhole(effect) => effect.set_values(values),
         }
     }
 

@@ -1,6 +1,7 @@
 //! The shipped effects - one struct per file, the `EffectSpec`
 //! variant payloads.
 
+mod aperture_panels;
 mod apparition;
 mod aura_glow;
 mod broken_glass;
@@ -15,6 +16,7 @@ mod hexagon;
 mod incinerate;
 mod materialize;
 mod matrix;
+mod morph;
 mod mushroom;
 mod paint_brush;
 mod pixel_wheel;
@@ -30,7 +32,10 @@ mod tv;
 mod tv_glitch;
 mod venetian_blinds;
 mod wisps;
+mod wormhole;
 
+pub use aperture_panels::AperturePanels;
+pub use aperture_panels::Backdrop;
 pub use apparition::Apparition;
 pub use aura_glow::AuraGlow;
 pub use broken_glass::BrokenGlass;
@@ -48,6 +53,7 @@ pub use materialize::Materialize;
 pub use matrix::GlyphSource;
 pub use matrix::Matrix;
 pub use matrix::ProceduralGlyphAtlas;
+pub use morph::Morph;
 pub use mushroom::Mushroom;
 pub use mushroom::StarColor;
 pub use paint_brush::PaintBrush;
@@ -64,3 +70,4 @@ pub use tv::Tv;
 pub use tv_glitch::TvGlitch;
 pub use venetian_blinds::VenetianBlinds;
 pub use wisps::Wisps;
+pub use wormhole::Wormhole;
