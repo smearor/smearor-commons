@@ -101,6 +101,23 @@ impl<S: Trajectory> TimedAnimation<S> {
         }
         Some(self.trajectory.value_at(self.easing_function.apply(progress)))
     }
+
+    /// Pins the clock so [`Self::progress`] reports `progress` -
+    /// the seek operation behind scrubbing and pause controls. The
+    /// animation keeps running from there. `progress` is clamped to
+    /// `0.0..=1.0`.
+    pub fn seek(&mut self, progress: Fraction) {
+        self.seek_at(progress, Instant::now());
+    }
+
+    /// Pins the clock at `now` so [`Self::progress_at`] reports
+    /// `progress` - the injectable variant of [`Self::seek`].
+    /// Calling it every frame with the same `progress` freezes the
+    /// animation - that is what a pause button does.
+    pub fn seek_at(&mut self, progress: Fraction, now: Instant) {
+        let elapsed = self.duration.mul_f64(progress.as_f64().clamp(0.0, 1.0));
+        self.start_time = Some(now.checked_sub(elapsed).unwrap_or(now));
+    }
 }
 
 #[cfg(test)]
@@ -108,9 +125,11 @@ mod tests {
     use super::TimedAnimation;
     use crate::EasingFunction;
     use crate::Span;
+    use smearor_commons_geometry::Fraction;
     use smearor_commons_geometry::RotationRad;
     use std::thread::sleep;
     use std::time::Duration;
+    use std::time::Instant;
 
     /// An unstarted animation yields nothing.
     #[test]
@@ -130,6 +149,24 @@ mod tests {
         sleep(Duration::from_millis(50));
         let value = animation.value();
         assert!(value.is_some_and(|v| (3.0..7.0).contains(&v)), "value {value:?} should be near the midpoint");
+    }
+
+    /// Seeking pins the clock to the requested progress, seeking
+    /// to the same progress twice freezes the animation.
+    #[test]
+    fn seek_pins_the_clock() {
+        let mut animation = TimedAnimation::new(Span::new(0.0_f64, 10.0), Duration::from_secs(1), EasingFunction::Linear);
+        let now = Instant::now();
+        animation.seek_at(Fraction::new(0.75), now);
+        let pinned = animation.progress_at(now).map(|p| p.as_f64());
+        assert_eq!(pinned, Some(0.75));
+        // 100ms later the pinned clock has advanced again
+        let later = now + Duration::from_millis(100);
+        let advanced = animation.progress_at(later).map(|p| p.as_f64());
+        assert_eq!(advanced, Some(0.85));
+        // out-of-range seeks clamp into the run
+        animation.seek_at(Fraction::new(1.5), now);
+        assert_eq!(animation.progress_at(now).map(|p| p.as_f64()), Some(1.0));
     }
 
     /// Past the duration the animation reports `t = 1` - the exact

@@ -30,3 +30,19 @@ smearor-commons-color.workspace = true
 [[example]]
 name = "playground"
 required-features = ["gtk4"]
+
+[[example]]
+name = "geometry"
+required-features = ["gtk4"]
+
+[[example]]
+name = "color"
+required-features = ["gtk4"]
+
+[[example]]
+name = "palette"
+required-features = ["gtk4"]
+
+[[example]]
+name = "effectgen"
+required-features = ["gtk4"]
