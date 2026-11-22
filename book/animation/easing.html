@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-18160b99.js";
+            window.path_to_searchindex_js = "../searchindex-cd79b29d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-e1f8f295.js"></script>
@@ -184,10 +184,9 @@
 endpoints are fixed at <code>(0, 0)</code> and <code>(1, 1)</code>; what happens between is
 the curve’s personality.</p>
 <figure class="diagram">
-  <img src="img/easing-curves.svg" alt="The eight easing curves: Linear, quadratic and cubic ease-in/out/in-out, and Overshoot exceeding 1.0">
-  <figcaption>the exact formulas from easing.rs — overshoot deliberately exceeds 1.0</figcaption>
+  <img src="img/easing-curves.svg" alt="All easing curves: the power, sine, exponential and circular families, Overshoot/Back, Elastic, Bounce, CubicBezier and Steps">
+  <figcaption>the exact formulas from easing.rs — overshoot, back and elastic deliberately exceed 1.0</figcaption>
 </figure>
-<h2 id="the-eight-variants"><a class="header" href="#the-eight-variants">The eight variants</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use smearor_commons_animation::EasingFunction;
@@ -197,19 +196,53 @@ EasingFunction::Linear.apply(Fraction::HALF);          // 0.5 — constant speed
 EasingFunction::EaseOutCubic.apply(Fraction::HALF);    // 0.875 — the arrive curve
 EasingFunction::overshoot().apply(Fraction::HALF);     // 0.5 — below 0 before, past 1 after
 <span class="boring">}</span></code></pre>
+<h2 id="the-power-family--easeinoutinout--quadcubicquartquint"><a class="header" href="#the-power-family--easeinoutinout--quadcubicquartquint">The power family — <code>Ease{In,Out,InOut}</code> × <code>{Quad,Cubic,Quart,Quint}</code></a></h2>
+<p>Each degree sharpens the curve; every variant comes in three
+directions:</p>
 <ul>
-<li><strong>Quadratic</strong>: <code>EaseIn</code> (<code>t²</code>), <code>EaseOut</code> (<code>1−(1−t)²</code>), <code>EaseInOut</code></li>
-<li><strong>Cubic</strong>: <code>EaseInCubic</code> (<code>t³</code>), <code>EaseOutCubic</code> (<code>1−(1−t)³</code>) — the
-classic “arrive” curve for camera and pose transitions —
-<code>EaseInOutCubic</code></li>
-<li><strong><code>Overshoot { overshoot_amount }</code></strong>: Penner’s back-easing —
-<code>EasingFunction::overshoot()</code> gives the canonical <code>s = 1.70158</code>,
-<code>DEFAULT_OVERSHOOT</code>. Eased progress dips below 0, rises past 1.0 and
-settles — the trajectory on the other end decides what extrapolated
-<code>t</code> means.</li>
+<li><strong>Quadratic</strong>: <code>EaseIn</code> (<code>t²</code>), <code>EaseOut</code>, <code>EaseInOut</code></li>
+<li><strong>Cubic</strong>: <code>EaseInCubic</code>, <code>EaseOutCubic</code> — the classic “arrive”
+curve for camera and pose transitions — <code>EaseInOutCubic</code></li>
+<li><strong>Quartic</strong>: <code>EaseInQuart</code>, <code>EaseOutQuart</code>, <code>EaseInOutQuart</code> (<code>t⁴</code>)</li>
+<li><strong>Quintic</strong>: <code>EaseInQuint</code>, <code>EaseOutQuint</code>, <code>EaseInOutQuint</code> (<code>t⁵</code>)</li>
+</ul>
+<h2 id="the-trigonometric-families"><a class="header" href="#the-trigonometric-families">The trigonometric families</a></h2>
+<ul>
+<li><strong>Sine</strong> — <code>EaseInSine</code>, <code>EaseOutSine</code>, <code>EaseInOutSine</code>: the
+gentlest curves</li>
+<li><strong>Exponential</strong> — <code>EaseInExpo</code>, <code>EaseOutExpo</code>, <code>EaseInOutExpo</code>:
+near-frozen start, abrupt end</li>
+<li><strong>Circular</strong> — <code>EaseInCirc</code>, <code>EaseOutCirc</code>, <code>EaseInOutCirc</code>:
+quarter-circle arcs</li>
+</ul>
+<h2 id="beyond-the-endpoints"><a class="header" href="#beyond-the-endpoints">Beyond the endpoints</a></h2>
+<ul>
+<li><strong><code>Overshoot { overshoot_amount }</code></strong> — Penner’s back-in-out:
+<code>EasingFunction::overshoot()</code> is the canonical <code>s = 1.70158</code>.</li>
+<li><strong><code>BackIn</code> / <code>BackOut { overshoot_amount }</code></strong> — the two halves:
+dip below the start / overshoot the target.</li>
+<li><strong><code>Elastic { amplitude, period }</code></strong> — oscillates around the target
+and settles; the springy classic.</li>
+<li><strong><code>Bounce</code></strong> — decreasing parabolic bounces into the target.</li>
 </ul>
 <p>Eased <code>t</code> exceeding <code>[0, 1]</code> is a feature, not a bug: see
-<a href="./interpolation.html">Interpolation</a> for how value types handle it.</p>
+<a href="./interpolation.html">Interpolation</a> for how value types handle
+extrapolation.</p>
+<h2 id="cubicbezier--x1-y1-x2-y2---css-compatible-custom-curves"><a class="header" href="#cubicbezier--x1-y1-x2-y2---css-compatible-custom-curves"><code>CubicBezier { x1, y1, x2, y2 }</code> — CSS-compatible custom curves</a></h2>
+<p>The <code>cubic-bezier()</code> function from CSS, verbatim: <code>y</code> may exceed
+<code>0..1</code>, <code>x</code> is clamped to it. <code>CubicBezier { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1.0 }</code> is CSS <code>ease</code>; <code>(0.42, 0.0, 0.58, 1.0)</code> is
+<code>ease-in-out</code>. Designers hand you four numbers — this variant runs
+them.</p>
+<h2 id="steps--steps-jump---discrete-easing"><a class="header" href="#steps--steps-jump---discrete-easing"><code>Steps { steps, jump }</code> — discrete easing</a></h2>
+<p>Quantizes the progress into <code>steps</code> jumps, CSS <code>steps()</code> compatible:
+<code>StepsJump::End</code> jumps at each interval’s end (the last at <code>t = 1</code>),
+<code>StepsJump::Start</code> at its start (the first at <code>t = 0</code>). For stepping
+the <em>value</em> instead of the progress see <code>trajectory::Steps</code>.</p>
+<h2 id="playground"><a class="header" href="#playground">Playground</a></h2>
+<p><code>cargo run -p smearor-commons-animation --features gtk4 --example playground</code>
+— pick a trajectory and an easing, tune overshoot, amplitude, period,
+steps, bezier points and duration with sliders, watch the curve and
+the animated value on the frame clock.</p>
 
                     </main>
 

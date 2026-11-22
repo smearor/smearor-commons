@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-18160b99.js";
+            window.path_to_searchindex_js = "../searchindex-cd79b29d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-e1f8f295.js"></script>
@@ -182,7 +182,12 @@
 <p>A <code>Trajectory</code> maps eased progress <code>t</code> to a value — <strong>the shape of an
 animation’s output over time</strong>. Time lives in <code>TimedAnimation</code>; the
 trajectory only knows how to answer <code>value_at(t)</code>.</p>
+<figure class="diagram">
+  <img src="img/trajectories.svg" alt="The trajectory shapes: Span, ThreePhaseSpan, Keyframes, Repeat, Mirror, Delay, Steps and BezierPath">
+  <figcaption>one tile per trajectory — value over progress</figcaption>
+</figure>
 <h2 id="spant--two-endpoints"><a class="header" href="#spant--two-endpoints"><code>Span&lt;T&gt;</code> — two endpoints</a></h2>
+  <img src="img/traj-span.svg" alt="A Span trajectory sampled over progress">
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use smearor_commons_animation::{Span, Trajectory};
@@ -195,6 +200,7 @@ span.value_at(Fraction::HALF);          // 50.0
 let slide = Span::new(Vec2::&lt;Pixels&gt;::new(0.0, 0.0), Vec2::&lt;Pixels&gt;::new(320.0, 0.0));
 <span class="boring">}</span></code></pre>
 <h2 id="threephasespant--out-hold-back"><a class="header" href="#threephasespant--out-hold-back"><code>ThreePhaseSpan&lt;T&gt;</code> — out, hold, back</a></h2>
+  <img src="img/traj-threephasespan.svg" alt="A ThreePhaseSpan trajectory sampled over progress">
 <p><code>new(from, mid, to, lead, trail)</code>: interpolates <code>from → mid</code> over
 <code>[0, lead)</code>, holds <code>mid</code> over <code>[lead, trail]</code>, interpolates <code>mid → to</code>
 over the rest.</p>
@@ -204,6 +210,228 @@ over the rest.</p>
 </figure>
 <p><code>ThreePhaseSpan&lt;ScaleFactor&gt;</code> with <code>from = to = 1.0</code> is the
 zoom-during-rotation pattern; <code>PulseAnimation</code> is exactly that.</p>
+<p><code>with_easing(lead_ease, trail_ease)</code> shapes the interpolation
+<em>inside</em> the lead and trail phases - the boundaries stay real time
+fractions while each phase gets its own curve. Without it the outer
+<code>TimedAnimation</code> easing warps the phase durations along with
+everything else.</p>
+<p><code>with_hold(hold_to, hold_ease)</code> turns the hold into a drifting
+phase: instead of sitting at <code>mid</code> it eases <code>mid -&gt; hold_to</code> over
+the hold duration - a slow settle or a breathing pause.</p>
+<p><code>with_hold_mode(.., HoldMode::Pulse)</code> mirrors the hold curve
+<code>0 -&gt; 1 -&gt; 0</code>: the excursion peaks mid-hold and returns to <code>mid</code> -
+an animation around the hold point that hands off cleanly to the
+trail phase. <code>Elastic</code> as hold easing turns it into an
+oscillation.</p>
+<h2 id="keyframest--the-general-case"><a class="header" href="#keyframest--the-general-case"><code>Keyframes&lt;T&gt;</code> — the general case</a></h2>
+  <img src="img/traj-keyframes.svg" alt="A Keyframes trajectory sampled over progress">
+<p><code>(progress, value)</code> pairs, piecewise-lerped, boundary values holding
+outside the range. <code>Span</code> is two keys, <code>ThreePhaseSpan</code> is four —
+every other shape is a special case of this one:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{Keyframes, Trajectory};
+use smearor_commons_geometry::Fraction;
+
+let keys = Keyframes::new(
+    (Fraction::ZERO, 0.0_f64),
+    [(Fraction::new(0.3), 0.8), (Fraction::new(0.6), 0.2), (Fraction::ONE, 1.0)],
+);
+keys.value_at(Fraction::new(0.45));     // lerps between the two middle keys
+<span class="boring">}</span></code></pre>
+<p>The first key is a separate argument — a <code>Keyframes</code> can never be
+empty.</p>
+<h2 id="repeats--the-same-cycle-n-times"><a class="header" href="#repeats--the-same-cycle-n-times"><code>Repeat&lt;S&gt;</code> — the same cycle, <code>n</code> times</a></h2>
+  <img src="img/traj-repeat.svg" alt="A Repeat trajectory sampled over progress">
+<p>Wraps an inner trajectory and plays it <code>count</code> times within the
+duration — blinking, pulsing, loading indicators. Easing applies to
+the whole sequence, not per cycle:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{Repeat, Span};
+
+let blink = Repeat::new(Span::new(0.0_f64, 1.0), 3); // three cycles
+<span class="boring">}</span></code></pre>
+<h2 id="mirrors--yo-yo"><a class="header" href="#mirrors--yo-yo"><code>Mirror&lt;S&gt;</code> — yo-yo</a></h2>
+  <img src="img/traj-mirror.svg" alt="A Mirror trajectory sampled over progress">
+<p><code>0 → 0.5</code> plays <code>inner</code> forward, <code>0.5 → 1</code> plays it backward —
+<code>A → B → A</code> on one clock. <code>Mirror</code> inside <code>Repeat</code> is a seamless
+back-and-forth.</p>
+<h2 id="delays--choreography"><a class="header" href="#delays--choreography"><code>Delay&lt;S&gt;</code> — choreography</a></h2>
+  <img src="img/traj-delay.svg" alt="A Delay trajectory sampled over progress">
+<p>Holds <code>inner</code>’s start value until progress <code>delay</code>, then plays the
+inner trajectory compressed into the rest. In a tuple composite this
+staggers the members: <code>(Span&lt;RotationRad&gt;, Delay&lt;Span&lt;ScaleFactor&gt;&gt;)</code>
+rotates first, zooms after, on one clock.</p>
+<h2 id="easeds--a-local-easing-decorator"><a class="header" href="#easeds--a-local-easing-decorator"><code>Eased&lt;S&gt;</code> — a local easing decorator</a></h2>
+  <img src="img/traj-eased.svg" alt="An Eased span shaped by the bounce easing">
+<p><code>Eased::new(inner, easing)</code> applies an <code>EasingFunction</code> to the
+progress <em>inside</em> a trajectory — <code>value_at(t) = inner.value_at(easing(t))</code>. That frees easing from the clock:
+<code>TimedAnimation</code> can run <code>Linear</code> while each component of a
+composite animation (a tuple, a split axis) keeps its own curve.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{Eased, EasingFunction, Span};
+
+let bounced = Eased::new(Span::new(0.0, 1.0), EasingFunction::Bounce);
+<span class="boring">}</span></code></pre>
+<h2 id="stepst--discrete-values"><a class="header" href="#stepst--discrete-values"><code>Steps&lt;T&gt;</code> — discrete values</a></h2>
+  <img src="img/traj-steps.svg" alt="A Steps trajectory sampled over progress">
+<p><code>values</code> held in order, <code>1 / n</code> progress each — no interpolation.
+Typewriter reveals, frame animation. For stepping <em>before</em> the
+trajectory sees the progress use <code>EasingFunction::Steps</code> instead.</p>
+<h2 id="bezierpathp--along-a-curve"><a class="header" href="#bezierpathp--along-a-curve"><code>BezierPath&lt;P&gt;</code> — along a curve</a></h2>
+  <img src="img/traj-bezierpath.svg" alt="A BezierPath trajectory sampled over progress">
+<p>The value is the point on the bezier through <code>points</code> at <code>t</code> —
+evaluated by recursive de Casteljau. Two points give a line, three a
+quadratic, four a cubic. Generic over the point type:
+<code>BezierPath&lt;Vec2&lt;Pixels&gt;&gt;</code> animates along screen curves,
+<code>BezierPath&lt;Vec3&gt;</code> sweeps a spatial path — any <code>Interpolate</code> point
+works.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{BezierPath, Trajectory};
+use smearor_commons_geometry::{Fraction, Vec3};
+
+let swoop = BezierPath::new(
+    Vec3::&lt;()&gt;::new(0.0, 0.0, 0.0),
+    [Vec3::new(1.0, 2.0, 1.0), Vec3::new(2.0, 0.0, 0.5)],
+);
+swoop.value_at(Fraction::HALF);
+<span class="boring">}</span></code></pre>
+<h2 id="orbitu--circular-laps"><a class="header" href="#orbitu--circular-laps"><code>Orbit&lt;U&gt;</code> — circular laps</a></h2>
+  <img src="img/traj-orbit.svg" alt="A Orbit trajectory sampled over progress">
+<p><code>Orbit::new(center, radius)</code> moves the value on a circle —
+spinners, loading wheels. One lap by default; <code>with_turns(n)</code> runs
+<code>n</code> revolutions per animation. Integer <code>turns</code> closes the curve, so
+<code>value_at(0) == value_at(1)</code> — a seamless loop under
+<code>EasingFunction::Linear</code>. Pair with <code>Mirror</code> for a partial swing.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{Orbit, Trajectory};
+use smearor_commons_geometry::{Fraction, Vec2};
+
+let wheel = Orbit::new(Vec2::&lt;()&gt;::new(0.5, 0.5), 0.3).with_turns(2.0);
+wheel.value_at(Fraction::new(0.25));    // south after half a lap
+<span class="boring">}</span></code></pre>
+<h2 id="helixu--circular-climb"><a class="header" href="#helixu--circular-climb"><code>Helix&lt;U&gt;</code> — circular climb</a></h2>
+  <img src="img/traj-helix.svg" alt="A Helix trajectory sampled over progress">
+<p><code>Helix::new(center, radius, z_from, z_to)</code> is the spatial cousin of
+<code>Orbit</code>: the value winds around <code>center</code> while <code>z</code> interpolates
+linearly — corkscrews, ascending paths. <code>with_turns(n)</code> adds
+windings.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{Helix, Trajectory};
+use smearor_commons_geometry::{Fraction, Vec2};
+
+let corkscrew = Helix::new(Vec2::&lt;()&gt;::new(0.0, 0.0), 0.5, 0.0, 1.0);
+corkscrew.value_at(Fraction::HALF);     // opposite point at z = 0.5
+<span class="boring">}</span></code></pre>
+<h2 id="lissajousu--sinusoidal-ratio-figures"><a class="header" href="#lissajousu--sinusoidal-ratio-figures"><code>Lissajous&lt;U&gt;</code> — sinusoidal ratio figures</a></h2>
+  <img src="img/traj-lissajous.svg" alt="A Lissajous trajectory sampled over progress">
+<p><code>Lissajous::new(center, size, x_turns, y_turns)</code> oscillates both
+axes sinusoidally — <code>2:1</code> draws a figure eight, <code>3:2</code> a bow tie.
+<code>with_phase</code> shifts the <code>x</code> wave and changes the handedness.
+Integer ratios close the loop.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_animation::{Lissajous, Trajectory};
+use smearor_commons_geometry::Vec2;
+use std::f64::consts::FRAC_PI_2;
+
+let eight = Lissajous::new(Vec2::&lt;()&gt;::new(0.5, 0.5), 0.4, 2.0, 1.0)
+    .with_phase(FRAC_PI_2);            // circle -&gt; eight -&gt; line
+<span class="boring">}</span></code></pre>
+<h2 id="spiralu--winding-out"><a class="header" href="#spiralu--winding-out"><code>Spiral&lt;U&gt;</code> — winding out</a></h2>
+  <img src="img/traj-spiral.svg" alt="A Spiral trajectory sampled over progress">
+<p><code>Spiral::new(center, radius)</code> circles the center while the radius
+grows linearly from <code>0</code> to <code>radius</code> — <code>with_turns</code> sets the
+windings.</p>
+<h2 id="polygonpathp--edges-in-equal-time"><a class="header" href="#polygonpathp--edges-in-equal-time"><code>PolygonPath&lt;P&gt;</code> — edges in equal time</a></h2>
+  <img src="img/traj-polygonpath.svg" alt="A PolygonPath trajectory sampled over progress">
+<p><code>PolygonPath::new(vertices)</code> travels a closed polygon — every
+edge gets the same time share, corners stay corners. Generic like
+<code>BezierPath</code>: <code>PolygonPath&lt;Vec3&gt;</code> walks a spatial polygon.</p>
+<h2 id="catmullromp--through-every-point"><a class="header" href="#catmullromp--through-every-point"><code>CatmullRom&lt;P&gt;</code> — through every point</a></h2>
+  <img src="img/traj-catmullrom.svg" alt="A CatmullRom trajectory sampled over progress">
+<p><code>CatmullRom::new(points)</code> draws the smooth spline that passes
+through <em>all</em> its control points — unlike a bezier, every knob
+lies on the curve. Same generic point type.</p>
+<h2 id="lemniskateu--the-canonical-eight"><a class="header" href="#lemniskateu--the-canonical-eight"><code>Lemniskate&lt;U&gt;</code> — the canonical eight</a></h2>
+  <img src="img/traj-lemniskate.svg" alt="A Lemniskate trajectory sampled over progress">
+<p><code>Lemniskate::new(center, size)</code> traces the Bernoulli lemniscate —
+the classic infinity shape, smooth through its crossing.</p>
+<h2 id="sphericalorbitu--a-tilted-lap"><a class="header" href="#sphericalorbitu--a-tilted-lap"><code>SphericalOrbit&lt;U&gt;</code> — a tilted lap</a></h2>
+  <img src="img/traj-sphericalorbit.svg" alt="A SphericalOrbit trajectory sampled over progress">
+<p><code>SphericalOrbit::new(center, radius, inclination)</code> is <code>Orbit</code> with
+the plane tilted by <code>inclination</code> radians — <code>0</code> is flat,
+<code>FRAC_PI_2</code> a vertical wheel swinging through <code>z</code>.</p>
+<h2 id="torusknotu--winding-a-torus"><a class="header" href="#torusknotu--winding-a-torus"><code>TorusKnot&lt;U&gt;</code> — winding a torus</a></h2>
+  <img src="img/traj-torusknot.svg" alt="A TorusKnot trajectory sampled over progress">
+<p><code>TorusKnot::new(center, radius, p, q)</code> traces the (p,q) torus
+knot — <code>p</code> winds around the axis, <code>q</code> threads the hole. Prime
+pairs draw the interlaced classics, e.g. <code>(2, 3)</code> the trefoil.</p>
+<h2 id="figure8u--an-eight-with-depth"><a class="header" href="#figure8u--an-eight-with-depth"><code>Figure8&lt;U&gt;</code> — an eight with depth</a></h2>
+<p><code>Figure8::new(center, size, depth)</code> draws a Gerono lemniscate in
+the <code>x</code>/<code>y</code> plane that also swings <code>depth</code> units along <code>z</code> — an
+infinity loop diving forward.</p>
+<h2 id="ellipseu--the-oval-lap"><a class="header" href="#ellipseu--the-oval-lap"><code>Ellipse&lt;U&gt;</code> — the oval lap</a></h2>
+  <img src="img/traj-ellipse.svg" alt="A Ellipse trajectory sampled over progress">
+<p><code>Ellipse::new(center, rx, ry)</code> widens <code>Orbit</code> to independent
+semi-axes; <code>with_rotation</code> tilts the axes, <code>with_turns</code> counts
+laps.</p>
+<h2 id="roseu--the-rosette"><a class="header" href="#roseu--the-rosette"><code>Rose&lt;U&gt;</code> — the rosette</a></h2>
+  <img src="img/traj-rose.svg" alt="A Rose trajectory sampled over progress">
+<p><code>Rose::new(center, size, petals)</code> traces <code>r = size·cos(k·θ)</code> —
+<code>petals = 3</code> the trefoil rose, <code>4</code> an eight-leaf rosette.
+<code>with_phase</code> rotates the figure.</p>
+<h2 id="spirou--the-spirograph"><a class="header" href="#spirou--the-spirograph"><code>Spiro&lt;U&gt;</code> — the spirograph</a></h2>
+  <img src="img/traj-spiro.svg" alt="A Spiro trajectory sampled over progress">
+<p><code>Spiro::new(center, outer, inner, pen)</code> rolls a wheel <code>inner</code>
+inside <code>outer</code> while a pen <code>pen</code> units out draws stars and
+blossoms - <code>outer = 4·inner</code> with <code>pen = inner</code> gives the
+four-cusped astroid.</p>
+<h2 id="superellipseu--exponent-morphing"><a class="header" href="#superellipseu--exponent-morphing"><code>Superellipse&lt;U&gt;</code> — exponent morphing</a></h2>
+  <img src="img/traj-superellipse.svg" alt="A Superellipse trajectory sampled over progress">
+<p><code>Superellipse::new(center, rx, ry, exponent)</code> morphs with <code>n</code>:
+<code>2</code> is the ellipse, <code>2/3</code> the astroid, large <code>n</code> a squircle.</p>
+<h2 id="starpathp--the-star-polygon"><a class="header" href="#starpathp--the-star-polygon"><code>StarPath&lt;P&gt;</code> — the star polygon</a></h2>
+  <img src="img/traj-starpath.svg" alt="A StarPath trajectory sampled over progress">
+<p><code>StarPath::new(vertices).with_step(k)</code> is <code>PolygonPath</code> skipping
+<code>k</code> vertices per edge - five points, <code>step = 2</code>: the pentagram.</p>
+<h2 id="wavetrailu--travel-with-wobble"><a class="header" href="#wavetrailu--travel-with-wobble"><code>WaveTrail&lt;U&gt;</code> — travel with wobble</a></h2>
+  <img src="img/traj-wavetrail.svg" alt="A WaveTrail trajectory sampled over progress">
+<p><code>WaveTrail::new(from, to, amplitude, waves)</code> moves <code>from -&gt; to</code>
+swaying perpendicular — a slalom across the field.</p>
+<h2 id="bouncepathu--hops-that-decay"><a class="header" href="#bouncepathu--hops-that-decay"><code>BouncePath&lt;U&gt;</code> — hops that decay</a></h2>
+  <img src="img/traj-bouncepath.svg" alt="A BouncePath trajectory sampled over progress">
+<p><code>BouncePath::new(from, to, height, hops, decay)</code> hops parabolas
+along the route, each <code>decay</code> smaller than the last.</p>
+<h2 id="conicalhelixu--the-tapering-staircase"><a class="header" href="#conicalhelixu--the-tapering-staircase"><code>ConicalHelix&lt;U&gt;</code> — the tapering staircase</a></h2>
+  <img src="img/traj-conicalhelix.svg" alt="A ConicalHelix trajectory sampled over progress">
+<p><code>ConicalHelix::new(center, r_from, r_to, z_from, z_to)</code> is <code>Helix</code>
+with the radius growing or shrinking while it climbs — a spiral
+staircase flaring into a cone.</p>
+<h2 id="vivianiu--a-figure-eight-on-a-sphere"><a class="header" href="#vivianiu--a-figure-eight-on-a-sphere"><code>Viviani&lt;U&gt;</code> — a figure eight on a sphere</a></h2>
+  <img src="img/traj-viviani.svg" alt="A Viviani trajectory sampled over progress">
+<p><code>Viviani::new(center, radius)</code> traces the intersection of sphere
+and off-center cylinder — a closed lemniscate in space.</p>
+<h2 id="mobiusu--the-one-sided-edge"><a class="header" href="#mobiusu--the-one-sided-edge"><code>Mobius&lt;U&gt;</code> — the one-sided edge</a></h2>
+  <img src="img/traj-mobius.svg" alt="A Mobius trajectory sampled over progress">
+<p><code>Mobius::new(center, radius, width)</code> walks the single edge of a
+Moebius strip — two ring revolutions to return, half a run flips
+sides.</p>
+<h2 id="spherelissajousu--weaving-a-ball"><a class="header" href="#spherelissajousu--weaving-a-ball"><code>SphereLissajous&lt;U&gt;</code> — weaving a ball</a></h2>
+  <img src="img/traj-spherelissajous.svg" alt="A SphereLissajous trajectory sampled over progress">
+<p><code>SphereLissajous::new(center, radius, lon, lat)</code> oscillates
+longitude and latitude in frequency ratio — woven basket coverage
+of a sphere, closed for integer ratios.</p>
+<h2 id="lorenzu--the-strange-attractor"><a class="header" href="#lorenzu--the-strange-attractor"><code>Lorenz&lt;U&gt;</code> — the strange attractor</a></h2>
+  <img src="img/traj-lorenz.svg" alt="A Lorenz trajectory sampled over progress">
+<p><code>Lorenz::new(center, size)</code> integrates the classic chaotic system
+at construction and walks the baked path — the butterfly. It does
+not close; <code>Mirror</code> makes it loop-friendly.</p>
 <h2 id="tuples--composite-values-on-one-clock"><a class="header" href="#tuples--composite-values-on-one-clock">Tuples — composite values on one clock</a></h2>
 <p><code>(A, B)</code> implements <code>Trajectory</code> when both members do — a
 rotate-while-zooming animation needs no dedicated struct:</p>
@@ -221,6 +449,9 @@ let trajectory = (
 );
 // TimedAnimation&lt;…&gt;::value_at(t) → (RotationRad, ScaleFactor)
 <span class="boring">}</span></code></pre>
+<p><code>Box&lt;dyn Trajectory&lt;Value = V&gt;&gt;</code> implements <code>Trajectory</code> too — a UI
+can let the user pick the shape at runtime and run it on the same
+clock.</p>
 <h2 id="ready-made-aliases"><a class="header" href="#ready-made-aliases">Ready-made aliases</a></h2>
 <div class="table-wrapper">
 <table>
@@ -238,6 +469,12 @@ let trajectory = (
 </div>
 <p><code>Fraction::clamped</code> inside <code>ThreePhaseSpan::new</code> keeps
 <code>lead ≤ trail</code> — phase order can not be inverted by accident.</p>
+<h2 id="playground"><a class="header" href="#playground">Playground</a></h2>
+<p><code>cargo run -p smearor-commons-animation --features gtk4 --example playground</code>
+opens a GTK window that combines any trajectory with any easing —
+parameters (overshoot, elastic amplitude/period, steps, bezier
+control points, repeat count, delay) are sliders, and the easing
+curve is drawn behind the animated value.</p>
 
                     </main>
 
