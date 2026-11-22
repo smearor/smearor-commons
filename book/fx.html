@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-b03c156b.js";
+            window.path_to_searchindex_js = "searchindex-6aa13c6a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -265,6 +265,36 @@ over surface. <code>WindowEffect::check</code> returns
 <code>FxError::MissingSurface</code> when a two-pass effect runs without
 <code>ctx.surface</code>; <code>apply</code> itself degrades gracefully to transparent
 reads so headless consumers can still drive the window pass alone.</p>
+<h2 id="the-gtk-adapter-gtk4-feature"><a class="header" href="#the-gtk-adapter-gtk4-feature">The GTK adapter (<code>gtk4</code> feature)</a></h2>
+<p><code>smearor_commons_fx::gtk</code> attaches the headless engine to real GTK
+widgets - the same frame pipeline the experimenter uses:</p>
+<ul>
+<li><strong><code>gtk::snapshot(&amp;widget)</code></strong> - renders a widget into a frozen
+straight-alpha <code>PixelBuffer&lt;Rgba&gt;</code> at <code>allocation * scale_factor</code>
+(<code>WidgetPaintable</code> -&gt; render node -&gt; cairo <code>ARgb32</code> -&gt; buffer).
+Called once per animation; live widget content is a non-goal.</li>
+<li><strong><code>gtk::FxPlayer</code></strong> - a <code>DrawingArea</code> subclass owning the clock and
+frame buffers. <code>set_effect(spec, input)</code> + <code>play(FxPlayOptions)</code>
+runs a <code>TimedAnimation</code> on the widget’s frame clock and paints the
+effect output as a <code>TextureNode</code>; <code>pause</code>/<code>resume</code>/<code>stop</code> and the
+<code>animation-ended</code> signal cover the lifecycle. Pointer events feed
+<code>ctx.pointer</code> (broken-glass epicenter, pixel-wipe origin).</li>
+<li><strong><code>gtk::SurfaceProvider</code></strong> - the callback layered
+(<code>SurfaceAndWindow</code>) specs pull their <code>ctx.surface</code> backdrop from,
+once per frame. Without one the pass degrades gracefully
+(<code>MissingSurface</code> contract).</li>
+</ul>
+<p>Floating-board recipe (the adapter never owns the real widget -
+hide/show stays consumer policy):</p>
+<ol>
+<li><em>card added</em>: <code>snapshot(card)</code> -&gt; <code>FxPlayer</code> at the card’s
+coordinates, hide the card, <code>play</code> an <code>Open</code> spec, on
+<code>animation-ended</code> remove the player and show the card.</li>
+<li><em>card removed</em>: same in <code>Close</code> direction; destroy the card on
+end.</li>
+<li><em>board transitions</em>: snapshot card + board, run a layered spec
+with a <code>SurfaceProvider</code> returning the board pixels.</li>
+</ol>
 <h2 id="the-fx-experimenter"><a class="header" href="#the-fx-experimenter">The <code>fx</code> experimenter</a></h2>
 <p><code>cargo run -p smearor-commons-fx --features gtk4 --example fx</code> opens
 the GTK experimenter - the same grammar as the animation examples:
