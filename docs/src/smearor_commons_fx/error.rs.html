@@ -17,5 +17,16 @@
 <a href=#17 id=17 data-nosnippet>17</a>    /// `params()` (wrong length or wrong kind).
 <a href=#18 id=18 data-nosnippet>18</a>    </span><span class="attr">#[error(<span class="string">"parameter mismatch: {0}"</span>)]
 <a href=#19 id=19 data-nosnippet>19</a>    </span>ParamMismatch(String),
-<a href=#20 id=20 data-nosnippet>20</a>}
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a>    <span class="doccomment">/// [`crate::gtk::snapshot`] got a zero-size or node-less widget.
+<a href=#22 id=22 data-nosnippet>22</a>    </span><span class="attr">#[cfg(feature = <span class="string">"gtk4"</span>)]
+<a href=#23 id=23 data-nosnippet>23</a>    #[error(<span class="string">"widget snapshot produced no pixels"</span>)]
+<a href=#24 id=24 data-nosnippet>24</a>    </span>SnapshotEmpty,
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="doccomment">/// A cairo status error surfaced by the GTK adapter - carried as
+<a href=#27 id=27 data-nosnippet>27</a>    /// text so the error type stays GTK-free.
+<a href=#28 id=28 data-nosnippet>28</a>    </span><span class="attr">#[cfg(feature = <span class="string">"cairo"</span>)]
+<a href=#29 id=29 data-nosnippet>29</a>    #[error(<span class="string">"cairo error: {0}"</span>)]
+<a href=#30 id=30 data-nosnippet>30</a>    </span>Cairo(String),
+<a href=#31 id=31 data-nosnippet>31</a>}
 </code></pre></div></section></main></body></html>
