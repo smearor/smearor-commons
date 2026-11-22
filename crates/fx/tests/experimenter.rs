@@ -48,6 +48,7 @@ fn render_dir(spec: &EffectSpec, card: &PixelBuffer<Rgba>, progress: f64, seed: 
         layer: Layer::Window,
         window: card.view(),
         surface: None,
+        assets: smearor_commons_fx::FxAssets::default(),
         pointer: None,
         fullscreen: false,
         padding: Pixels::new(0.0),

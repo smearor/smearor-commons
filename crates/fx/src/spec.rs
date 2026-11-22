@@ -1,5 +1,6 @@
 use crate::Apparition;
 use crate::AuraGlow;
+use crate::BrokenGlass;
 use crate::Crossfade;
 use crate::Doom;
 use crate::EnergizeA;
@@ -13,6 +14,7 @@ use crate::Incinerate;
 use crate::Materialize;
 use crate::Matrix;
 use crate::Mushroom;
+use crate::PaintBrush;
 use crate::ParamValue;
 use crate::PixelWheel;
 use crate::PixelWipe;
@@ -20,6 +22,9 @@ use crate::Pixelate;
 use crate::Portal;
 use crate::RgbWarp;
 use crate::Shredder;
+use crate::Snap;
+use crate::TeamRocket;
+use crate::Trex;
 use crate::Tv;
 use crate::TvGlitch;
 use crate::VenetianBlinds;
@@ -87,6 +92,16 @@ pub enum EffectSpec {
     Incinerate(Incinerate),
     /// Orbiting light dots + noise dissolve.
     Wisps(Wisps),
+    /// Sparkle flare + off-center warp.
+    TeamRocket(TeamRocket),
+    /// Timed claw scratches + wound flash.
+    Trex(Trex),
+    /// Wind-blown dust disintegration.
+    Snap(Snap),
+    /// Brush-stroke sweep + drop shadow.
+    PaintBrush(PaintBrush),
+    /// Shattered shards + gravity drift.
+    BrokenGlass(BrokenGlass),
     // Incinerate, Wisps, ... - appended by phase 4
 }
 
@@ -119,6 +134,11 @@ impl EffectSpec {
             EffectSpec::Hexagon(Hexagon::default()),
             EffectSpec::Incinerate(Incinerate::default()),
             EffectSpec::Wisps(Wisps::default()),
+            EffectSpec::TeamRocket(TeamRocket::default()),
+            EffectSpec::Trex(Trex::default()),
+            EffectSpec::Snap(Snap::default()),
+            EffectSpec::PaintBrush(PaintBrush::default()),
+            EffectSpec::BrokenGlass(BrokenGlass::default()),
         ]
     }
 
@@ -159,6 +179,11 @@ impl EffectSpec {
             Self::Hexagon(effect) => effect.nick(),
             Self::Incinerate(effect) => effect.nick(),
             Self::Wisps(effect) => effect.nick(),
+            Self::TeamRocket(effect) => effect.nick(),
+            Self::Trex(effect) => effect.nick(),
+            Self::Snap(effect) => effect.nick(),
+            Self::PaintBrush(effect) => effect.nick(),
+            Self::BrokenGlass(effect) => effect.nick(),
         }
     }
 
@@ -189,6 +214,11 @@ impl EffectSpec {
             Self::Hexagon(effect) => Box::new(effect.clone()),
             Self::Incinerate(effect) => Box::new(effect.clone()),
             Self::Wisps(effect) => Box::new(effect.clone()),
+            Self::TeamRocket(effect) => Box::new(*effect),
+            Self::Trex(effect) => Box::new(*effect),
+            Self::Snap(effect) => Box::new(*effect),
+            Self::PaintBrush(effect) => Box::new(*effect),
+            Self::BrokenGlass(effect) => Box::new(*effect),
         }
     }
 
@@ -220,6 +250,11 @@ impl EffectSpec {
             Self::Hexagon(effect) => effect.set_values(values),
             Self::Incinerate(effect) => effect.set_values(values),
             Self::Wisps(effect) => effect.set_values(values),
+            Self::TeamRocket(effect) => effect.set_values(values),
+            Self::Trex(effect) => effect.set_values(values),
+            Self::Snap(effect) => effect.set_values(values),
+            Self::PaintBrush(effect) => effect.set_values(values),
+            Self::BrokenGlass(effect) => effect.set_values(values),
         }
     }
 

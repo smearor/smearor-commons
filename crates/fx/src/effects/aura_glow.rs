@@ -319,6 +319,7 @@ mod tests {
             layer: Layer::Window,
             window,
             surface: None,
+            assets: crate::FxAssets::default(),
             pointer: None,
             fullscreen: false,
             padding: Pixels::new(0.0),

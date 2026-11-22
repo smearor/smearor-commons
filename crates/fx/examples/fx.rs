@@ -110,6 +110,7 @@ impl FxDemo {
             layer: Layer::Window,
             window: self.card.view(),
             surface: None,
+            assets: smearor_commons_fx::FxAssets::default(),
             pointer: None,
             fullscreen: false,
             // the fake soft shadow is window content - the fade zone

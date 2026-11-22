@@ -1,4 +1,5 @@
 use crate::Direction;
+use crate::FxAssets;
 use crate::Layer;
 use smearor_commons_buffer::BufferView;
 use smearor_commons_buffer::Rgba;
@@ -41,6 +42,11 @@ pub struct FxContext<'a> {
     /// What sits behind the content for layered effects (BMW's
     /// `uLayer = 0` source) - `None` for [`crate::Layers::WindowOnly`].
     pub surface: Option<BufferView<'a, Rgba>>,
+
+    /// Optional auxiliary textures - BMW's `sampler2D` image
+    /// resources (`claws.png`, `dust.png`, ...). All fields `None`
+    /// selects the effects' procedural fallbacks.
+    pub assets: FxAssets<'a>,
 
     /// Pointer position in uv space - BMW's `broken-glass-use-pointer`
     /// (`uEpicenter`).

@@ -53,6 +53,7 @@ fn main() {
         layer: Layer::Window,
         window: card.view(),
         surface: None,
+        assets: smearor_commons_fx::FxAssets::default(),
         pointer: None,
         fullscreen: false,
         padding: Pixels::new(12.0),

@@ -86,9 +86,13 @@ impl<F: PixelFormat> BufferView<'_, F> {
     }
 
     /// Bilinear sampling - the weighted mean of the four surrounding
-    /// texels, clamp-to-edge on every tap. Empty views yield
+    /// texels, clamp-to-edge on every tap. Empty views and non-finite
+    /// uv coordinates (warped effect coords can go `inf`/`NaN`) yield
     /// transparent black.
     pub fn sample_bilinear(&self, uv: Vec2<()>) -> Color<f64> {
+        if !uv.x.is_finite() || !uv.y.is_finite() {
+            return Color::<f64>::BLACK.with_alpha(0.0);
+        }
         let Some((width, height)) = self.dims() else {
             return Color::<f64>::BLACK.with_alpha(0.0);
         };

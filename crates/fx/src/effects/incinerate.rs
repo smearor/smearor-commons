@@ -64,7 +64,9 @@ impl Incinerate {
     /// the other coordinate snaps to 0/1 - a random point on a
     /// random window edge.
     fn start_pos(&self, ctx: &FxContext<'_>, seed: Vec2<()>) -> Vec2<()> {
-        if self.use_pointer && let Some(pointer) = ctx.pointer {
+        if self.use_pointer
+            && let Some(pointer) = ctx.pointer
+        {
             return pointer;
         }
         if seed.x > seed.y {
@@ -307,6 +309,7 @@ mod tests {
             layer: Layer::Window,
             window: window.view(),
             surface: None,
+            assets: crate::FxAssets::default(),
             pointer: None,
             fullscreen: false,
             padding: Pixels::new(0.0),

@@ -47,14 +47,30 @@ a `TimedAnimation` driven by the consumer.
 | `hexagon` | `Hexagon` | Shrinking hexagonal tiles + glow lines, additive or over-blended. |
 | `incinerate` | `Incinerate` | Fiery-edge burn from the pointer or a random edge, with smoke and embers. |
 | `wisps` | `Wisps` | Orbiting light dots + shrinking noise dissolve. |
+| `team-rocket` | `TeamRocket` | Window warp toward a sparkle position + rotating superellipse star flare. |
+| `trex` | `Trex` | Claw-scratch strips (`FxAssets::claws` or a procedural fallback) + flash color, finite-difference warp. |
+| `snap` | `Snap` | Voronoi-grouped dust disintegration with wind (`FxAssets::dust` or fallback). |
+| `paint-brush` | `PaintBrush` | Left-to-right brush-stroke sweep revealing/erasing the window (`FxAssets::brush` or fallback). |
+| `broken-glass` | `BrokenGlass` | Shattered shard layers blowing away with gravity (`FxAssets::shards` or fallback). |
 
-All 24 are reachable through `EffectSpec::by_nick`/`build` and
+All 29 are reachable through `EffectSpec::by_nick`/`build` and
 survive JSON round trips. Each rustdoc states the behavioral spec and
 names its source shader in the Burn-My-Windows checkout for
 provenance; the implementations are semantic re-implementations on our
 ops (`mix`, `smoothstep`, `absolute_edge_mask`, `relative_edge_mask`,
 `offset_hue`, `whirl`, `darken`, `lighten`, `alpha_over`, `tritone`,
 `BufferView` sampling), not line ports.
+
+## Effect assets
+
+`FxContext::assets` (`FxAssets`) is the channel through which consumers
+hand optional texture atlases to the five asset-driven effects
+(`trex`, `snap`, `paint-brush`, `broken-glass`, and any future
+atlas effect). Each slot (`claws`, `dust`, `brush`, `shards`) is an
+`Option`al `BufferView` sampler; when empty the effect falls back to a
+deterministic procedural map, so headless consumers render correctly
+without packaged image files while GTK consumers can pass the real
+Burn-My-Windows PNGs.
 
 ## The `fx` experimenter
 
@@ -102,4 +118,4 @@ smearor-commons-fx --features gtk4 --example dump_card`:
 Rendered frames (all deterministic for a fixed seed/progress) come
 from `cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- <effect> <progress> <direction>`:
 
-<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/hexagon.png" alt="hexagon at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixelate.png" alt="pixelate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/incinerate.png" alt="incinerate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wisps.png" alt="wisps at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;">
+<img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/hexagon.png" alt="hexagon at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixelate.png" alt="pixelate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/incinerate.png" alt="incinerate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wisps.png" alt="wisps at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/team-rocket.png" alt="team-rocket at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/trex.png" alt="trex at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/snap.png" alt="snap at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/paint-brush.png" alt="paint-brush at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/broken-glass.png" alt="broken-glass at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;">

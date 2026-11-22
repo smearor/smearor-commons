@@ -20,6 +20,7 @@
 //! The default feature set is pure-std headless; `gtk4`, `cairo`,
 //! `schemars` integrations live behind dependency-named features.
 
+mod assets;
 mod context;
 mod cycle_speed;
 mod direction;
@@ -34,12 +35,14 @@ mod render;
 mod spec;
 mod spoke_count;
 
+pub use assets::FxAssets;
 pub use context::FxContext;
 pub use cycle_speed::CycleSpeed;
 pub use direction::Direction;
 pub use effect::WindowEffect;
 pub use effects::Apparition;
 pub use effects::AuraGlow;
+pub use effects::BrokenGlass;
 pub use effects::Crossfade;
 pub use effects::Doom;
 pub use effects::EnergizeA;
@@ -54,6 +57,7 @@ pub use effects::Incinerate;
 pub use effects::Materialize;
 pub use effects::Matrix;
 pub use effects::Mushroom;
+pub use effects::PaintBrush;
 pub use effects::PixelWheel;
 pub use effects::PixelWipe;
 pub use effects::Pixelate;
@@ -61,7 +65,10 @@ pub use effects::Portal;
 pub use effects::ProceduralGlyphAtlas;
 pub use effects::RgbWarp;
 pub use effects::Shredder;
+pub use effects::Snap;
 pub use effects::StarColor;
+pub use effects::TeamRocket;
+pub use effects::Trex;
 pub use effects::Tv;
 pub use effects::TvGlitch;
 pub use effects::VenetianBlinds;
