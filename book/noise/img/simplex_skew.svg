@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 320" font-family="'Source Code Pro',ui-monospace,monospace">
+  <rect width="700" height="320" rx="14" fill="#0a0e16" stroke="#1c2433"/>
+
+  <text x="350" y="36" fill="#8b98ad" font-size="11" letter-spacing="2" text-anchor="middle">SKEWING - WHY SIMPLEX BEATS PERLIN'S LATTICE</text>
+
+  <!-- left: unskewed square grid -->
+  <rect x="30" y="56" width="300" height="220" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="180" y="82" fill="#00a1e4" font-size="12" text-anchor="middle">square grid (Perlin)</text>
+
+  <g stroke="#3a4557" stroke-width="1.2">
+    <path d="M70 110 L70 250 M130 110 L130 250 M190 110 L190 250 M250 110 L250 250"/>
+    <path d="M70 110 L290 110 M70 180 L290 180 M70 250 L290 250"/>
+  </g>
+  <!-- corner vertices -->
+  <g fill="#00a1e4">
+    <circle cx="70" cy="110" r="4"/><circle cx="130" cy="110" r="4"/><circle cx="190" cy="110" r="4"/><circle cx="250" cy="110" r="4"/>
+    <circle cx="70" cy="180" r="4"/><circle cx="130" cy="180" r="4"/><circle cx="190" cy="180" r="4"/><circle cx="250" cy="180" r="4"/>
+    <circle cx="70" cy="250" r="4"/><circle cx="130" cy="250" r="4"/><circle cx="190" cy="250" r="4"/><circle cx="250" cy="250" r="4"/>
+  </g>
+  <!-- sample point in a cell -->
+  <circle cx="165" cy="140" r="4" fill="#ff9e64"/>
+  <text x="165" y="130" fill="#ff9e64" font-size="9" text-anchor="middle">p</text>
+  <text x="180" y="296" fill="#8b98ad" font-size="10" text-anchor="middle">4 corners contribute per cell</text>
+
+  <!-- right: skewed simplex grid -->
+  <rect x="370" y="56" width="300" height="220" rx="10" fill="#10151f" stroke="#1c2433"/>
+  <text x="520" y="82" fill="#00a1e4" font-size="12" text-anchor="middle">simplex grid (skewed)</text>
+
+  <g stroke="#3a4557" stroke-width="1.2">
+    <!-- skewed lattice: rows shifted right by half a cell per step down -->
+    <path d="M410 110 L470 110 L440 180 L380 180 Z"/>
+    <path d="M470 110 L530 110 L500 180 L440 180 Z"/>
+    <path d="M530 110 L590 110 L560 180 L500 180 Z"/>
+    <path d="M590 110 L650 110 L620 180 L560 180 Z"/>
+    <path d="M440 180 L500 180 L470 250 L410 250 Z"/>
+    <path d="M500 180 L560 180 L530 250 L470 250 Z"/>
+    <path d="M560 180 L620 180 L590 250 L530 250 Z"/>
+    <!-- triangle splits -->
+    <path d="M410 110 L440 180 M470 110 L500 180 M530 110 L560 180 M590 110 L620 180"/>
+    <path d="M440 180 L470 250 M500 180 L530 250 M560 180 L590 250"/>
+  </g>
+  <g fill="#00a1e4">
+    <circle cx="410" cy="110" r="4"/><circle cx="470" cy="110" r="4"/><circle cx="530" cy="110" r="4"/><circle cx="590" cy="110" r="4"/><circle cx="650" cy="110" r="4"/>
+    <circle cx="380" cy="180" r="4"/><circle cx="440" cy="180" r="4"/><circle cx="500" cy="180" r="4"/><circle cx="560" cy="180" r="4"/><circle cx="620" cy="180" r="4"/>
+    <circle cx="410" cy="250" r="4"/><circle cx="470" cy="250" r="4"/><circle cx="530" cy="250" r="4"/><circle cx="590" cy="250" r="4"/>
+  </g>
+  <!-- sample point in a triangle -->
+  <circle cx="497" cy="140" r="4" fill="#ff9e64"/>
+  <text x="497" y="130" fill="#ff9e64" font-size="9" text-anchor="middle">p</text>
+  <text x="520" y="296" fill="#8b98ad" font-size="10" text-anchor="middle">3 corners contribute per triangle</text>
+</svg>
