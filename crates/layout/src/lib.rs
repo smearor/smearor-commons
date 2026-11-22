@@ -5,8 +5,10 @@
 //! [`Placement`] is the technical target of an arrangement
 //! (center + rotation + footprint). A [`LayoutStrategy`] maps a list
 //! of [`LayoutItem`]s onto `Placement`s inside bounds - the built-ins
-//! are [`FlowLayout`] (side-by-side lines, non-overlapping) and
-//! [`SeatLayout`] (the four table seats). Consumer crates keep their
+//! are [`FlowLayout`] (side-by-side lines, non-overlapping),
+//! [`SeatLayout`] (the four table seats), [`EdgeStripLayout`] (item
+//! strips docked outside a host's edges) and [`OrbitLayout`] (items
+//! on an arc around a host center). Consumer crates keep their
 //! semantic types ("player", "card", "note") and map them onto these
 //! primitives - which side a user sits at, or what a placed item
 //! *is*, stays downstream.
@@ -17,30 +19,41 @@
 //! coordinates share the same algorithms.
 
 mod anchor_weights;
+mod edge_distribution;
+mod edge_strip_layout;
 mod error;
 mod flow_layout;
 mod layout_item;
 mod layout_strategy;
+mod orbit_item;
+mod orbit_layout;
 mod placement;
 mod seat;
 mod seat_assignment;
 mod seat_layout;
 mod seat_pose;
+mod side_set;
 mod table_side;
 mod view;
 mod workspace_size;
 
 pub use anchor_weights::AnchorWeights;
+pub use edge_distribution::EdgeDistribution;
+pub use edge_strip_layout::EdgeStripLayout;
 pub use error::LayoutError;
 pub use flow_layout::FlowLayout;
 pub use layout_item::LayoutItem;
 pub use layout_strategy::LayoutStrategy;
+pub use orbit_item::OrbitItem;
+pub use orbit_layout::OrbitLayout;
+pub use orbit_layout::orbit_radius_for;
 pub use placement::Placement;
 pub use placement::footprint_for;
 pub use seat::Seat;
 pub use seat_assignment::SeatAssignment;
 pub use seat_layout::SeatLayout;
 pub use seat_pose::SeatPose;
+pub use side_set::SideSet;
 pub use table_side::TableSide;
 pub use view::View;
 pub use view::physical_zoom;

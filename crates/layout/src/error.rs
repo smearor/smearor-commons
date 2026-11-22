@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// Errors from arrangement strategies.
+/// Errors from arrangement strategies and layout configuration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 pub enum LayoutError {
     /// The items do not fit inside the bounds with the requested
@@ -13,4 +13,8 @@ pub enum LayoutError {
         /// Total number of items handed to the strategy.
         items: usize,
     },
+    /// A [`crate::SideSet`] was built from an empty side list - the
+    /// set needs at least one [`crate::TableSide`] by invariant.
+    #[error("a side set needs at least one table side")]
+    EmptySides,
 }
