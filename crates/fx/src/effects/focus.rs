@@ -21,6 +21,7 @@
 //! Params (`focus.ui` ranges): `blur_amount` 0..=100 px (default 50),
 //! `blur_quality` 1..=10 taps per ray (default 3).
 
+use crate::BlurQuality;
 use crate::Direction;
 use crate::FxContext;
 use crate::Layers;
@@ -35,6 +36,7 @@ use smearor_commons_buffer::BufferView;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_geometry::Fraction;
+use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Vec2;
 
 /// Rays of the BMW blur cone (`directions = 15.0` in
@@ -43,15 +45,17 @@ const BLUR_DIRECTIONS: u32 = 15;
 
 /// Focus - blur + fade, the simplest BMW transition.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct Focus {
     /// `uBlurAmount` - the blur radius in pixels at animation start
-    /// (`focus.ui`: 0..=100, default 50).
-    pub blur_amount: u32,
+    /// (`focus.ui`: 0..=100, default 50). Serializes as the bare
+    /// pixel count (`"blur_amount": 50`).
+    pub blur_amount: Pixels<u32>,
     /// `uBlurQuality` - taps per ray of the blur cone (`focus.ui`:
     /// 1..=10, default 3). Higher values smooth the blur at linear
     /// sampling cost.
-    pub blur_quality: u32,
+    pub blur_quality: BlurQuality,
 }
 
 impl Default for Focus {
@@ -64,11 +68,11 @@ impl Default for Focus {
 }
 
 impl Focus {
-    const fn default_blur_amount() -> u32 {
-        50
+    const fn default_blur_amount() -> Pixels<u32> {
+        Pixels::new(50)
     }
-    const fn default_blur_quality() -> u32 {
-        3
+    const fn default_blur_quality() -> BlurQuality {
+        BlurQuality::new(3)
     }
 }
 
@@ -103,7 +107,10 @@ impl WindowEffect for Focus {
     }
 
     fn values(&self) -> Vec<ParamValue> {
-        vec![ParamValue::Int(i64::from(self.blur_amount)), ParamValue::Int(i64::from(self.blur_quality))]
+        vec![
+            ParamValue::Int(i64::from(self.blur_amount.0)),
+            ParamValue::Int(i64::from(self.blur_quality.as_u32())),
+        ]
     }
 
     fn set_values(&mut self, values: &[ParamValue]) -> Result<(), crate::FxError> {
@@ -111,8 +118,8 @@ impl WindowEffect for Focus {
         if values.len() != 2 {
             return Err(crate::FxError::ParamMismatch(format!("focus takes 2 parameters, got {}", values.len())));
         }
-        self.blur_amount = u32::try_from(values[0].as_i64().ok_or(mismatch(0))?.clamp(0, 100)).map_err(|_| mismatch(0))?;
-        self.blur_quality = u32::try_from(values[1].as_i64().ok_or(mismatch(1))?.clamp(1, 10)).map_err(|_| mismatch(1))?;
+        self.blur_amount = Pixels::new(u32::try_from(values[0].as_i64().ok_or(mismatch(0))?.clamp(0, 100)).map_err(|_| mismatch(0))?);
+        self.blur_quality = BlurQuality::new(u32::try_from(values[1].as_i64().ok_or(mismatch(1))?.clamp(1, 10)).map_err(|_| mismatch(1))?);
         Ok(())
     }
 
@@ -123,13 +130,13 @@ impl WindowEffect for Focus {
         let opening = ctx.direction == Direction::Open;
         let progl = if opening { ctx.progress.as_f64() } else { 1.0 - ctx.progress.as_f64() };
 
-        let blur_px = crate::mix(f64::from(self.blur_amount), 0.0, EasingFunction::EaseInOutSine.apply(Fraction::new(progl)).as_f64());
+        let blur_px = crate::mix(f64::from(self.blur_amount.0), 0.0, EasingFunction::EaseInOutSine.apply(Fraction::new(progl)).as_f64());
         let alpha = EasingFunction::EaseInOutCubic.apply(Fraction::new(progl)).as_f64();
 
         // The cone table once for the whole frame; `sample_cone`
         // degenerates to a plain bilinear tap when the radius is zero.
         let radius = Vec2::<()>::new(blur_px / w, blur_px / h);
-        let offsets = BufferView::<'_, Rgba>::cone_offsets(radius, BLUR_DIRECTIONS, self.blur_quality.max(1));
+        let offsets = BufferView::<'_, Rgba>::cone_offsets(radius, BLUR_DIRECTIONS, self.blur_quality.as_u32().max(1));
 
         let inv = Vec2::<()>::new(1.0 / w, 1.0 / h);
         crate::render::fill(out, |x, y| {

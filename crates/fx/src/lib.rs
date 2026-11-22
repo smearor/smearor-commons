@@ -21,6 +21,7 @@
 //! `schemars` integrations live behind dependency-named features.
 
 mod assets;
+mod blur_quality;
 mod context;
 mod cycle_speed;
 mod direction;
@@ -39,6 +40,7 @@ pub mod gtk;
 mod spoke_count;
 
 pub use assets::FxAssets;
+pub use blur_quality::BlurQuality;
 pub use context::FxContext;
 pub use cycle_speed::CycleSpeed;
 pub use direction::Direction;

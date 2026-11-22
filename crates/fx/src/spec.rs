@@ -44,6 +44,7 @@ use serde::Serialize;
 /// on the struct itself), so one definition serves runtime, JSON and
 /// codegen.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(tag = "effect", rename_all = "kebab-case")]
 pub enum EffectSpec {
     /// The reference effect - plain cross-fade.

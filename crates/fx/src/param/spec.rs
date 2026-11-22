@@ -5,6 +5,7 @@ use super::ParamKind;
 /// `params()` metadata drives everything downstream: GTK control rows
 /// (phase 3 experimenter), serde defaults, `emit` codegen.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ParamSpec {
     /// The serde/JSON key, e.g. `"scale"`.
     pub key: &'static str,

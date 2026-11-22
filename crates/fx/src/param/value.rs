@@ -7,6 +7,7 @@ use smearor_commons_color::Color;
 /// Untagged: JSON has no kind tag; the pairing with [`super::ParamKind`]
 /// (same index in `params()`) is what makes a value meaningful.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(untagged)]
 pub enum ParamValue {
     /// A float parameter.

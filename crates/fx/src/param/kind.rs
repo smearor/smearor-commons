@@ -2,6 +2,7 @@ use smearor_commons_color::Color;
 
 /// The widget/kind of a parameter, carrying the schema default.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum ParamKind {
     /// Float slider - GSettings schema `d`.
     Float {
