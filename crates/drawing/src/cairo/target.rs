@@ -30,8 +30,11 @@ pub struct CairoTarget {
 impl CairoTarget {
     /// Wraps `ctx`, declaring `size` as the drawable pixel extent.
     /// Clones the handle (refcount bump only).
-    pub fn new(ctx: &Context, size: Size<u32>) -> Self {
-        Self { ctx: ctx.clone(), size }
+    pub fn new(ctx: &Context, size: impl Into<Size<u32>>) -> Self {
+        Self {
+            ctx: ctx.clone(),
+            size: size.into(),
+        }
     }
 
     /// The wrapped context, for backend-specific operations outside the

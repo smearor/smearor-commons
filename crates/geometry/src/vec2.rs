@@ -706,6 +706,14 @@ impl<U> From<Vec2<U, u32>> for Vec2<U, i32> {
     }
 }
 
+impl<U> From<Vec2<U, f64>> for Vec2<U, u32> {
+    /// Component-wise `as` conversion - truncates and saturates
+    /// negatives at `0`.
+    fn from(v: Vec2<U, f64>) -> Self {
+        Self::new(v.x as u32, v.y as u32)
+    }
+}
+
 impl<U> From<Vec2<U, f64>> for Vec2<U, f32> {
     fn from(v: Vec2<U, f64>) -> Self {
         Self::new(v.x as f32, v.y as f32)
