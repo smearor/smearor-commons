@@ -197,15 +197,30 @@ impl<U> Hexagon<U, f64> {
         Size::new(width, height)
     }
 
-    /// The circumradius of the hexagon whose axis-aligned bounding
-    /// size fits `size` - the exact inverse of
-    /// [`Hexagon::bounding_size_for_circumradius`]. A `0.0`
+    /// The smallest circumradius whose axis-aligned bounding box
+    /// covers `size` - the content must fit inside the box. A `0.0`
     /// component leaves that axis unconstrained.
-    pub fn circumradius_for_bounding_size(size: Size<f64>, orientation: PolygonOrientation) -> f64 {
+    pub fn circumradius_covering(size: Size<f64>, orientation: PolygonOrientation) -> f64 {
         match orientation {
             PolygonOrientation::FlatTop => (size.x / 2.0).max(size.y / (2.0 * SIN_60)),
             PolygonOrientation::PointyTop => (size.x / (2.0 * SIN_60)).max(size.y / 2.0),
         }
+    }
+
+    /// The largest circumradius whose axis-aligned bounding box
+    /// stays inside `size` - the "fit inside" counterpart of
+    /// [`Hexagon::circumradius_covering`].
+    pub fn circumradius_bounded_by(size: Size<f64>, orientation: PolygonOrientation) -> f64 {
+        match orientation {
+            PolygonOrientation::FlatTop => (size.x / 2.0).min(size.y / (2.0 * SIN_60)),
+            PolygonOrientation::PointyTop => (size.x / (2.0 * SIN_60)).min(size.y / 2.0),
+        }
+    }
+
+    /// The largest hexagon centered in `bounds` - its bounding box
+    /// touches the tighter side.
+    pub fn inscribed_in(bounds: &Rect<U, f64>, orientation: PolygonOrientation) -> Self {
+        Self::new(bounds.center(), Self::circumradius_bounded_by(bounds.size.with_unit(), orientation), orientation)
     }
 
     /// How far the outline extends along `direction` measured from
