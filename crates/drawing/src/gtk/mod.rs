@@ -4,3 +4,4 @@
 mod drawing_area;
 
 pub use drawing_area::drawing_area;
+pub use drawing_area::drawing_target;
