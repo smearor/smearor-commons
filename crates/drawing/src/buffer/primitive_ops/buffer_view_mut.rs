@@ -13,6 +13,7 @@ use crate::ops::StrokeCircle;
 use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
+use crate::ops::StrokeSector;
 use smearor_commons_buffer::BufferViewMut;
 use smearor_commons_buffer::PixelFormat;
 use smearor_commons_buffer::Rgba;
@@ -205,6 +206,28 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
                     blend_scanned(self, cap_bounds, spec.color, spec.alpha, |p| cap.interior_distance(p).is_some_and(|d| d.as_raw() <= half));
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// The sector boundary = the `w/2` bands on both rims inside
+    /// `arc`'s interval, plus the two radial edge segments.
+    fn stroke_sector(&mut self, spec: StrokeSector) -> Result<(), Self::Error> {
+        let half = f64::from(spec.line_width.as_raw()) / 2.0;
+        if half <= 0.0 {
+            return Ok(());
+        }
+        let (center, inner, outer) = (spec.annulus.center, spec.annulus.inner, spec.annulus.outer);
+        let bounds = spec.annulus.outer_circle().bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| {
+            spec.arc.contains((*p - center).direction())
+                && ((p.distance(&center).as_raw() - outer).abs() <= half || (p.distance(&center).as_raw() - inner).abs() <= half)
+        });
+        for direction in [spec.arc.start, spec.arc.end()] {
+            let radial = Vec2::<Pixels>::new(1.0, 0.0).rotated(direction);
+            let edge = Segment::new(center + radial * inner, center + radial * outer);
+            let edge_bounds = edge.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+            blend_scanned(self, edge_bounds, spec.color, spec.alpha, |p| edge.distance(p).as_raw() <= half);
         }
         Ok(())
     }

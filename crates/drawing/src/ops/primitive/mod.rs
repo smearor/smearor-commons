@@ -11,6 +11,7 @@ mod stroke_circle;
 mod stroke_polygon;
 mod stroke_polyline;
 mod stroke_rect;
+mod stroke_sector;
 
 pub use cap::Cap;
 pub use fill_circle::FillCircle;
@@ -23,6 +24,7 @@ pub use stroke_circle::StrokeCircle;
 pub use stroke_polygon::StrokePolygon;
 pub use stroke_polyline::StrokePolyline;
 pub use stroke_rect::StrokeRect;
+pub use stroke_sector::StrokeSector;
 
 use crate::ops::DrawBackend;
 use smearor_commons_color::Color;
@@ -76,6 +78,11 @@ pub trait DrawPrimitiveOps: DrawBackend {
     /// Fill `spec`'s annulus sector (pie-ring pieces: color-wheel
     /// wedges, fan chips).
     fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error>;
+
+    /// Stroke `spec`'s annulus-sector outline - the closed boundary
+    /// matching [`fill_sector`](Self::fill_sector)'s shape (hovered
+    /// wedge outlines, selected pieces).
+    fn stroke_sector(&mut self, spec: StrokeSector) -> Result<(), Self::Error>;
 
     /// Fill `spec`'s sector band - `count` sectors partitioning
     /// `spec.arc`, cycling `spec.colors` (lifebuoys, donut fills, dial
@@ -131,6 +138,10 @@ impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
 
     fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
         (**self).fill_sector(spec)
+    }
+
+    fn stroke_sector(&mut self, spec: StrokeSector) -> Result<(), Self::Error> {
+        (**self).stroke_sector(spec)
     }
 
     fn fill_sectors(&mut self, spec: FillSectors) -> Result<(), Self::Error> {

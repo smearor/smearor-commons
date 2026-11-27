@@ -43,6 +43,7 @@ pub use primitive::StrokeCircle;
 pub use primitive::StrokePolygon;
 pub use primitive::StrokePolyline;
 pub use primitive::StrokeRect;
+pub use primitive::StrokeSector;
 pub use progress::DrawProgressOps;
 pub use progress::Gauge;
 pub use progress::PROGRESS_BAR_BOTTOM_MARGIN;

@@ -15,6 +15,7 @@ use crate::ops::StrokeCircle;
 use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
+use crate::ops::StrokeSector;
 use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
 use std::f64::consts::TAU;
@@ -121,6 +122,23 @@ impl DrawPrimitiveOps for CairoTarget {
         polyline_path(&self.ctx, spec.polyline.points());
         self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
         self.ctx.set_line_cap(spec.cap.into());
+        self.ctx.stroke()
+    }
+
+    /// The sector outline: the same `arc`/`arc_negative` boundary as
+    /// `fill_sector`, stroked instead of filled.
+    fn stroke_sector(&mut self, spec: StrokeSector) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
+            return Ok(());
+        }
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        let center = spec.annulus.center;
+        let (start, end) = (spec.arc.start.as_f64(), spec.arc.start.as_f64() + spec.arc.width.as_f64());
+        self.ctx.new_path();
+        self.ctx.arc(center.x, center.y, spec.annulus.outer, start, end);
+        self.ctx.arc_negative(center.x, center.y, spec.annulus.inner, end, start);
+        self.ctx.close_path();
+        self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
         self.ctx.stroke()
     }
 

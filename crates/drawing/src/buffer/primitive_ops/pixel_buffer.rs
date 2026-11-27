@@ -11,6 +11,7 @@ use crate::ops::StrokeCircle;
 use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
+use crate::ops::StrokeSector;
 use smearor_commons_buffer::PixelBuffer;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Color;
@@ -50,6 +51,10 @@ impl DrawPrimitiveOps for PixelBuffer<Rgba> {
 
     fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error> {
         self.view_mut().stroke_polyline(spec)
+    }
+
+    fn stroke_sector(&mut self, spec: StrokeSector) -> Result<(), Self::Error> {
+        self.view_mut().stroke_sector(spec)
     }
 
     fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {

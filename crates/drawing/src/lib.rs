@@ -73,6 +73,7 @@ pub use ops::StrokeCircle;
 pub use ops::StrokePolygon;
 pub use ops::StrokePolyline;
 pub use ops::StrokeRect;
+pub use ops::StrokeSector;
 pub use render_context::RenderContext;
 
 /// Re-exports all drawing capability traits — `use
