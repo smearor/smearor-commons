@@ -144,6 +144,13 @@ impl<U> Circle<U, f64> {
         Self::new(center, Self::radius_for_inscribed_square(side))
     }
 
+    /// The largest circle centered in `bounds` - its radius is
+    /// half the shorter side. Inset the bound beforehand where a
+    /// margin applies (`bounds.inset(...)`).
+    pub fn inscribed_in(bounds: &Rect<U, f64>) -> Self {
+        Self::new(bounds.center(), bounds.width().min(bounds.height()) / 2.0)
+    }
+
     /// Rasterizes the disk into 1-px-high integer rectangles - one
     /// [`Rect<U, i32>`] per covered scanline, in the circle's own
     /// coordinate space.

@@ -65,6 +65,14 @@ impl<U> Semicircle<U, f64> {
     }
 
     /// The axis-aligned bounding box: `2r` wide and `r` tall, the
+    /// The largest dome centered on the bottom edge of `bounds` -
+    /// its radius is `min(width / 2, height)`: half the width or
+    /// the full height, whichever is tighter. Inset the bound
+    /// beforehand where a margin applies (`bounds.inset(...)`).
+    pub fn inscribed_in(bounds: &Rect<U, f64>) -> Self {
+        Self::new(Vec2::new(bounds.center().x, bounds.min.y + bounds.height()), (bounds.width() / 2.0).min(bounds.height()))
+    }
+
     /// diameter edge as its bottom side.
     pub fn bounding_box(&self) -> Rect<U, f64> {
         Rect::new(self.center - Vec2::new(self.radius, self.radius), Vec2::new(self.radius * 2.0, self.radius))
