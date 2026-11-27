@@ -10,6 +10,7 @@ use crate::ops::FillCircle;
 use crate::ops::FillPolygon;
 use crate::ops::FillRect;
 use crate::ops::FillSector;
+use crate::ops::StrokeArc;
 use crate::ops::StrokeCircle;
 use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
@@ -83,6 +84,24 @@ impl DrawPrimitiveOps for CairoTarget {
         self.ctx.new_path();
         self.ctx.arc(spec.circle.center.x, spec.circle.center.y, spec.circle.radius, 0.0, TAU);
         self.ctx.fill()
+    }
+
+    fn stroke_arc(&mut self, spec: StrokeArc) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
+            return Ok(());
+        }
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.ctx.new_path();
+        self.ctx.arc(
+            spec.circle.center.x,
+            spec.circle.center.y,
+            spec.circle.radius,
+            spec.arc.start.as_f64(),
+            spec.arc.start.as_f64() + spec.arc.width.as_f64(),
+        );
+        self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
+        self.ctx.set_line_cap(spec.cap.into());
+        self.ctx.stroke()
     }
 
     fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {

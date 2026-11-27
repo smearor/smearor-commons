@@ -6,6 +6,7 @@ use crate::ops::FillCircle;
 use crate::ops::FillPolygon;
 use crate::ops::FillRect;
 use crate::ops::FillSector;
+use crate::ops::StrokeArc;
 use crate::ops::StrokeCircle;
 use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
@@ -29,6 +30,10 @@ impl DrawPrimitiveOps for PixelBuffer<Rgba> {
 
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
         self.view_mut().fill_circle(spec)
+    }
+
+    fn stroke_arc(&mut self, spec: StrokeArc) -> Result<(), Self::Error> {
+        self.view_mut().stroke_arc(spec)
     }
 
     fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error> {

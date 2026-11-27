@@ -6,6 +6,7 @@ mod fill_polygon;
 mod fill_rect;
 mod fill_sector;
 mod fill_sectors;
+mod stroke_arc;
 mod stroke_circle;
 mod stroke_polygon;
 mod stroke_polyline;
@@ -17,6 +18,7 @@ pub use fill_polygon::FillPolygon;
 pub use fill_rect::FillRect;
 pub use fill_sector::FillSector;
 pub use fill_sectors::FillSectors;
+pub use stroke_arc::StrokeArc;
 pub use stroke_circle::StrokeCircle;
 pub use stroke_polygon::StrokePolygon;
 pub use stroke_polyline::StrokePolyline;
@@ -54,6 +56,10 @@ pub trait DrawPrimitiveOps: DrawBackend {
     /// Stroke `spec`'s circle outline, centered on the radius (hub
     /// rings, badge borders, orbit paths).
     fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error>;
+
+    /// Stroke the `arc` interval of `spec`'s rim (level bars,
+    /// progress rings) - `cap` styles the open ends.
+    fn stroke_arc(&mut self, spec: StrokeArc) -> Result<(), Self::Error>;
 
     /// Fill `spec`'s polygon, even-odd (gamut outlines, Ostwald/NCS
     /// triangle cells).
@@ -105,6 +111,10 @@ impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
 
     fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error> {
         (**self).stroke_circle(spec)
+    }
+
+    fn stroke_arc(&mut self, spec: StrokeArc) -> Result<(), Self::Error> {
+        (**self).stroke_arc(spec)
     }
 
     fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {

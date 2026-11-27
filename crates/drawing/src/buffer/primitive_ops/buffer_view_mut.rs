@@ -8,6 +8,7 @@ use crate::ops::FillCircle;
 use crate::ops::FillPolygon;
 use crate::ops::FillRect;
 use crate::ops::FillSector;
+use crate::ops::StrokeArc;
 use crate::ops::StrokeCircle;
 use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
@@ -167,6 +168,41 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
                     };
                     let bounds = cap.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
                     blend_scanned(self, bounds, spec.color, spec.alpha, |p| cap.interior_distance(p).is_some_and(|d| d.as_raw() <= half));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// The rim band `|dist − r| ≤ w/2` masked by `arc`'s interval -
+    /// caps are the same geometry as `stroke_polyline`'s: round ends
+    /// scan endpoint circles, square ends scan a tangent extension.
+    fn stroke_arc(&mut self, spec: StrokeArc) -> Result<(), Self::Error> {
+        let half = f64::from(spec.line_width.as_raw()) / 2.0;
+        if half <= 0.0 {
+            return Ok(());
+        }
+        let (center, radius) = (spec.circle.center, spec.circle.radius);
+        let bounds = spec.circle.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| {
+            (p.distance(&center).as_raw() - radius).abs() <= half && spec.arc.contains((*p - center).direction())
+        });
+        for (index, end) in [spec.arc.start, spec.arc.end()].iter().enumerate() {
+            let radial = Vec2::<Pixels>::new(1.0, 0.0).rotated(*end);
+            let endpoint = center + radial * radius;
+            match spec.cap {
+                Cap::Butt => {}
+                Cap::Round => {
+                    let cap_bounds = Circle::new(endpoint, half).bounding_box().to_i32_ceil();
+                    blend_scanned(self, cap_bounds, spec.color, spec.alpha, |p| p.distance(&endpoint).as_raw() <= half);
+                }
+                // The tangent continuation: forward past `arc.end`,
+                // backward past `arc.start`.
+                Cap::Square => {
+                    let tangent = radial.perpendicular() * if index == 0 { -half } else { half };
+                    let cap = Segment::new(endpoint, endpoint + tangent);
+                    let cap_bounds = cap.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+                    blend_scanned(self, cap_bounds, spec.color, spec.alpha, |p| cap.interior_distance(p).is_some_and(|d| d.as_raw() <= half));
                 }
             }
         }

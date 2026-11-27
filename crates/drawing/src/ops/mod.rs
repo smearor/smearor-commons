@@ -38,6 +38,7 @@ pub use primitive::FillPolygon;
 pub use primitive::FillRect;
 pub use primitive::FillSector;
 pub use primitive::FillSectors;
+pub use primitive::StrokeArc;
 pub use primitive::StrokeCircle;
 pub use primitive::StrokePolygon;
 pub use primitive::StrokePolyline;
