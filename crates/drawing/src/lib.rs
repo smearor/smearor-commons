@@ -61,6 +61,7 @@ pub use ops::FillCircle;
 pub use ops::FillPolygon;
 pub use ops::FillRect;
 pub use ops::FillSector;
+pub use ops::FillSectors;
 pub use ops::Gauge;
 pub use ops::Icon;
 pub use ops::IconGrid;

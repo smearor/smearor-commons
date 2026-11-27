@@ -4,6 +4,7 @@ mod fill_circle;
 mod fill_polygon;
 mod fill_rect;
 mod fill_sector;
+mod fill_sectors;
 mod stroke_polyline;
 mod stroke_rect;
 
@@ -11,6 +12,7 @@ pub use fill_circle::FillCircle;
 pub use fill_polygon::FillPolygon;
 pub use fill_rect::FillRect;
 pub use fill_sector::FillSector;
+pub use fill_sectors::FillSectors;
 pub use stroke_polyline::StrokePolyline;
 pub use stroke_rect::StrokeRect;
 
@@ -54,6 +56,20 @@ pub trait DrawPrimitiveOps: DrawBackend {
     /// Fill `spec`'s annulus sector (pie-ring pieces: color-wheel
     /// wedges, fan chips).
     fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error>;
+
+    /// Fill `spec`'s sector band - `count` sectors partitioning
+    /// `spec.arc`, cycling `spec.colors` (lifebuoys, donut fills, dial
+    /// segments). The default loops [`fill_sector`](Self::fill_sector)
+    /// over [`Arc::segments`]; backends may override for a fused pass.
+    fn fill_sectors(&mut self, spec: FillSectors) -> Result<(), Self::Error> {
+        if spec.colors.is_empty() {
+            return Ok(());
+        }
+        for (index, arc) in spec.arc.segments(spec.count, spec.gap).iter().enumerate() {
+            self.fill_sector(FillSector::new(spec.annulus, *arc, spec.colors[index % spec.colors.len()], spec.alpha))?;
+        }
+        Ok(())
+    }
 }
 
 impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
@@ -83,5 +99,9 @@ impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
 
     fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
         (**self).fill_sector(spec)
+    }
+
+    fn fill_sectors(&mut self, spec: FillSectors) -> Result<(), Self::Error> {
+        (**self).fill_sectors(spec)
     }
 }

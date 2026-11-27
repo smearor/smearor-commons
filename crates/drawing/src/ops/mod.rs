@@ -36,6 +36,7 @@ pub use primitive::FillCircle;
 pub use primitive::FillPolygon;
 pub use primitive::FillRect;
 pub use primitive::FillSector;
+pub use primitive::FillSectors;
 pub use primitive::StrokePolyline;
 pub use primitive::StrokeRect;
 pub use progress::DrawProgressOps;
