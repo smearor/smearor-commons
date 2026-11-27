@@ -213,6 +213,22 @@ impl<U> Octagon<U, f64> {
         }
     }
 
+    /// The edge length of a regular octagon of `inradius`:
+    /// `2 * inradius * tan(22.5deg)` - orientation-independent,
+    /// since a regular octagon's apothem is `a = R * cos(22.5deg)`.
+    /// The exact inverse of [`Octagon::inradius_for_side_length`].
+    pub fn side_length_for_inradius(inradius: f64) -> f64 {
+        inradius * 2.0 * SIN_22_5 / COS_22_5
+    }
+
+    /// The inradius of a regular octagon of edge `side` -
+    /// [`Octagon::with_side_length`] takes the same measure via the
+    /// circumradius. The exact inverse of
+    /// [`Octagon::side_length_for_inradius`].
+    pub fn inradius_for_side_length(side: f64) -> f64 {
+        side * COS_22_5 / (2.0 * SIN_22_5)
+    }
+
     /// The inradius of the octagon whose bounding square has
     /// `side` - the exact inverse of
     /// [`Octagon::bounding_side_for_inradius`].
@@ -221,6 +237,16 @@ impl<U> Octagon<U, f64> {
             PolygonOrientation::FlatTop => side / 2.0,
             PolygonOrientation::PointyTop => side * COS_22_5 / 2.0,
         }
+    }
+
+    /// The largest octagon centered in `bounds` - its square
+    /// bounding box touches the tighter side.
+    pub fn inscribed_in(bounds: &Rect<U, f64>, orientation: PolygonOrientation) -> Self {
+        Self::with_inradius(
+            bounds.center(),
+            Self::inradius_for_bounding_side(bounds.width().min(bounds.height()), orientation),
+            orientation,
+        )
     }
 
     /// How far the outline extends along `direction` measured from
