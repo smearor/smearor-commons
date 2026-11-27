@@ -1,4 +1,6 @@
 use crate::Circle;
+use crate::Fraction;
+use crate::Rect;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
@@ -54,6 +56,15 @@ impl<U, T> Annulus<U, T> {
 }
 
 impl<U> Annulus<U, f64> {
+    /// The largest annulus centered in `bounds`: `outer` is the
+    /// inscribed circle's radius (touching the tighter side), `inner`
+    /// the `hole` share of it (`Fraction::ZERO` degenerates to the
+    /// inscribed disk).
+    pub fn inscribed_in(bounds: &Rect<U, f64>, hole: Fraction) -> Self {
+        let disc = Circle::inscribed_in(bounds);
+        Self::new(disc.center, disc.radius * hole.as_f64(), disc.radius)
+    }
+
     /// Whether `point` lies in the ring - both boundaries count as
     /// inside (`inner <= distance <= outer`).
     pub fn contains(&self, point: &Vec2<U, f64>) -> bool {
