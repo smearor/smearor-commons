@@ -10,6 +10,8 @@ use crate::ops::FillCircle;
 use crate::ops::FillPolygon;
 use crate::ops::FillRect;
 use crate::ops::FillSector;
+use crate::ops::StrokeCircle;
+use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
 use smearor_commons_color::Alpha;
@@ -46,6 +48,29 @@ impl DrawPrimitiveOps for CairoTarget {
         }
         spec.color.apply_alpha(&self.ctx, spec.alpha);
         self.ctx.rectangle(spec.rect.min.x, spec.rect.min.y, spec.rect.width(), spec.rect.height());
+        self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
+        self.ctx.stroke()
+    }
+
+    fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
+            return Ok(());
+        }
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.ctx.new_path();
+        self.ctx.arc(spec.circle.center.x, spec.circle.center.y, spec.circle.radius, 0.0, TAU);
+        self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
+        self.ctx.stroke()
+    }
+
+    fn stroke_polygon(&mut self, spec: StrokePolygon) -> Result<(), Self::Error> {
+        if spec.line_width.as_raw() <= 0.0 {
+            return Ok(());
+        }
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.ctx.new_path();
+        polyline_path(&self.ctx, &spec.polygon);
+        self.ctx.close_path();
         self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
         self.ctx.stroke()
     }

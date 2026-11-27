@@ -7,6 +7,8 @@ use crate::ops::FillCircle;
 use crate::ops::FillPolygon;
 use crate::ops::FillRect;
 use crate::ops::FillSector;
+use crate::ops::StrokeCircle;
+use crate::ops::StrokePolygon;
 use crate::ops::StrokePolyline;
 use crate::ops::StrokeRect;
 use smearor_commons_buffer::BufferViewMut;
@@ -81,6 +83,35 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
         let bounds = spec.circle.bounding_box().to_i32_ceil();
         blend_scanned(self, bounds, spec.color, spec.alpha, |p| spec.circle.contains(p));
+        Ok(())
+    }
+
+    /// Stroke centered on the radius like cairo: the stroke region is
+    /// every point within `line_width/2` of the circle.
+    fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error> {
+        let half = f64::from(spec.line_width.as_raw()) / 2.0;
+        if half <= 0.0 {
+            return Ok(());
+        }
+        let bounds = spec.circle.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+        let center = spec.circle.center;
+        blend_scanned(self, bounds, spec.color, spec.alpha, |p| {
+            ((*p - center).magnitude().as_raw() - spec.circle.radius).abs() <= half
+        });
+        Ok(())
+    }
+
+    /// Stroke centered on each edge like cairo - the polygon's
+    /// `segments` closes the ring, so the seam strokes like any edge.
+    fn stroke_polygon(&mut self, spec: StrokePolygon) -> Result<(), Self::Error> {
+        let half = f64::from(spec.line_width.as_raw()) / 2.0;
+        if half <= 0.0 {
+            return Ok(());
+        }
+        for segment in spec.polygon.segments() {
+            let bounds = segment.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+            blend_scanned(self, bounds, spec.color, spec.alpha, |p| segment.distance(p).as_raw() <= half);
+        }
         Ok(())
     }
 

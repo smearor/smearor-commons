@@ -5,6 +5,8 @@ mod fill_polygon;
 mod fill_rect;
 mod fill_sector;
 mod fill_sectors;
+mod stroke_circle;
+mod stroke_polygon;
 mod stroke_polyline;
 mod stroke_rect;
 
@@ -13,6 +15,8 @@ pub use fill_polygon::FillPolygon;
 pub use fill_rect::FillRect;
 pub use fill_sector::FillSector;
 pub use fill_sectors::FillSectors;
+pub use stroke_circle::StrokeCircle;
+pub use stroke_polygon::StrokePolygon;
 pub use stroke_polyline::StrokePolyline;
 pub use stroke_rect::StrokeRect;
 
@@ -45,9 +49,17 @@ pub trait DrawPrimitiveOps: DrawBackend {
     /// dots, indicators).
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error>;
 
+    /// Stroke `spec`'s circle outline, centered on the radius (hub
+    /// rings, badge borders, orbit paths).
+    fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error>;
+
     /// Fill `spec`'s polygon, even-odd (gamut outlines, Ostwald/NCS
     /// triangle cells).
     fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error>;
+
+    /// Stroke `spec`'s closed polygon ring with a joined seam -
+    /// `close_path` semantics (dice faces, chip borders).
+    fn stroke_polygon(&mut self, spec: StrokePolygon) -> Result<(), Self::Error>;
 
     /// Stroke `spec`'s polyline segments — the path stays open
     /// (spectral and Planckian loci, wireframe edges).
@@ -89,8 +101,16 @@ impl<T: DrawPrimitiveOps + ?Sized> DrawPrimitiveOps for &mut T {
         (**self).fill_circle(spec)
     }
 
+    fn stroke_circle(&mut self, spec: StrokeCircle) -> Result<(), Self::Error> {
+        (**self).stroke_circle(spec)
+    }
+
     fn fill_polygon(&mut self, spec: FillPolygon) -> Result<(), Self::Error> {
         (**self).fill_polygon(spec)
+    }
+
+    fn stroke_polygon(&mut self, spec: StrokePolygon) -> Result<(), Self::Error> {
+        (**self).stroke_polygon(spec)
     }
 
     fn stroke_polyline(&mut self, spec: StrokePolyline) -> Result<(), Self::Error> {

@@ -67,6 +67,8 @@ pub use ops::Icon;
 pub use ops::IconGrid;
 pub use ops::PROGRESS_BAR_BOTTOM_MARGIN;
 pub use ops::ProgressBar;
+pub use ops::StrokeCircle;
+pub use ops::StrokePolygon;
 pub use ops::StrokePolyline;
 pub use ops::StrokeRect;
 pub use render_context::RenderContext;
