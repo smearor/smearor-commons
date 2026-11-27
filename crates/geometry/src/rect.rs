@@ -70,6 +70,14 @@ impl<U, T> Rect<U, T> {
             size: Vec2::new(width, height),
         }
     }
+
+    /// The rectangle of `size` anchored at the origin.
+    pub fn from_size(size: Vec2<U, T>) -> Self
+    where
+        T: Default,
+    {
+        Self::new(Vec2::new(T::default(), T::default()), size)
+    }
 }
 
 impl<U, T: Copy> Rect<U, T> {
