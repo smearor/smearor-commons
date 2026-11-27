@@ -50,6 +50,16 @@ impl Fraction {
     pub fn inverse(self) -> Self {
         Self(1.0 - self.0)
     }
+
+    /// The smaller of `self` and `other` (`f64::min` semantics).
+    pub fn min(self, other: Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    /// The larger of `self` and `other` (`f64::max` semantics).
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
 }
 
 impl Add for Fraction {
