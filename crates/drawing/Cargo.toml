@@ -11,12 +11,13 @@ description = "Shared rendering vocabulary for the Smearor ecosystem: icons, tex
 
 [features]
 cairo = ["dep:cairo-rs", "smearor-commons-color/cairo"]
-gtk4 = ["cairo", "smearor-commons-buffer/gtk4"]
+gtk4 = ["cairo", "dep:gtk4", "smearor-commons-buffer/gtk4"]
 
 [dependencies]
 ab_glyph.workspace = true
 ahash.workspace = true
 cairo-rs = { workspace = true, optional = true, features = ["png"] }
+gtk4 = { workspace = true, optional = true }
 serde.workspace = true
 smearor-commons-buffer.workspace = true
 smearor-commons-color.workspace = true

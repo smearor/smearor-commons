@@ -33,6 +33,8 @@
 mod buffer;
 #[cfg(feature = "cairo")]
 pub mod cairo;
+#[cfg(feature = "gtk4")]
+pub mod gtk;
 mod ops;
 mod render_context;
 mod tech;
