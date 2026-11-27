@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -198,8 +198,9 @@ let item = LayoutItem::new(
 <span class="boring">}</span></code></pre>
 <ul>
 <li><code>size: Vec2</code> — the item’s footprint <strong>as currently rotated</strong></li>
-<li><code>rotation: Rotation</code> — <code>QuarterTurn(_)</code> or <code>Free(_)</code>; strategies may
-preserve it (Flow) or override it (Seat)</li>
+<li><code>rotation: Rotation</code> — a snapped <code>QuarterTurn(_)</code>/<code>SixthTurn(_)</code>/
+<code>EighthTurn(_)</code> or <code>Free(_)</code>; strategies may preserve it (Flow) or
+override it (Seat, EdgeStrip)</li>
 <li><code>seat: Option&lt;Seat&gt;</code> — explicit seat request; <code>None</code> leaves the
 decision to the strategy</li>
 </ul>
@@ -228,6 +229,21 @@ approximated as the unrotated extent. Strategies use this when an item
 changes orientation on the way to its placement — a <code>SeatLayout</code>
 placing an upright <code>60×40</code> item at the <code>Left</code> seat knows it occupies
 <code>40×60</code> along the edge.</p>
+<h2 id="orbititem--orbitlayouts-request"><a class="header" href="#orbititem--orbitlayouts-request"><code>OrbitItem</code> — <code>OrbitLayout</code>’s request</a></h2>
+<p><code>OrbitLayout</code> takes <code>OrbitItem</code>s instead of <code>LayoutItem</code>s — same
+footprint and rotation, plus an optional anchor direction on the
+orbit circle:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Rotation, RotationRad, Vec2};
+use smearor_commons_layout::OrbitItem;
+
+let flexible = OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO);
+let pinned = flexible.with_anchor(RotationRad::QUARTER_TURN);
+<span class="boring">}</span></code></pre>
+<p><code>anchor: Some(dir)</code> pins the item to that absolute direction;
+<code>None</code> leaves it flexible — the strategy distributes flexible items
+into the free angular space between anchors.</p>
 
                     </main>
 

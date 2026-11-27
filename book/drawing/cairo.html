@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -213,6 +213,10 @@ vocabulary: <code>save</code>/<code>restore</code>, transforms, patterns, source
 <li>cairo-only extras: <code>draw_rotated_text</code>, <code>draw_halo_text</code></li>
 <li><strong>path helpers</strong> (free functions): <code>polyline_path</code>, <code>smooth_path</code>,
 <code>wavy_path</code>, <code>band_path</code>, <code>rounded_rect_path</code>, <code>tile_fill</code></li>
+<li>every spec is a <strong>self-contained primitive</strong>: <code>fill_circle</code>,
+<code>fill_sector</code> &amp; co. start on a fresh path (<code>new_path</code>), so a stale
+current point can’t chain a stray chord into the next shape — the
+same contract the software-raster backend gives</li>
 <li><code>status()</code> surfaces cairo’s sticky deferred error — <code>DrawTarget</code>’s
 end-of-pass check</li>
 </ul>
@@ -224,6 +228,9 @@ end-of-pass check</li>
 let surface = image_surface_from_buffer(&amp;buffer)?;   // PixelBuffer&lt;F&gt; → ImageSurface
 let back = pixel_buffer_from_surface(&amp;mut surface)?; // → PixelBuffer&lt;BgraPremultiplied&gt;
 <span class="boring">}</span></code></pre>
+<p>The <code>cairo</code> feature also enables cairo-rs’ <code>png</code> support —
+<code>ImageSurface::create_from_png</code>/<code>write_to_png</code> are available for PNG
+fixtures and frame dumps without an extra dependency.</p>
 <h2 id="drawingerror"><a class="header" href="#drawingerror"><code>DrawingError</code></a></h2>
 <div class="table-wrapper">
 <table>

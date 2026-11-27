@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -214,6 +214,27 @@ let tolerance = Degrees::new(5.0);           // snap tolerance
 <p>The newtypes wrap plain scalars (<code>serde(transparent)</code> on the wire) and
 carry <code>as_raw</code>/<code>as_f64</code>/<code>as_f32</code> bridges plus <code>min</code>/<code>max</code>/<code>clamp</code>/
 <code>abs</code> helpers where useful.</p>
+<h2 id="distanceu--the-scalar-vec2"><a class="header" href="#distanceu--the-scalar-vec2"><code>Distance&lt;U&gt;</code> — the scalar <code>Vec2</code></a></h2>
+<p><code>Distance&lt;U&gt;</code> is the one-dimensional counterpart of <code>Vec2&lt;U&gt;</code> — a bare
+<code>f64</code> tagged with the coordinate space, for APIs that want the unit on
+a lone scalar: gaps, radii, margins. <code>Distance&lt;Pixels&gt;</code> cannot be
+passed where <code>Distance&lt;Millimeters&gt;</code> is expected; <code>Distance&lt;()&gt;</code> keeps
+unit-free math available, like <code>Vec2&lt;()&gt;</code>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Distance, Pixels};
+
+let gap = Distance::&lt;Pixels&gt;::new(24.0);
+gap.as_f64();                          // 24.0 — the erased scalar
+gap * 2.0 + Distance::&lt;Pixels&gt;::new(4.0); // arithmetic keeps the unit
+<span class="boring">}</span></code></pre>
+<p>The unit marker carries no value — equality, ordering and serde see
+only the scalar (the wire form is the bare number). <code>From&lt;f64&gt;</code> makes
+a plain number read as whatever <code>U</code> the context expects — the same
+escape hatch <code>Vec2::new</code> offers — so <code>f64</code> call sites keep compiling
+against <code>Distance</code>-typed parameters. The layout crate uses it for
+<code>FlowLayout::gap</code>, <code>SeatLayout::edge_margin</code>, <code>EdgeStripLayout::gap</code>
+and <code>OrbitLayout::radius</code>.</p>
 <h2 id="bridging-spaces-pixelspermm--unitspermm"><a class="header" href="#bridging-spaces-pixelspermm--unitspermm">Bridging spaces: PixelsPerMm &amp; UnitsPerMm</a></h2>
 <p><code>PixelsPerMm(pub f64)</code> is the scale between the physical surface and
 the framebuffer — set once from DPI/surface calibration, then applied

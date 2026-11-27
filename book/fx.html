@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -330,6 +330,34 @@ Smearor tile mark - regenerates via <code>cargo run -p smearor-commons-fx --feat
 <p>Rendered frames (all deterministic for a fixed seed/progress) come
 from <code>cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- &lt;effect&gt; &lt;progress&gt; &lt;direction&gt;</code>:</p>
 <p><img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/hexagon.png" alt="hexagon at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixelate.png" alt="pixelate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/incinerate.png" alt="incinerate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wisps.png" alt="wisps at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/team-rocket.png" alt="team-rocket at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/trex.png" alt="trex at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/snap.png" alt="snap at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/paint-brush.png" alt="paint-brush at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/broken-glass.png" alt="broken-glass at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/aperture-panels.png" alt="aperture-panels at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/morph.png" alt="morph at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wormhole.png" alt="wormhole at progress 0.55, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/focus.png" alt="focus at progress 0.7, opening" style="width: 32%; image-rendering: pixelated;"></p>
+<h2 id="parallel-rows-and-schema-export-phase-6"><a class="header" href="#parallel-rows-and-schema-export-phase-6">Parallel rows and schema export (phase 6)</a></h2>
+<p><code>fill</code> fans out over disjoint row bands (<code>render.rs</code>), so every
+<code>apply</code> is multicore - sequential is the byte-identical reference
+(<code>parallel_output_is_byte_identical</code>, <code>rayon_output_is_byte_identical</code>).
+Two backends behind one abstraction: <code>std::thread::scope</code> (default,
+zero dependencies) or rayon’s work-stealing pool behind
+<code>--features rayon</code>. Measured (<code>fx_bench</code>, release, 400x300): the
+parallelization itself buys <code>focus</code> 106 -&gt; 27 ms (3.9x), <code>fire</code> 18 -&gt;
+4.9 ms (3.7x), <code>crossfade</code> 2.5 -&gt; 0.9 ms (2.8x) on 4 cores; rayon adds
+only variance reduction and pool reuse at high core counts - worth it
+as an <em>optional</em> backend for uneven row costs (wormhole’s bisection),
+not a dependency for the headless default. <code>FX_THREADS</code> overrides the
+worker count, <code>FX_BACKEND=scoped</code> forces the std path inside a
+rayon-enabled build:</p>
+<pre><code class="language-sh">FX_THREADS=1 cargo run --release -p smearor-commons-fx --example fx_bench
+cargo run --release -p smearor-commons-fx --features rayon --example fx_bench
+</code></pre>
+<p><code>--features schemars</code> adds <code>JsonSchema</code> to the whole effect model
+(<code>EffectSpec</code>, the 33 effect structs, <code>ParamSpec</code>, <code>ParamKind</code>,
+<code>ParamValue</code>, <code>Direction</code>, <code>Layers</code>, <code>Layer</code>; the geometry/color
+newtypes carry their own derives). The exporter writes a validating
+JSON Schema - <code>effect</code> is a <code>const</code> per variant, params land in
+<code>$defs</code>:</p>
+<pre><code class="language-sh">cargo run -p smearor-commons-fx --features schemars \
+    --example fx_schema &gt; effect.schema.json
+</code></pre>
+<p><code>schema_covers_all</code> pins that every shipped nick appears in the
+document.</p>
 
                     </main>
 

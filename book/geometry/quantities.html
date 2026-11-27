@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -246,9 +246,30 @@ since only exact multiples of 90° qualify.</p>
 <p><code>apply(pos, bounds)</code> maps a point through the quarter turn inside
 <code>bounds</code> — the coordinate math every tabletop needs when content is
 re-oriented for another seat.</p>
+<h2 id="sixthturn--eighthturn--finer-snaps"><a class="header" href="#sixthturn--eighthturn--finer-snaps">SixthTurn &amp; EighthTurn — finer snaps</a></h2>
+<p><code>SixthTurn</code> (<code>Deg0</code>…<code>Deg300</code> in 60° steps) and <code>EighthTurn</code>
+(<code>Deg0</code>…<code>Deg315</code> in 45° steps) are the snapped orientations of regular
+hexagons and octagons — every sixth turn maps a <code>Hexagon</code> onto itself,
+every eighth turn an <code>Octagon</code>. They mirror the <code>QuarterTurn</code> API:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{EighthTurn, RotationDirection, RotationRad, SixthTurn};
+
+SixthTurn::Deg60.clockwise();                          // Deg120
+SixthTurn::Deg60.inverse();                            // Deg240
+EighthTurn::snap_zone(RotationRad::from_degrees(100.0)); // Deg90
+SixthTurn::snap_target(angle, RotationDirection::Clockwise); // next step along the drag
+SixthTurn::ALL;                                        // all six, clockwise
+<span class="boring">}</span></code></pre>
+<p><code>snap_zone(angle)</code> returns the nearest step (zones reach 30° resp.
+22.5° to either side of each turn’s angle), <code>snap_target(angle, direction)</code> the next step <em>along</em> a drag direction — the same
+mechanics <a href="../animation/rotation-snap.html">RotationSnap</a> drives for
+quarter turns. <code>from_degrees</code>/<code>from_rotation_rad</code> return <code>Option</code>
+since only exact multiples qualify.</p>
 <h2 id="rotation--snapped-or-free"><a class="header" href="#rotation--snapped-or-free">Rotation — snapped <em>or</em> free</a></h2>
-<p><code>Rotation</code> is the union enum for values that are <em>usually</em> a quarter
-turn but sometimes continuous — e.g. a card mid-spin:</p>
+<p><code>Rotation</code> is the union enum for values that are <em>usually</em> a snapped
+turn but sometimes continuous — e.g. a card mid-spin. Four variants:
+<code>QuarterTurn</code>, <code>SixthTurn</code>, <code>EighthTurn</code> and <code>Free(RotationRad)</code>.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use smearor_commons_geometry::{QuarterTurn, Rotation, RotationRad};
@@ -258,21 +279,29 @@ let f = Rotation::from_degrees(45.0);  // Rotation::Free(RotationRad) — contin
 let q = Rotation::quantized(RotationRad::from_degrees(179.9)); // nearest snap
 
 r.quarter_turn();   // Some(Deg90)
-f.quarter_turn();   // None
-r.is_snapped();     // true
+r.sixth_turn();     // None
+f.is_snapped();     // false — is_snapped covers all three snapped forms
 <span class="boring">}</span></code></pre>
+<p><code>degrees()</code>/<code>to_rotation_rad()</code> normalize any variant to a continuous
+angle. <code>from_degrees</code>/<code>quantized</code> snap only to <code>QuarterTurn</code> — the
+finer turns are opt-in via <code>SixthTurn::from_degrees</code> /
+<code>EighthTurn::from_degrees</code> or the variant constructors directly.</p>
 <h2 id="rotationdirection"><a class="header" href="#rotationdirection">RotationDirection</a></h2>
 <p><code>RotationDirection::{Clockwise, CounterClockwise}</code> — with
 <code>RotationDirection::of(delta)</code> mapping a signed <code>Degrees</code> change to a
 direction (<code>None</code> for zero) and <code>step(turn)</code> advancing a <code>QuarterTurn</code>
 one step along it.</p>
-<h2 id="aspectratio-scalefactor-smoothingalpha"><a class="header" href="#aspectratio-scalefactor-smoothingalpha">AspectRatio, ScaleFactor, SmoothingAlpha</a></h2>
+<h2 id="aspectratio-scalefactor-factor-smoothingalpha"><a class="header" href="#aspectratio-scalefactor-factor-smoothingalpha">AspectRatio, ScaleFactor, Factor, SmoothingAlpha</a></h2>
 <ul>
 <li><code>AspectRatio</code> — width/height ratio; <code>new</code> rejects non-positive input
 with <code>Option</code>, and consts cover the usual suspects (<code>SIXTEEN_NINE</code>,
 <code>FOUR_THREE</code>, <code>ISO_PAPER</code>, <code>GOLDEN</code>, …). <code>Vec2::aspect()</code> derives one.</li>
 <li><code>ScaleFactor(pub f64)</code> — a zoom factor; <code>Camera</code> uses it for
 screen-pixels-per-world-unit.</li>
+<li><code>Factor(pub f64)</code> — a signed, unitless multiplier (<code>0.0</code> neutral,
+negative inverts) — the general-purpose sibling of <code>ScaleFactor</code>
+for coefficients like tilt, squish or drift speed that are no size
+relation.</li>
 <li><code>SmoothingAlpha</code> — the EMA weight; <code>is_effective()</code> tells whether it
 actually smooths, <code>complement()</code> is <code>1-α</code>, and
 <code>from_frame_time(frame_time, tau)</code> derives the per-frame alpha from a

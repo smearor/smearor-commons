@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -208,6 +208,23 @@ clockwise-next side; <code>nearest_edge</code> derives a side from a physical
 position — ties resolve to <code>Bottom</code> first, in <code>ALL</code> order.
 <code>anchor_weights()</code> translates a side into the matching
 <code>AnchorWeights</code> corner for flow-style anchoring.</p>
+<h2 id="sideset--several-sides-at-once"><a class="header" href="#sideset--several-sides-at-once"><code>SideSet</code> — several sides at once</a></h2>
+<p>A non-empty bitmask set of <code>TableSide</code>s — <code>EdgeStripLayout</code> takes its
+edge selection as a <code>SideSet</code> so “at least one side” is a type-level
+invariant, not a convention:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_layout::{SideSet, TableSide};
+
+let sides = SideSet::try_from_sides([TableSide::Bottom, TableSide::Left])?;
+sides.contains(TableSide::Left);   // true
+sides.len();                       // 2 — always 1..=4
+SideSet::ALL;                      // all four
+<span class="boring">}</span></code></pre>
+<p>Membership and <code>iter()</code> follow the clockwise <code>TableSide::ALL</code> order,
+so iteration is deterministic regardless of construction order; serde
+is a list of side names (<code>["bottom","left"]</code>). An empty selection
+reports <code>LayoutError::EmptySides</code>.</p>
 <h2 id="seat--side-plus-optional-edge-offset"><a class="header" href="#seat--side-plus-optional-edge-offset"><code>Seat</code> — side plus optional edge offset</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -239,6 +256,9 @@ seat.fanned_placement(bounds, footprint, margin, &amp;taken, gap)
 // reuses gaps in the edge lane, may land a row behind when the
 // lane is full
 <span class="boring">}</span></code></pre>
+<p><code>margin</code>/<code>gap</code> take <code>impl Into&lt;Distance&lt;U&gt;&gt;</code> — a bare <code>f64</code> reads as
+the <code>bounds</code> coordinate space, a <code>Distance&lt;Millimeters&gt;</code> carries its
+unit into the call.</p>
 <h2 id="seatpose--a-seat-with-a-face"><a class="header" href="#seatpose--a-seat-with-a-face"><code>SeatPose</code> — a seat with a face</a></h2>
 <p><code>Seat { side, offset }</code> says <em>where</em>; <code>SeatPose { seat, orientation: RotationRad }</code> adds <em>which way the user faces</em> — a free angle, not
 snapped to the side’s quarter turn. It offers the same navigation

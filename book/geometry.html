@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -216,16 +216,19 @@ not parallel representations.</p>
 <h2 id="whats-inside"><a class="header" href="#whats-inside">What’s inside</a></h2>
 <ul>
 <li><strong><a href="geometry/shapes.html">Shapes</a></strong>: <code>Line</code>, <code>Segment</code>, <code>Circle</code>,
-<code>Annulus</code>, <code>Arc</code>, <code>Polyline</code>, <code>Polygon</code>, <code>Sphere</code> — <code>Circle</code> e.g.
-rasterizes itself into 1-px <code>Rect&lt;U, i32&gt;</code> strips (<code>region_rects</code>) or
-a cairo <code>Region</code> behind the <code>cairo</code> feature.</li>
+<code>Annulus</code>, <code>Arc</code>, <code>Polyline</code>, <code>Polygon</code>, <code>Hexagon</code>, <code>Octagon</code>,
+<code>Semicircle</code>, <code>Sphere</code> — <code>Circle</code> e.g. rasterizes itself into 1-px
+<code>Rect&lt;U, i32&gt;</code> strips (<code>region_rects</code>) or a cairo <code>Region</code> behind
+the <code>cairo</code> feature.</li>
 <li><strong><a href="geometry/quantities.html">Quantities</a></strong>: <code>RotationRad</code>, <code>Rotation</code>,
-<code>QuarterTurn</code>, <code>RotationDirection</code>, <code>Fraction</code>, <code>AspectRatio</code>,
-<code>ScaleFactor</code>, <code>SmoothingAlpha</code> — strict newtypes with
-<code>FromStr</code>/<code>Display</code> where it fits.</li>
+<code>QuarterTurn</code>, <code>SixthTurn</code>, <code>EighthTurn</code>, <code>RotationDirection</code>,
+<code>Fraction</code>, <code>AspectRatio</code>, <code>ScaleFactor</code>, <code>Factor</code>,
+<code>SmoothingAlpha</code> — strict newtypes with <code>FromStr</code>/<code>Display</code> where it
+fits.</li>
 <li><strong><a href="geometry/units.html">Units</a></strong>: <code>Millimeters</code>, <code>Pixels</code>,
 <code>SquareMillimeters</code>, <code>PixelsPerMm</code>, <code>UnitsPerMm</code>, <code>Degrees</code>,
-<code>DegreesPerPixel</code>, <code>Radians</code>.</li>
+<code>DegreesPerPixel</code>, <code>Radians</code>, plus <code>Distance&lt;U&gt;</code> — the unit-tagged
+scalar counterpart of <code>Vec2&lt;U&gt;</code>.</li>
 <li><strong><a href="geometry/grid.html">Grid</a></strong>: <code>Grid</code> with <code>Cell</code>/<code>Col</code>/<code>Row</code> for
 cell-addressed partitions.</li>
 <li><strong><a href="geometry/transforms.html">Transforms</a></strong>: <code>RigidTransform</code>,

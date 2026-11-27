@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -239,7 +239,11 @@ chromaticity tables.</li>
 
 <p>Feature gates: <code>cairo</code> and <code>gtk4</code> bridge <code>Color</code> into cairo source
 calls and <code>gdk::RGBA</code>; <code>schemars</code>/<code>async-graphql</code>/<code>zbus</code> add schema
-derives where they fit. See the crate’s rustdoc for the full API.</p>
+derives where they fit. On <code>cairo</code>, all three channel types
+(<code>u8</code>/<code>f32</code>/<code>f64</code>) share the same source-setting vocabulary:
+<code>apply(ctx)</code> sets the RGB source, <code>apply_rgba(ctx)</code> includes the
+color’s own alpha channel, <code>apply_alpha(ctx, alpha)</code> overrides it.
+See the crate’s rustdoc for the full API.</p>
 
                     </main>
 

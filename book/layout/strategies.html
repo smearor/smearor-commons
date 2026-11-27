@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -200,15 +200,18 @@ strategy arranges a pixel canvas or a physical millimeter table.</p>
 <h2 id="flowlayout--anchored-rows"><a class="header" href="#flowlayout--anchored-rows"><code>FlowLayout</code> — anchored rows</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use smearor_commons_layout::{AnchorWeights, FlowLayout};
+</span>use smearor_commons_geometry::Distance;
+use smearor_commons_layout::{AnchorWeights, FlowLayout};
 
 let flow = FlowLayout {
-    anchor: AnchorWeights::TOP_LEFT,   // corner the flow starts from
-    gap: 24.0,                          // between items and between lines
-    wrap: true,                         // wrap to the next line at the far edge
+    anchor: AnchorWeights::TOP_LEFT,      // corner the flow starts from
+    gap: Distance::new(24.0),             // between items and between lines
+    wrap: true,                           // wrap to the next line at the far edge
 };
 // Default::default() → TOP_LEFT, gap 24, wrap on
 <span class="boring">}</span></code></pre>
+<p><code>FlowLayout&lt;U&gt;</code> is unit-generic: <code>gap</code> is a <code>Distance&lt;U&gt;</code> in the
+<code>bounds</code> coordinate space — a bare <code>f64</code> reads as <code>U</code> by context.</p>
 <p>Non-overlapping rows starting at <code>anchor</code> — <code>horizontal</code> picks the
 item direction, <code>vertical</code> the line direction. <code>wrap = false</code> means a
 single line; an overflowing item reports <code>DoesNotFit</code>. The item’s own
@@ -216,12 +219,13 @@ single line; an overflowing item reports <code>DoesNotFit</code>. The item’s o
 <h2 id="seatlayout--around-the-table"><a class="header" href="#seatlayout--around-the-table"><code>SeatLayout</code> — around the table</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use smearor_commons_layout::SeatLayout;
+</span>use smearor_commons_geometry::Distance;
+use smearor_commons_layout::SeatLayout;
 
 let seats = SeatLayout {
     assignment: SeatAssignment::RoundRobin,   // for items without a seat
-    edge_margin: 24.0,                        // distance off the table edge
-    gap: 24.0,                                // between items on one side
+    edge_margin: Distance::new(24.0),         // distance off the table edge
+    gap: Distance::new(24.0),                 // between items on one side
 };
 <span class="boring">}</span></code></pre>
 <p>Per side: <strong>pinned</strong> seats (<code>Seat::at</code>) take their exact offset;
@@ -241,15 +245,65 @@ AnchorWeights::BOTTOM_RIGHT; // 1.0 / 1.0
 <p>Two <code>Fraction</code>s selecting one of nine anchors — corners, edge centers
 and center. <code>TableSide::anchor_weights()</code> maps a side to its
 matching anchor for consumers that blend flow and seat semantics.</p>
-<h2 id="layouterrordoesnotfit"><a class="header" href="#layouterrordoesnotfit"><code>LayoutError::DoesNotFit</code></a></h2>
+<h2 id="edgestriplayout--docked-strips-outside-the-host"><a class="header" href="#edgestriplayout--docked-strips-outside-the-host"><code>EdgeStripLayout</code> — docked strips outside the host</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::Distance;
+use smearor_commons_layout::{EdgeDistribution, EdgeStripLayout, SideSet, TableSide};
+
+let strip = EdgeStripLayout {
+    sides: SideSet::try_from_sides([TableSide::Bottom, TableSide::Left])?,
+    distribution: EdgeDistribution::Balanced,
+    gap: Distance::new(12.0),
+};
+<span class="boring">}</span></code></pre>
+<p>Items line up as a strip <em>outside</em> <code>bounds</code>, along each edge named by
+<code>sides</code> — host-attached chrome like docked tool strips or satellites,
+hovering <code>gap</code> off the host outline so the host’s own extent stays
+untouched. Each side’s group is centered on its edge and ordered along
+the side’s reading direction (<code>TableSide::right_direction</code>);
+placements carry the side’s quarter-turn orientation.
+<code>EdgeDistribution::Sequential</code> fills side by side in <code>SideSet</code> order
+with the overflow spilling to the next edge; <code>Balanced</code> centers an
+even share on every selected edge. Strips colliding at a corner — or a
+group exceeding its edge — report <code>DoesNotFit</code>.</p>
+<h2 id="orbitlayout--items-on-a-ring"><a class="header" href="#orbitlayout--items-on-a-ring"><code>OrbitLayout</code> — items on a ring</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Arc, Rotation, RotationRad, Vec2};
+use smearor_commons_layout::{orbit_radius_for, OrbitItem, OrbitLayout};
+
+let orbit = OrbitLayout::new(orbit_radius_for(bounds, 12.0), Arc::FULL);
+let items = vec![
+    OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO).with_anchor(RotationRad::ZERO), // pinned at 0°
+    OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO),                                 // flexible
+];
+let placements = orbit.arrange(bounds, &amp;items);
+let directions = orbit.directions(&amp;items);   // the angle-only half
+<span class="boring">}</span></code></pre>
+<p>Same arrange pattern, but deliberately not a <code>LayoutStrategy</code> impl: it
+takes <a href="items.html"><code>OrbitItem</code>s</a> — an <code>anchor: Option&lt;RotationRad&gt;</code> pins
+an item to an absolute direction on the orbit circle — and never
+fails, so <code>arrange</code> returns <code>Vec&lt;Placement&lt;U&gt;&gt;</code> directly. Anchored
+items keep their angle verbatim (even outside <code>span</code>); flexible items
+distribute evenly over <code>span</code> (a limited <code>Arc</code> or <code>Arc::FULL</code>) or fill
+the anchor gaps clipped to <code>span</code> proportionally to segment width —
+largest-remainder rounding. <code>orbit_radius_for(bounds, gap)</code> derives a
+radius clearing the host’s bounding circle.</p>
+<h2 id="layouterror"><a class="header" href="#layouterror"><code>LayoutError</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[error("item {index} of {items} does not fit inside the bounds")]
 DoesNotFit { index: usize, items: usize }
+#[error("a side set needs at least one table side")]
+EmptySides
 <span class="boring">}</span></code></pre>
 <p>The strategy reports the first item that failed; the consumer decides
 the reaction — retry with different options, shrink items, or leave
-the overflow unarranged. Layout never silently overlaps.</p>
+the overflow unarranged. Layout never silently overlaps. <code>EmptySides</code>
+is the construction-time sibling: <code>SideSet::try_from_sides</code> refuses an
+empty edge selection, keeping “at least one side” a type-level
+invariant.</p>
 
                     </main>
 

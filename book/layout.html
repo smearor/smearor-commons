@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -190,7 +190,8 @@ perimeter navigation, seat placement, <code>SeatPose</code></li>
 <li><a href="./layout/items.html">Items &amp; Placements</a> — <code>LayoutItem</code>,
 <code>Placement</code>, <code>footprint_for</code> axis swaps</li>
 <li><a href="./layout/strategies.html">Strategies</a> — <code>LayoutStrategy</code>,
-<code>FlowLayout</code>, <code>SeatLayout</code>, <code>AnchorWeights</code>, <code>DoesNotFit</code></li>
+<code>FlowLayout</code>, <code>SeatLayout</code>, <code>EdgeStripLayout</code>, <code>OrbitLayout</code>,
+<code>AnchorWeights</code>, <code>DoesNotFit</code></li>
 <li><a href="./layout/view.html">Workspace &amp; View</a> — <code>WorkspaceSize</code>, the <code>View</code>
 camera, <code>physical_zoom</code></li>
 </ul>
@@ -234,6 +235,10 @@ wrapping to the next line at the far edge.</li>
 <li><strong><code>SeatLayout</code></strong> — explicit seats win;
 <code>SeatAssignment::RoundRobin</code> distributes the rest over
 <code>TableSide::ALL</code>.</li>
+<li><strong><code>EdgeStripLayout</code></strong> — items as a strip <em>outside</em> the host bounds,
+docked to a <code>SideSet</code> of edges (<code>Sequential</code> or <code>Balanced</code>).</li>
+<li><strong><code>OrbitLayout</code></strong> — items on an arc around the host center; anchored
+<code>OrbitItem</code>s pin their direction, flexible ones fill the gaps.</li>
 </ul>
 <p>Overflow yields <code>LayoutError::DoesNotFit</code> — the consumer decides whether
 to retry, shrink or leave items unarranged. <code>footprint_for</code> computes a

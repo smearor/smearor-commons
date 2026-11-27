@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -435,16 +435,19 @@ not parallel representations.</p>
 <h2 id="whats-inside"><a class="header" href="#whats-inside">What’s inside</a></h2>
 <ul>
 <li><strong><a href="#shapes">Shapes</a></strong>: <code>Line</code>, <code>Segment</code>, <code>Circle</code>,
-<code>Annulus</code>, <code>Arc</code>, <code>Polyline</code>, <code>Polygon</code>, <code>Sphere</code> — <code>Circle</code> e.g.
-rasterizes itself into 1-px <code>Rect&lt;U, i32&gt;</code> strips (<code>region_rects</code>) or
-a cairo <code>Region</code> behind the <code>cairo</code> feature.</li>
+<code>Annulus</code>, <code>Arc</code>, <code>Polyline</code>, <code>Polygon</code>, <code>Hexagon</code>, <code>Octagon</code>,
+<code>Semicircle</code>, <code>Sphere</code> — <code>Circle</code> e.g. rasterizes itself into 1-px
+<code>Rect&lt;U, i32&gt;</code> strips (<code>region_rects</code>) or a cairo <code>Region</code> behind
+the <code>cairo</code> feature.</li>
 <li><strong><a href="#quantities">Quantities</a></strong>: <code>RotationRad</code>, <code>Rotation</code>,
-<code>QuarterTurn</code>, <code>RotationDirection</code>, <code>Fraction</code>, <code>AspectRatio</code>,
-<code>ScaleFactor</code>, <code>SmoothingAlpha</code> — strict newtypes with
-<code>FromStr</code>/<code>Display</code> where it fits.</li>
+<code>QuarterTurn</code>, <code>SixthTurn</code>, <code>EighthTurn</code>, <code>RotationDirection</code>,
+<code>Fraction</code>, <code>AspectRatio</code>, <code>ScaleFactor</code>, <code>Factor</code>,
+<code>SmoothingAlpha</code> — strict newtypes with <code>FromStr</code>/<code>Display</code> where it
+fits.</li>
 <li><strong><a href="#units">Units</a></strong>: <code>Millimeters</code>, <code>Pixels</code>,
 <code>SquareMillimeters</code>, <code>PixelsPerMm</code>, <code>UnitsPerMm</code>, <code>Degrees</code>,
-<code>DegreesPerPixel</code>, <code>Radians</code>.</li>
+<code>DegreesPerPixel</code>, <code>Radians</code>, plus <code>Distance&lt;U&gt;</code> — the unit-tagged
+scalar counterpart of <code>Vec2&lt;U&gt;</code>.</li>
 <li><strong><a href="#grid">Grid</a></strong>: <code>Grid</code> with <code>Cell</code>/<code>Col</code>/<code>Row</code> for
 cell-addressed partitions.</li>
 <li><strong><a href="#transforms">Transforms</a></strong>: <code>RigidTransform</code>,
@@ -463,7 +466,7 @@ serialize <code>Vec2</code>s as compact <code>[x, y]</code> pairs.</li>
 all generic over the coordinate-space unit <code>U</code> (and mostly over the
 component type <code>T</code>, defaulting to <code>f64</code>):</p>
 <figure class="diagram">
-  <img src="geometry/img/shapes-overview.svg" alt="The geometric primitives: Line, Segment, Polyline, Polygon, Circle, Annulus, Arc, Sphere">
+  <img src="geometry/img/shapes-overview.svg" alt="The geometric primitives: Line, Segment, Polyline, Polygon, Circle, Annulus, Arc, Sphere, Hexagon, Octagon, Semicircle">
   <figcaption>the shape zoo — all generic over the unit U</figcaption>
 </figure>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -550,7 +553,9 @@ if table_zone.contains(&amp;Vec2::new(150.0, 90.0)) {
 <code>diameter</code>, <code>circumference</code>) and <code>f64</code> bridges (<code>diameter_f64</code>,
 <code>circumference_f64</code>) — so the same type serves mm-precise surface math
 and framework float APIs. <code>area::&lt;P&gt;()</code> is generic over the return
-type.</p>
+type. <code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code>
+convert between the circle and the largest centered axis-aligned square
+inside it — a vocabulary <code>Hexagon</code>, <code>Octagon</code> and <code>Semicircle</code> share.</p>
 <p><code>Annulus&lt;U, T&gt;</code> is a ring: <code>center</code>, <code>inner</code>, <code>outer</code> radii. <code>width</code>
 (ring thickness), <code>mid_radius</code>, <code>contains</code> (inside the outer, outside
 the inner), and <code>inner_circle</code>/<code>outer_circle</code> views. A radial gauge
@@ -572,7 +577,52 @@ wedge.at(smearor_commons_geometry::Fraction::HALF); // parameter → direction
 <p><code>Arc::spanning(from, to)</code> computes the interval between two
 directions; <code>Arc::gaps_between(&amp;[RotationRad])</code> returns the angular
 holes between sorted directions — used e.g. to find free angular slots
-around a dial.</p>
+around a dial (and by <code>OrbitLayout</code> in the layout crate to place items
+between anchor directions).</p>
+<h2 id="regular-polygons--hexagon--octagon"><a class="header" href="#regular-polygons--hexagon--octagon">Regular polygons — Hexagon &amp; Octagon</a></h2>
+<p><code>Hexagon&lt;U, T&gt;</code> and <code>Octagon&lt;U, T&gt;</code> model the regular n-gons a
+hexagonal grid, a pie-menu ring or a compass dial is built from. Both
+store <code>center</code> + <code>circumradius</code> (center to vertex) plus a
+<code>PolygonOrientation</code> — <code>FlatTop</code> (a horizontal top edge) or
+<code>PointyTop</code> (a vertex on top).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Hexagon, Octagon, PolygonOrientation, Vec2};
+
+let tile = Hexagon::flat_top(Vec2::new(100.0, 80.0), 40.0);
+let cell = Hexagon::with_inradius(Vec2::new(0.0, 0.0), 17.3, PolygonOrientation::PointyTop);
+let dial = Octagon::with_side_length(Vec2::new(50.0, 50.0), 24.0, PolygonOrientation::FlatTop);
+<span class="boring">}</span></code></pre>
+<p>Every extent works in both directions — <code>with_side_length</code>/
+<code>side_length</code>, <code>with_inradius</code>/<code>inradius</code> (the apothem, <code>R·sin(60°)</code>
+for the hexagon, <code>R·cos(22.5°)</code> for the octagon; the hexagon’s side
+length <em>is</em> its circumradius). Common queries:</p>
+<ul>
+<li><code>vertices()</code> — the corners in counter-clockwise order;
+<code>to_polygon()</code> is the bridge into generic <code>Polygon</code> algorithms</li>
+<li><code>contains(p)</code>, <code>bounding_box()</code>, <code>support(direction)</code> — the exact
+convex support function (largest vertex projection)</li>
+<li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side, orientation)</code> — the largest centered axis-aligned square inside,
+and its exact inverse</li>
+</ul>
+<p><code>PolygonOrientation</code> is a two-variant enum with <code>Display</code>/<code>FromStr</code>
+(<code>flat-top</code> / <code>pointy-top</code>) — and the symmetry vocabulary the snapped
+rotations quantize into: <code>SixthTurn</code> maps a hexagon onto itself,
+<code>EighthTurn</code> an octagon.</p>
+<h2 id="semicircle"><a class="header" href="#semicircle">Semicircle</a></h2>
+<p><code>Semicircle&lt;U, T&gt;</code> is a half-disk — a dome standing on its diameter
+edge through <code>center</code>, extending toward smaller <code>y</code> in the usual
+screen convention:</p>
+<ul>
+<li><code>contains(p)</code> — inside the virtual circle <em>and</em> on the dome side of
+the flat edge</li>
+<li><code>bounding_box()</code> — <code>2r</code> wide, <code>r</code> tall, the flat edge at the bottom</li>
+<li><code>support(direction)</code> — <code>r</code> into the dome half, <code>r·|cos|</code> along the
+flat edge</li>
+<li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code> —
+the largest square standing on the diameter edge (<code>2r/√5</code>), and its
+inverse</li>
+</ul>
 <h2 id="sphere--friends"><a class="header" href="#sphere--friends">Sphere &amp; friends</a></h2>
 <ul>
 <li><code>Sphere&lt;U, T&gt;</code> — <code>Vec3</code> center + radius; pairs with <code>Camera</code>
@@ -651,9 +701,30 @@ since only exact multiples of 90° qualify.</p>
 <p><code>apply(pos, bounds)</code> maps a point through the quarter turn inside
 <code>bounds</code> — the coordinate math every tabletop needs when content is
 re-oriented for another seat.</p>
+<h2 id="sixthturn--eighthturn--finer-snaps"><a class="header" href="#sixthturn--eighthturn--finer-snaps">SixthTurn &amp; EighthTurn — finer snaps</a></h2>
+<p><code>SixthTurn</code> (<code>Deg0</code>…<code>Deg300</code> in 60° steps) and <code>EighthTurn</code>
+(<code>Deg0</code>…<code>Deg315</code> in 45° steps) are the snapped orientations of regular
+hexagons and octagons — every sixth turn maps a <code>Hexagon</code> onto itself,
+every eighth turn an <code>Octagon</code>. They mirror the <code>QuarterTurn</code> API:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{EighthTurn, RotationDirection, RotationRad, SixthTurn};
+
+SixthTurn::Deg60.clockwise();                          // Deg120
+SixthTurn::Deg60.inverse();                            // Deg240
+EighthTurn::snap_zone(RotationRad::from_degrees(100.0)); // Deg90
+SixthTurn::snap_target(angle, RotationDirection::Clockwise); // next step along the drag
+SixthTurn::ALL;                                        // all six, clockwise
+<span class="boring">}</span></code></pre>
+<p><code>snap_zone(angle)</code> returns the nearest step (zones reach 30° resp.
+22.5° to either side of each turn’s angle), <code>snap_target(angle, direction)</code> the next step <em>along</em> a drag direction — the same
+mechanics <a href="#rotation-snap">RotationSnap</a> drives for
+quarter turns. <code>from_degrees</code>/<code>from_rotation_rad</code> return <code>Option</code>
+since only exact multiples qualify.</p>
 <h2 id="rotation--snapped-or-free"><a class="header" href="#rotation--snapped-or-free">Rotation — snapped <em>or</em> free</a></h2>
-<p><code>Rotation</code> is the union enum for values that are <em>usually</em> a quarter
-turn but sometimes continuous — e.g. a card mid-spin:</p>
+<p><code>Rotation</code> is the union enum for values that are <em>usually</em> a snapped
+turn but sometimes continuous — e.g. a card mid-spin. Four variants:
+<code>QuarterTurn</code>, <code>SixthTurn</code>, <code>EighthTurn</code> and <code>Free(RotationRad)</code>.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use smearor_commons_geometry::{QuarterTurn, Rotation, RotationRad};
@@ -663,21 +734,29 @@ let f = Rotation::from_degrees(45.0);  // Rotation::Free(RotationRad) — contin
 let q = Rotation::quantized(RotationRad::from_degrees(179.9)); // nearest snap
 
 r.quarter_turn();   // Some(Deg90)
-f.quarter_turn();   // None
-r.is_snapped();     // true
+r.sixth_turn();     // None
+f.is_snapped();     // false — is_snapped covers all three snapped forms
 <span class="boring">}</span></code></pre>
+<p><code>degrees()</code>/<code>to_rotation_rad()</code> normalize any variant to a continuous
+angle. <code>from_degrees</code>/<code>quantized</code> snap only to <code>QuarterTurn</code> — the
+finer turns are opt-in via <code>SixthTurn::from_degrees</code> /
+<code>EighthTurn::from_degrees</code> or the variant constructors directly.</p>
 <h2 id="rotationdirection"><a class="header" href="#rotationdirection">RotationDirection</a></h2>
 <p><code>RotationDirection::{Clockwise, CounterClockwise}</code> — with
 <code>RotationDirection::of(delta)</code> mapping a signed <code>Degrees</code> change to a
 direction (<code>None</code> for zero) and <code>step(turn)</code> advancing a <code>QuarterTurn</code>
 one step along it.</p>
-<h2 id="aspectratio-scalefactor-smoothingalpha"><a class="header" href="#aspectratio-scalefactor-smoothingalpha">AspectRatio, ScaleFactor, SmoothingAlpha</a></h2>
+<h2 id="aspectratio-scalefactor-factor-smoothingalpha"><a class="header" href="#aspectratio-scalefactor-factor-smoothingalpha">AspectRatio, ScaleFactor, Factor, SmoothingAlpha</a></h2>
 <ul>
 <li><code>AspectRatio</code> — width/height ratio; <code>new</code> rejects non-positive input
 with <code>Option</code>, and consts cover the usual suspects (<code>SIXTEEN_NINE</code>,
 <code>FOUR_THREE</code>, <code>ISO_PAPER</code>, <code>GOLDEN</code>, …). <code>Vec2::aspect()</code> derives one.</li>
 <li><code>ScaleFactor(pub f64)</code> — a zoom factor; <code>Camera</code> uses it for
 screen-pixels-per-world-unit.</li>
+<li><code>Factor(pub f64)</code> — a signed, unitless multiplier (<code>0.0</code> neutral,
+negative inverts) — the general-purpose sibling of <code>ScaleFactor</code>
+for coefficients like tilt, squish or drift speed that are no size
+relation.</li>
 <li><code>SmoothingAlpha</code> — the EMA weight; <code>is_effective()</code> tells whether it
 actually smooths, <code>complement()</code> is <code>1-α</code>, and
 <code>from_frame_time(frame_time, tau)</code> derives the per-frame alpha from a
@@ -720,6 +799,27 @@ let tolerance = Degrees::new(5.0);           // snap tolerance
 <p>The newtypes wrap plain scalars (<code>serde(transparent)</code> on the wire) and
 carry <code>as_raw</code>/<code>as_f64</code>/<code>as_f32</code> bridges plus <code>min</code>/<code>max</code>/<code>clamp</code>/
 <code>abs</code> helpers where useful.</p>
+<h2 id="distanceu--the-scalar-vec2"><a class="header" href="#distanceu--the-scalar-vec2"><code>Distance&lt;U&gt;</code> — the scalar <code>Vec2</code></a></h2>
+<p><code>Distance&lt;U&gt;</code> is the one-dimensional counterpart of <code>Vec2&lt;U&gt;</code> — a bare
+<code>f64</code> tagged with the coordinate space, for APIs that want the unit on
+a lone scalar: gaps, radii, margins. <code>Distance&lt;Pixels&gt;</code> cannot be
+passed where <code>Distance&lt;Millimeters&gt;</code> is expected; <code>Distance&lt;()&gt;</code> keeps
+unit-free math available, like <code>Vec2&lt;()&gt;</code>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Distance, Pixels};
+
+let gap = Distance::&lt;Pixels&gt;::new(24.0);
+gap.as_f64();                          // 24.0 — the erased scalar
+gap * 2.0 + Distance::&lt;Pixels&gt;::new(4.0); // arithmetic keeps the unit
+<span class="boring">}</span></code></pre>
+<p>The unit marker carries no value — equality, ordering and serde see
+only the scalar (the wire form is the bare number). <code>From&lt;f64&gt;</code> makes
+a plain number read as whatever <code>U</code> the context expects — the same
+escape hatch <code>Vec2::new</code> offers — so <code>f64</code> call sites keep compiling
+against <code>Distance</code>-typed parameters. The layout crate uses it for
+<code>FlowLayout::gap</code>, <code>SeatLayout::edge_margin</code>, <code>EdgeStripLayout::gap</code>
+and <code>OrbitLayout::radius</code>.</p>
 <h2 id="bridging-spaces-pixelspermm--unitspermm"><a class="header" href="#bridging-spaces-pixelspermm--unitspermm">Bridging spaces: PixelsPerMm &amp; UnitsPerMm</a></h2>
 <p><code>PixelsPerMm(pub f64)</code> is the scale between the physical surface and
 the framebuffer — set once from DPI/surface calibration, then applied
@@ -983,7 +1083,11 @@ chromaticity tables.</li>
 
 <p>Feature gates: <code>cairo</code> and <code>gtk4</code> bridge <code>Color</code> into cairo source
 calls and <code>gdk::RGBA</code>; <code>schemars</code>/<code>async-graphql</code>/<code>zbus</code> add schema
-derives where they fit. See the crate’s rustdoc for the full API.</p>
+derives where they fit. On <code>cairo</code>, all three channel types
+(<code>u8</code>/<code>f32</code>/<code>f64</code>) share the same source-setting vocabulary:
+<code>apply(ctx)</code> sets the RGB source, <code>apply_rgba(ctx)</code> includes the
+color’s own alpha channel, <code>apply_alpha(ctx, alpha)</code> overrides it.
+See the crate’s rustdoc for the full API.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="representations"><a class="header" href="#representations">Representations</a></h1>
 <p><code>Color&lt;T&gt;</code> is one struct — <code>r</code>, <code>g</code>, <code>b</code>, <code>a</code> channels — parameterized
@@ -2616,6 +2720,10 @@ vocabulary: <code>save</code>/<code>restore</code>, transforms, patterns, source
 <li>cairo-only extras: <code>draw_rotated_text</code>, <code>draw_halo_text</code></li>
 <li><strong>path helpers</strong> (free functions): <code>polyline_path</code>, <code>smooth_path</code>,
 <code>wavy_path</code>, <code>band_path</code>, <code>rounded_rect_path</code>, <code>tile_fill</code></li>
+<li>every spec is a <strong>self-contained primitive</strong>: <code>fill_circle</code>,
+<code>fill_sector</code> &amp; co. start on a fresh path (<code>new_path</code>), so a stale
+current point can’t chain a stray chord into the next shape — the
+same contract the software-raster backend gives</li>
 <li><code>status()</code> surfaces cairo’s sticky deferred error — <code>DrawTarget</code>’s
 end-of-pass check</li>
 </ul>
@@ -2627,6 +2735,9 @@ end-of-pass check</li>
 let surface = image_surface_from_buffer(&amp;buffer)?;   // PixelBuffer&lt;F&gt; → ImageSurface
 let back = pixel_buffer_from_surface(&amp;mut surface)?; // → PixelBuffer&lt;BgraPremultiplied&gt;
 <span class="boring">}</span></code></pre>
+<p>The <code>cairo</code> feature also enables cairo-rs’ <code>png</code> support —
+<code>ImageSurface::create_from_png</code>/<code>write_to_png</code> are available for PNG
+fixtures and frame dumps without an extra dependency.</p>
 <h2 id="drawingerror"><a class="header" href="#drawingerror"><code>DrawingError</code></a></h2>
 <div class="table-wrapper">
 <table>
@@ -3239,7 +3350,8 @@ perimeter navigation, seat placement, <code>SeatPose</code></li>
 <li><a href="#items--placements">Items &amp; Placements</a> — <code>LayoutItem</code>,
 <code>Placement</code>, <code>footprint_for</code> axis swaps</li>
 <li><a href="#strategies-1">Strategies</a> — <code>LayoutStrategy</code>,
-<code>FlowLayout</code>, <code>SeatLayout</code>, <code>AnchorWeights</code>, <code>DoesNotFit</code></li>
+<code>FlowLayout</code>, <code>SeatLayout</code>, <code>EdgeStripLayout</code>, <code>OrbitLayout</code>,
+<code>AnchorWeights</code>, <code>DoesNotFit</code></li>
 <li><a href="#workspace--view">Workspace &amp; View</a> — <code>WorkspaceSize</code>, the <code>View</code>
 camera, <code>physical_zoom</code></li>
 </ul>
@@ -3283,6 +3395,10 @@ wrapping to the next line at the far edge.</li>
 <li><strong><code>SeatLayout</code></strong> — explicit seats win;
 <code>SeatAssignment::RoundRobin</code> distributes the rest over
 <code>TableSide::ALL</code>.</li>
+<li><strong><code>EdgeStripLayout</code></strong> — items as a strip <em>outside</em> the host bounds,
+docked to a <code>SideSet</code> of edges (<code>Sequential</code> or <code>Balanced</code>).</li>
+<li><strong><code>OrbitLayout</code></strong> — items on an arc around the host center; anchored
+<code>OrbitItem</code>s pin their direction, flexible ones fill the gaps.</li>
 </ul>
 <p>Overflow yields <code>LayoutError::DoesNotFit</code> — the consumer decides whether
 to retry, shrink or leave items unarranged. <code>footprint_for</code> computes a
@@ -3319,6 +3435,23 @@ clockwise-next side; <code>nearest_edge</code> derives a side from a physical
 position — ties resolve to <code>Bottom</code> first, in <code>ALL</code> order.
 <code>anchor_weights()</code> translates a side into the matching
 <code>AnchorWeights</code> corner for flow-style anchoring.</p>
+<h2 id="sideset--several-sides-at-once"><a class="header" href="#sideset--several-sides-at-once"><code>SideSet</code> — several sides at once</a></h2>
+<p>A non-empty bitmask set of <code>TableSide</code>s — <code>EdgeStripLayout</code> takes its
+edge selection as a <code>SideSet</code> so “at least one side” is a type-level
+invariant, not a convention:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_layout::{SideSet, TableSide};
+
+let sides = SideSet::try_from_sides([TableSide::Bottom, TableSide::Left])?;
+sides.contains(TableSide::Left);   // true
+sides.len();                       // 2 — always 1..=4
+SideSet::ALL;                      // all four
+<span class="boring">}</span></code></pre>
+<p>Membership and <code>iter()</code> follow the clockwise <code>TableSide::ALL</code> order,
+so iteration is deterministic regardless of construction order; serde
+is a list of side names (<code>["bottom","left"]</code>). An empty selection
+reports <code>LayoutError::EmptySides</code>.</p>
 <h2 id="seat--side-plus-optional-edge-offset"><a class="header" href="#seat--side-plus-optional-edge-offset"><code>Seat</code> — side plus optional edge offset</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -3350,6 +3483,9 @@ seat.fanned_placement(bounds, footprint, margin, &amp;taken, gap)
 // reuses gaps in the edge lane, may land a row behind when the
 // lane is full
 <span class="boring">}</span></code></pre>
+<p><code>margin</code>/<code>gap</code> take <code>impl Into&lt;Distance&lt;U&gt;&gt;</code> — a bare <code>f64</code> reads as
+the <code>bounds</code> coordinate space, a <code>Distance&lt;Millimeters&gt;</code> carries its
+unit into the call.</p>
 <h2 id="seatpose--a-seat-with-a-face"><a class="header" href="#seatpose--a-seat-with-a-face"><code>SeatPose</code> — a seat with a face</a></h2>
 <p><code>Seat { side, offset }</code> says <em>where</em>; <code>SeatPose { seat, orientation: RotationRad }</code> adds <em>which way the user faces</em> — a free angle, not
 snapped to the side’s quarter turn. It offers the same navigation
@@ -3379,8 +3515,9 @@ let item = LayoutItem::new(
 <span class="boring">}</span></code></pre>
 <ul>
 <li><code>size: Vec2</code> — the item’s footprint <strong>as currently rotated</strong></li>
-<li><code>rotation: Rotation</code> — <code>QuarterTurn(_)</code> or <code>Free(_)</code>; strategies may
-preserve it (Flow) or override it (Seat)</li>
+<li><code>rotation: Rotation</code> — a snapped <code>QuarterTurn(_)</code>/<code>SixthTurn(_)</code>/
+<code>EighthTurn(_)</code> or <code>Free(_)</code>; strategies may preserve it (Flow) or
+override it (Seat, EdgeStrip)</li>
 <li><code>seat: Option&lt;Seat&gt;</code> — explicit seat request; <code>None</code> leaves the
 decision to the strategy</li>
 </ul>
@@ -3409,6 +3546,21 @@ approximated as the unrotated extent. Strategies use this when an item
 changes orientation on the way to its placement — a <code>SeatLayout</code>
 placing an upright <code>60×40</code> item at the <code>Left</code> seat knows it occupies
 <code>40×60</code> along the edge.</p>
+<h2 id="orbititem--orbitlayouts-request"><a class="header" href="#orbititem--orbitlayouts-request"><code>OrbitItem</code> — <code>OrbitLayout</code>’s request</a></h2>
+<p><code>OrbitLayout</code> takes <code>OrbitItem</code>s instead of <code>LayoutItem</code>s — same
+footprint and rotation, plus an optional anchor direction on the
+orbit circle:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Rotation, RotationRad, Vec2};
+use smearor_commons_layout::OrbitItem;
+
+let flexible = OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO);
+let pinned = flexible.with_anchor(RotationRad::QUARTER_TURN);
+<span class="boring">}</span></code></pre>
+<p><code>anchor: Some(dir)</code> pins the item to that absolute direction;
+<code>None</code> leaves it flexible — the strategy distributes flexible items
+into the free angular space between anchors.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="strategies-1"><a class="header" href="#strategies-1">Strategies</a></h1>
 <p><code>LayoutStrategy&lt;U&gt;</code> is the contract — a pure function mapping
@@ -3432,15 +3584,18 @@ strategy arranges a pixel canvas or a physical millimeter table.</p>
 <h2 id="flowlayout--anchored-rows"><a class="header" href="#flowlayout--anchored-rows"><code>FlowLayout</code> — anchored rows</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use smearor_commons_layout::{AnchorWeights, FlowLayout};
+</span>use smearor_commons_geometry::Distance;
+use smearor_commons_layout::{AnchorWeights, FlowLayout};
 
 let flow = FlowLayout {
-    anchor: AnchorWeights::TOP_LEFT,   // corner the flow starts from
-    gap: 24.0,                          // between items and between lines
-    wrap: true,                         // wrap to the next line at the far edge
+    anchor: AnchorWeights::TOP_LEFT,      // corner the flow starts from
+    gap: Distance::new(24.0),             // between items and between lines
+    wrap: true,                           // wrap to the next line at the far edge
 };
 // Default::default() → TOP_LEFT, gap 24, wrap on
 <span class="boring">}</span></code></pre>
+<p><code>FlowLayout&lt;U&gt;</code> is unit-generic: <code>gap</code> is a <code>Distance&lt;U&gt;</code> in the
+<code>bounds</code> coordinate space — a bare <code>f64</code> reads as <code>U</code> by context.</p>
 <p>Non-overlapping rows starting at <code>anchor</code> — <code>horizontal</code> picks the
 item direction, <code>vertical</code> the line direction. <code>wrap = false</code> means a
 single line; an overflowing item reports <code>DoesNotFit</code>. The item’s own
@@ -3448,12 +3603,13 @@ single line; an overflowing item reports <code>DoesNotFit</code>. The item’s o
 <h2 id="seatlayout--around-the-table"><a class="header" href="#seatlayout--around-the-table"><code>SeatLayout</code> — around the table</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use smearor_commons_layout::SeatLayout;
+</span>use smearor_commons_geometry::Distance;
+use smearor_commons_layout::SeatLayout;
 
 let seats = SeatLayout {
     assignment: SeatAssignment::RoundRobin,   // for items without a seat
-    edge_margin: 24.0,                        // distance off the table edge
-    gap: 24.0,                                // between items on one side
+    edge_margin: Distance::new(24.0),         // distance off the table edge
+    gap: Distance::new(24.0),                 // between items on one side
 };
 <span class="boring">}</span></code></pre>
 <p>Per side: <strong>pinned</strong> seats (<code>Seat::at</code>) take their exact offset;
@@ -3473,15 +3629,65 @@ AnchorWeights::BOTTOM_RIGHT; // 1.0 / 1.0
 <p>Two <code>Fraction</code>s selecting one of nine anchors — corners, edge centers
 and center. <code>TableSide::anchor_weights()</code> maps a side to its
 matching anchor for consumers that blend flow and seat semantics.</p>
-<h2 id="layouterrordoesnotfit"><a class="header" href="#layouterrordoesnotfit"><code>LayoutError::DoesNotFit</code></a></h2>
+<h2 id="edgestriplayout--docked-strips-outside-the-host"><a class="header" href="#edgestriplayout--docked-strips-outside-the-host"><code>EdgeStripLayout</code> — docked strips outside the host</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::Distance;
+use smearor_commons_layout::{EdgeDistribution, EdgeStripLayout, SideSet, TableSide};
+
+let strip = EdgeStripLayout {
+    sides: SideSet::try_from_sides([TableSide::Bottom, TableSide::Left])?,
+    distribution: EdgeDistribution::Balanced,
+    gap: Distance::new(12.0),
+};
+<span class="boring">}</span></code></pre>
+<p>Items line up as a strip <em>outside</em> <code>bounds</code>, along each edge named by
+<code>sides</code> — host-attached chrome like docked tool strips or satellites,
+hovering <code>gap</code> off the host outline so the host’s own extent stays
+untouched. Each side’s group is centered on its edge and ordered along
+the side’s reading direction (<code>TableSide::right_direction</code>);
+placements carry the side’s quarter-turn orientation.
+<code>EdgeDistribution::Sequential</code> fills side by side in <code>SideSet</code> order
+with the overflow spilling to the next edge; <code>Balanced</code> centers an
+even share on every selected edge. Strips colliding at a corner — or a
+group exceeding its edge — report <code>DoesNotFit</code>.</p>
+<h2 id="orbitlayout--items-on-a-ring"><a class="header" href="#orbitlayout--items-on-a-ring"><code>OrbitLayout</code> — items on a ring</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Arc, Rotation, RotationRad, Vec2};
+use smearor_commons_layout::{orbit_radius_for, OrbitItem, OrbitLayout};
+
+let orbit = OrbitLayout::new(orbit_radius_for(bounds, 12.0), Arc::FULL);
+let items = vec![
+    OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO).with_anchor(RotationRad::ZERO), // pinned at 0°
+    OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO),                                 // flexible
+];
+let placements = orbit.arrange(bounds, &amp;items);
+let directions = orbit.directions(&amp;items);   // the angle-only half
+<span class="boring">}</span></code></pre>
+<p>Same arrange pattern, but deliberately not a <code>LayoutStrategy</code> impl: it
+takes <a href="#items--placements"><code>OrbitItem</code>s</a> — an <code>anchor: Option&lt;RotationRad&gt;</code> pins
+an item to an absolute direction on the orbit circle — and never
+fails, so <code>arrange</code> returns <code>Vec&lt;Placement&lt;U&gt;&gt;</code> directly. Anchored
+items keep their angle verbatim (even outside <code>span</code>); flexible items
+distribute evenly over <code>span</code> (a limited <code>Arc</code> or <code>Arc::FULL</code>) or fill
+the anchor gaps clipped to <code>span</code> proportionally to segment width —
+largest-remainder rounding. <code>orbit_radius_for(bounds, gap)</code> derives a
+radius clearing the host’s bounding circle.</p>
+<h2 id="layouterror"><a class="header" href="#layouterror"><code>LayoutError</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[error("item {index} of {items} does not fit inside the bounds")]
 DoesNotFit { index: usize, items: usize }
+#[error("a side set needs at least one table side")]
+EmptySides
 <span class="boring">}</span></code></pre>
 <p>The strategy reports the first item that failed; the consumer decides
 the reaction — retry with different options, shrink items, or leave
-the overflow unarranged. Layout never silently overlaps.</p>
+the overflow unarranged. Layout never silently overlaps. <code>EmptySides</code>
+is the construction-time sibling: <code>SideSet::try_from_sides</code> refuses an
+empty edge selection, keeping “at least one side” a type-level
+invariant.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="workspace--view"><a class="header" href="#workspace--view">Workspace &amp; View</a></h1>
 <p>Two separate concerns the crate keeps distinct: how big the item
@@ -3694,6 +3900,34 @@ Smearor tile mark - regenerates via <code>cargo run -p smearor-commons-fx --feat
 <p>Rendered frames (all deterministic for a fixed seed/progress) come
 from <code>cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- &lt;effect&gt; &lt;progress&gt; &lt;direction&gt;</code>:</p>
 <p><img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/hexagon.png" alt="hexagon at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixelate.png" alt="pixelate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/incinerate.png" alt="incinerate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wisps.png" alt="wisps at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/team-rocket.png" alt="team-rocket at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/trex.png" alt="trex at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/snap.png" alt="snap at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/paint-brush.png" alt="paint-brush at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/broken-glass.png" alt="broken-glass at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/aperture-panels.png" alt="aperture-panels at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/morph.png" alt="morph at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wormhole.png" alt="wormhole at progress 0.55, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/focus.png" alt="focus at progress 0.7, opening" style="width: 32%; image-rendering: pixelated;"></p>
+<h2 id="parallel-rows-and-schema-export-phase-6"><a class="header" href="#parallel-rows-and-schema-export-phase-6">Parallel rows and schema export (phase 6)</a></h2>
+<p><code>fill</code> fans out over disjoint row bands (<code>render.rs</code>), so every
+<code>apply</code> is multicore - sequential is the byte-identical reference
+(<code>parallel_output_is_byte_identical</code>, <code>rayon_output_is_byte_identical</code>).
+Two backends behind one abstraction: <code>std::thread::scope</code> (default,
+zero dependencies) or rayon’s work-stealing pool behind
+<code>--features rayon</code>. Measured (<code>fx_bench</code>, release, 400x300): the
+parallelization itself buys <code>focus</code> 106 -&gt; 27 ms (3.9x), <code>fire</code> 18 -&gt;
+4.9 ms (3.7x), <code>crossfade</code> 2.5 -&gt; 0.9 ms (2.8x) on 4 cores; rayon adds
+only variance reduction and pool reuse at high core counts - worth it
+as an <em>optional</em> backend for uneven row costs (wormhole’s bisection),
+not a dependency for the headless default. <code>FX_THREADS</code> overrides the
+worker count, <code>FX_BACKEND=scoped</code> forces the std path inside a
+rayon-enabled build:</p>
+<pre><code class="language-sh">FX_THREADS=1 cargo run --release -p smearor-commons-fx --example fx_bench
+cargo run --release -p smearor-commons-fx --features rayon --example fx_bench
+</code></pre>
+<p><code>--features schemars</code> adds <code>JsonSchema</code> to the whole effect model
+(<code>EffectSpec</code>, the 33 effect structs, <code>ParamSpec</code>, <code>ParamKind</code>,
+<code>ParamValue</code>, <code>Direction</code>, <code>Layers</code>, <code>Layer</code>; the geometry/color
+newtypes carry their own derives). The exporter writes a validating
+JSON Schema - <code>effect</code> is a <code>const</code> per variant, params land in
+<code>$defs</code>:</p>
+<pre><code class="language-sh">cargo run -p smearor-commons-fx --features schemars \
+    --example fx_schema &gt; effect.schema.json
+</code></pre>
+<p><code>schema_covers_all</code> pins that every shipped nick appears in the
+document.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="context"><a class="header" href="#context">Context</a></h1>
 <p><code>FxContext</code> is the uniform block one effect sees for one frame - every

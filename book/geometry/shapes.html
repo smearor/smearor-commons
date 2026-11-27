@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-6aa13c6a.js";
+            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -183,7 +183,7 @@
 all generic over the coordinate-space unit <code>U</code> (and mostly over the
 component type <code>T</code>, defaulting to <code>f64</code>):</p>
 <figure class="diagram">
-  <img src="img/shapes-overview.svg" alt="The geometric primitives: Line, Segment, Polyline, Polygon, Circle, Annulus, Arc, Sphere">
+  <img src="img/shapes-overview.svg" alt="The geometric primitives: Line, Segment, Polyline, Polygon, Circle, Annulus, Arc, Sphere, Hexagon, Octagon, Semicircle">
   <figcaption>the shape zoo — all generic over the unit U</figcaption>
 </figure>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -270,7 +270,9 @@ if table_zone.contains(&amp;Vec2::new(150.0, 90.0)) {
 <code>diameter</code>, <code>circumference</code>) and <code>f64</code> bridges (<code>diameter_f64</code>,
 <code>circumference_f64</code>) — so the same type serves mm-precise surface math
 and framework float APIs. <code>area::&lt;P&gt;()</code> is generic over the return
-type.</p>
+type. <code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code>
+convert between the circle and the largest centered axis-aligned square
+inside it — a vocabulary <code>Hexagon</code>, <code>Octagon</code> and <code>Semicircle</code> share.</p>
 <p><code>Annulus&lt;U, T&gt;</code> is a ring: <code>center</code>, <code>inner</code>, <code>outer</code> radii. <code>width</code>
 (ring thickness), <code>mid_radius</code>, <code>contains</code> (inside the outer, outside
 the inner), and <code>inner_circle</code>/<code>outer_circle</code> views. A radial gauge
@@ -292,7 +294,52 @@ wedge.at(smearor_commons_geometry::Fraction::HALF); // parameter → direction
 <p><code>Arc::spanning(from, to)</code> computes the interval between two
 directions; <code>Arc::gaps_between(&amp;[RotationRad])</code> returns the angular
 holes between sorted directions — used e.g. to find free angular slots
-around a dial.</p>
+around a dial (and by <code>OrbitLayout</code> in the layout crate to place items
+between anchor directions).</p>
+<h2 id="regular-polygons--hexagon--octagon"><a class="header" href="#regular-polygons--hexagon--octagon">Regular polygons — Hexagon &amp; Octagon</a></h2>
+<p><code>Hexagon&lt;U, T&gt;</code> and <code>Octagon&lt;U, T&gt;</code> model the regular n-gons a
+hexagonal grid, a pie-menu ring or a compass dial is built from. Both
+store <code>center</code> + <code>circumradius</code> (center to vertex) plus a
+<code>PolygonOrientation</code> — <code>FlatTop</code> (a horizontal top edge) or
+<code>PointyTop</code> (a vertex on top).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_geometry::{Hexagon, Octagon, PolygonOrientation, Vec2};
+
+let tile = Hexagon::flat_top(Vec2::new(100.0, 80.0), 40.0);
+let cell = Hexagon::with_inradius(Vec2::new(0.0, 0.0), 17.3, PolygonOrientation::PointyTop);
+let dial = Octagon::with_side_length(Vec2::new(50.0, 50.0), 24.0, PolygonOrientation::FlatTop);
+<span class="boring">}</span></code></pre>
+<p>Every extent works in both directions — <code>with_side_length</code>/
+<code>side_length</code>, <code>with_inradius</code>/<code>inradius</code> (the apothem, <code>R·sin(60°)</code>
+for the hexagon, <code>R·cos(22.5°)</code> for the octagon; the hexagon’s side
+length <em>is</em> its circumradius). Common queries:</p>
+<ul>
+<li><code>vertices()</code> — the corners in counter-clockwise order;
+<code>to_polygon()</code> is the bridge into generic <code>Polygon</code> algorithms</li>
+<li><code>contains(p)</code>, <code>bounding_box()</code>, <code>support(direction)</code> — the exact
+convex support function (largest vertex projection)</li>
+<li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side, orientation)</code> — the largest centered axis-aligned square inside,
+and its exact inverse</li>
+</ul>
+<p><code>PolygonOrientation</code> is a two-variant enum with <code>Display</code>/<code>FromStr</code>
+(<code>flat-top</code> / <code>pointy-top</code>) — and the symmetry vocabulary the snapped
+rotations quantize into: <code>SixthTurn</code> maps a hexagon onto itself,
+<code>EighthTurn</code> an octagon.</p>
+<h2 id="semicircle"><a class="header" href="#semicircle">Semicircle</a></h2>
+<p><code>Semicircle&lt;U, T&gt;</code> is a half-disk — a dome standing on its diameter
+edge through <code>center</code>, extending toward smaller <code>y</code> in the usual
+screen convention:</p>
+<ul>
+<li><code>contains(p)</code> — inside the virtual circle <em>and</em> on the dome side of
+the flat edge</li>
+<li><code>bounding_box()</code> — <code>2r</code> wide, <code>r</code> tall, the flat edge at the bottom</li>
+<li><code>support(direction)</code> — <code>r</code> into the dome half, <code>r·|cos|</code> along the
+flat edge</li>
+<li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code> —
+the largest square standing on the diameter edge (<code>2r/√5</code>), and its
+inverse</li>
+</ul>
 <h2 id="sphere--friends"><a class="header" href="#sphere--friends">Sphere &amp; friends</a></h2>
 <ul>
 <li><code>Sphere&lt;U, T&gt;</code> — <code>Vec3</code> center + radius; pairs with <code>Camera</code>
