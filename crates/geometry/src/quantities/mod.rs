@@ -8,6 +8,7 @@
 //! never interchangeable.
 
 mod aspect_ratio;
+mod eighth_turn;
 mod factor;
 mod fraction;
 mod quarter_turn;
@@ -19,6 +20,7 @@ mod sixth_turn;
 mod smoothing_alpha;
 
 pub use aspect_ratio::AspectRatio;
+pub use eighth_turn::EighthTurn;
 pub use factor::Factor;
 pub use fraction::Fraction;
 pub use quarter_turn::QuarterTurn;

@@ -1,5 +1,5 @@
-use crate::HexOrientation;
 use crate::Polygon;
+use crate::PolygonOrientation;
 use crate::Rect;
 use crate::RotationRad;
 use crate::Vec2;
@@ -35,9 +35,9 @@ pub struct Hexagon<U = (), T = f64> {
     /// For a regular hexagon this equals the edge length.
     pub circumradius: T,
     /// Whether the hexagon has a horizontal top edge
-    /// ([`HexOrientation::FlatTop`]) or a vertex on top
-    /// ([`HexOrientation::PointyTop`]).
-    pub orientation: HexOrientation,
+    /// ([`PolygonOrientation::FlatTop`]) or a vertex on top
+    /// ([`PolygonOrientation::PointyTop`]).
+    pub orientation: PolygonOrientation,
 }
 
 impl<U, T: Copy> Copy for Hexagon<U, T> {}
@@ -67,7 +67,7 @@ impl<U, T: Hash> Hash for Hexagon<U, T> {
 impl<U, T> Hexagon<U, T> {
     /// Creates a hexagon from its center, circumradius and
     /// orientation.
-    pub const fn new(center: Vec2<U, T>, circumradius: T, orientation: HexOrientation) -> Self {
+    pub const fn new(center: Vec2<U, T>, circumradius: T, orientation: PolygonOrientation) -> Self {
         Self {
             center,
             circumradius,
@@ -75,14 +75,14 @@ impl<U, T> Hexagon<U, T> {
         }
     }
 
-    /// Creates a [`HexOrientation::FlatTop`] hexagon.
+    /// Creates a [`PolygonOrientation::FlatTop`] hexagon.
     pub const fn flat_top(center: Vec2<U, T>, circumradius: T) -> Self {
-        Self::new(center, circumradius, HexOrientation::FlatTop)
+        Self::new(center, circumradius, PolygonOrientation::FlatTop)
     }
 
-    /// Creates a [`HexOrientation::PointyTop`] hexagon.
+    /// Creates a [`PolygonOrientation::PointyTop`] hexagon.
     pub const fn pointy_top(center: Vec2<U, T>, circumradius: T) -> Self {
-        Self::new(center, circumradius, HexOrientation::PointyTop)
+        Self::new(center, circumradius, PolygonOrientation::PointyTop)
     }
 }
 
@@ -90,14 +90,14 @@ impl<U> Hexagon<U, f64> {
     /// Creates a hexagon from its center, edge length and
     /// orientation. The edge length of a regular hexagon equals
     /// its circumradius.
-    pub const fn with_side_length(center: Vec2<U, f64>, side_length: f64, orientation: HexOrientation) -> Self {
+    pub const fn with_side_length(center: Vec2<U, f64>, side_length: f64, orientation: PolygonOrientation) -> Self {
         Self::new(center, side_length, orientation)
     }
 
     /// Creates a hexagon from its center, inradius and
     /// orientation. The inradius (apothem, center to edge) is
     /// `circumradius * sin(60°)`.
-    pub fn with_inradius(center: Vec2<U, f64>, inradius: f64, orientation: HexOrientation) -> Self {
+    pub fn with_inradius(center: Vec2<U, f64>, inradius: f64, orientation: PolygonOrientation) -> Self {
         Self::new(center, inradius / SIN_60, orientation)
     }
 
@@ -118,8 +118,8 @@ impl<U> Hexagon<U, f64> {
     /// `60°`.
     pub fn vertices(&self) -> [Vec2<U, f64>; 6] {
         let offset = match self.orientation {
-            HexOrientation::FlatTop => 0.0,
-            HexOrientation::PointyTop => FRAC_PI_6,
+            PolygonOrientation::FlatTop => 0.0,
+            PolygonOrientation::PointyTop => FRAC_PI_6,
         };
         [0, 1, 2, 3, 4, 5].map(|i| self.center + Vec2::from_polar(self.circumradius, RotationRad::new(offset + f64::from(i) * FRAC_PI_3)))
     }
@@ -140,8 +140,8 @@ impl<U> Hexagon<U, f64> {
         let (dx, dy) = (point.x - self.center.x, point.y - self.center.y);
         let inradius = self.inradius();
         match self.orientation {
-            HexOrientation::FlatTop => dy.abs() <= inradius && (SIN_60 * dx + 0.5 * dy).abs() <= inradius && (SIN_60 * dx - 0.5 * dy).abs() <= inradius,
-            HexOrientation::PointyTop => dx.abs() <= inradius && (0.5 * dx + SIN_60 * dy).abs() <= inradius && (0.5 * dx - SIN_60 * dy).abs() <= inradius,
+            PolygonOrientation::FlatTop => dy.abs() <= inradius && (SIN_60 * dx + 0.5 * dy).abs() <= inradius && (SIN_60 * dx - 0.5 * dy).abs() <= inradius,
+            PolygonOrientation::PointyTop => dx.abs() <= inradius && (0.5 * dx + SIN_60 * dy).abs() <= inradius && (0.5 * dx - SIN_60 * dy).abs() <= inradius,
         }
     }
 
@@ -149,8 +149,8 @@ impl<U> Hexagon<U, f64> {
     /// `FlatTop`, `sqrt(3)*R x 2R` for `PointyTop`.
     pub fn bounding_box(&self) -> Rect<U, f64> {
         let (half_width, half_height) = match self.orientation {
-            HexOrientation::FlatTop => (self.circumradius, self.inradius()),
-            HexOrientation::PointyTop => (self.inradius(), self.circumradius),
+            PolygonOrientation::FlatTop => (self.circumradius, self.inradius()),
+            PolygonOrientation::PointyTop => (self.inradius(), self.circumradius),
         };
         Rect::new(self.center - Vec2::new(half_width, half_height), Vec2::new(half_width * 2.0, half_height * 2.0))
     }
@@ -168,7 +168,7 @@ impl<U> Hexagon<U, f64> {
 #[cfg(test)]
 mod tests {
     use super::Hexagon;
-    use crate::HexOrientation;
+    use crate::PolygonOrientation;
     use crate::RotationRad;
     use crate::Vec2;
 
@@ -177,8 +177,8 @@ mod tests {
     fn circumradius_inradius_and_side_length_agree() {
         let center = Vec2::<()>::new(10.0, 20.0);
         let by_radius = Hexagon::flat_top(center, 100.0);
-        let by_side = Hexagon::with_side_length(center, 100.0, HexOrientation::FlatTop);
-        let by_inradius = Hexagon::with_inradius(center, 100.0 * super::SIN_60, HexOrientation::FlatTop);
+        let by_side = Hexagon::with_side_length(center, 100.0, PolygonOrientation::FlatTop);
+        let by_inradius = Hexagon::with_inradius(center, 100.0 * super::SIN_60, PolygonOrientation::FlatTop);
 
         assert_eq!(by_radius, by_side);
         assert!((by_inradius.circumradius - 100.0).abs() < 1e-9);
