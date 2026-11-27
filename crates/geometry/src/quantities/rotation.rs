@@ -1,17 +1,18 @@
 use crate::QuarterTurn;
 use crate::RotationRad;
+use crate::SixthTurn;
 use serde::Deserialize;
 use serde::Serialize;
 
-/// A rotation specification - either a snapped [`QuarterTurn`] or a
-/// free continuous [`RotationRad`].
+/// A rotation specification - a snapped [`QuarterTurn`] or
+/// [`SixthTurn`], or a free continuous [`RotationRad`].
 ///
 /// The enum makes "snapped vs. free" visible in the type: consumers
 /// that distinguish the two (rotation widgets with snap presets,
 /// configuration formats allowing both forms) model it directly
 /// instead of re-deriving snappedness from raw angle values.
 ///
-/// No `zvariant::Type` impl: the two variants carry different payload
+/// No `zvariant::Type` impl: the variants carry different payload
 /// signatures, which D-Bus cannot express under a single signature -
 /// wire consumers transport the angle as `f64` or `QuarterTurn`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -19,6 +20,9 @@ use serde::Serialize;
 pub enum Rotation {
     /// A snapped right-angle rotation.
     QuarterTurn(QuarterTurn),
+    /// A snapped sixth-turn rotation (60-degree multiples - the
+    /// symmetry step of a regular hexagon).
+    SixthTurn(SixthTurn),
     /// A free continuous rotation.
     Free(RotationRad),
 }
@@ -54,6 +58,7 @@ impl Rotation {
     pub fn degrees(self) -> f64 {
         match self {
             Self::QuarterTurn(turn) => turn.degrees(),
+            Self::SixthTurn(turn) => turn.degrees(),
             Self::Free(angle) => angle.to_degrees(),
         }
     }
@@ -62,22 +67,33 @@ impl Rotation {
     pub fn to_rotation_rad(self) -> RotationRad {
         match self {
             Self::QuarterTurn(turn) => turn.to_rotation_rad(),
+            Self::SixthTurn(turn) => turn.to_rotation_rad(),
             Self::Free(angle) => angle,
         }
     }
 
     /// The snapped [`QuarterTurn`] when `self` is a
-    /// [`Rotation::QuarterTurn`], `None` for free rotations.
+    /// [`Rotation::QuarterTurn`], `None` otherwise.
     pub fn quarter_turn(self) -> Option<QuarterTurn> {
         match self {
             Self::QuarterTurn(turn) => Some(turn),
-            Self::Free(_) => None,
+            _ => None,
         }
     }
 
-    /// Whether `self` is a snapped [`Rotation::QuarterTurn`].
+    /// The snapped [`SixthTurn`] when `self` is a
+    /// [`Rotation::SixthTurn`], `None` otherwise.
+    pub fn sixth_turn(self) -> Option<SixthTurn> {
+        match self {
+            Self::SixthTurn(turn) => Some(turn),
+            _ => None,
+        }
+    }
+
+    /// Whether `self` is a snapped rotation
+    /// ([`Rotation::QuarterTurn`] or [`Rotation::SixthTurn`]).
     pub fn is_snapped(self) -> bool {
-        matches!(self, Self::QuarterTurn(_))
+        matches!(self, Self::QuarterTurn(_) | Self::SixthTurn(_))
     }
 }
 
@@ -91,6 +107,12 @@ impl Default for Rotation {
 impl From<QuarterTurn> for Rotation {
     fn from(turn: QuarterTurn) -> Self {
         Self::QuarterTurn(turn)
+    }
+}
+
+impl From<SixthTurn> for Rotation {
+    fn from(turn: SixthTurn) -> Self {
+        Self::SixthTurn(turn)
     }
 }
 
