@@ -52,6 +52,10 @@ impl DrawPrimitiveOps for CairoTarget {
 
     fn fill_circle(&mut self, spec: FillCircle) -> Result<(), Self::Error> {
         spec.color.apply_alpha(&self.ctx, spec.alpha);
+        // `arc` chains onto a stale current point with a stray chord -
+        // each spec is a self-contained primitive like on the buffer
+        // backend, so it starts on a fresh path.
+        self.ctx.new_path();
         self.ctx.arc(spec.circle.center.x, spec.circle.center.y, spec.circle.radius, 0.0, TAU);
         self.ctx.fill()
     }
@@ -77,11 +81,14 @@ impl DrawPrimitiveOps for CairoTarget {
 
     /// The annulus sector as outer arc swept forward (`arc`) and
     /// inner arc swept back — `arc_negative` handles the wrap across
-    /// the full turn through the un-normalized end direction.
+    /// the full turn through the un-normalized end direction. The spec
+    /// is a self-contained primitive: it starts on a fresh path so a
+    /// stale current point can't chain a stray chord into the sector.
     fn fill_sector(&mut self, spec: FillSector) -> Result<(), Self::Error> {
         spec.color.apply_alpha(&self.ctx, spec.alpha);
         let center = spec.annulus.center;
         let (start, end) = (spec.arc.start.as_f64(), spec.arc.start.as_f64() + spec.arc.width.as_f64());
+        self.ctx.new_path();
         self.ctx.arc(center.x, center.y, spec.annulus.outer, start, end);
         self.ctx.arc_negative(center.x, center.y, spec.annulus.inner, end, start);
         self.ctx.close_path();
