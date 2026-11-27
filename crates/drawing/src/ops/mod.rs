@@ -31,6 +31,7 @@ pub use icon::Codepoint;
 pub use icon::DrawIconOps;
 pub use icon::Icon;
 pub use icon::IconGrid;
+pub use primitive::Cap;
 pub use primitive::DrawPrimitiveOps;
 pub use primitive::FillCircle;
 pub use primitive::FillPolygon;

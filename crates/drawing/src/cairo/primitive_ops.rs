@@ -101,6 +101,7 @@ impl DrawPrimitiveOps for CairoTarget {
         spec.color.apply_alpha(&self.ctx, spec.alpha);
         polyline_path(&self.ctx, spec.polyline.points());
         self.ctx.set_line_width(f64::from(spec.line_width.as_raw()));
+        self.ctx.set_line_cap(spec.cap.into());
         self.ctx.stroke()
     }
 

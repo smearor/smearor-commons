@@ -1,5 +1,6 @@
 //! The [`StrokePolyline`] draw spec.
 
+use crate::ops::Cap;
 use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
 use smearor_commons_geometry::Pixels;
@@ -17,6 +18,8 @@ pub struct StrokePolyline {
     pub color: Color<f64>,
     /// Stroke width in pixels, centered on the path.
     pub line_width: Pixels<f32>,
+    /// End style of the open path (`Cap::Butt` by default).
+    pub cap: Cap,
     /// Alpha composited on top of the color's own alpha channel.
     pub alpha: Alpha,
 }
@@ -28,7 +31,15 @@ impl StrokePolyline {
             polyline,
             color: color.into(),
             line_width,
+            cap: Cap::default(),
             alpha: alpha.into(),
         }
+    }
+
+    /// Sets the end style of the open path (`Cap::Round` for
+    /// semicircle endings).
+    pub fn with_cap(mut self, cap: Cap) -> Self {
+        self.cap = cap;
+        self
     }
 }

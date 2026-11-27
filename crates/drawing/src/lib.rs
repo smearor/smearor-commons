@@ -49,6 +49,7 @@ pub use cairo::ViewSurface;
 pub use cairo::image_surface_from_buffer;
 #[cfg(feature = "cairo")]
 pub use cairo::pixel_buffer_from_surface;
+pub use ops::Cap;
 pub use ops::Codepoint;
 pub use ops::DrawBackend;
 pub use ops::DrawIconOps;

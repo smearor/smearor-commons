@@ -2,6 +2,7 @@
 //! the actual software-raster logic shared behind a shape-scan helper.
 
 use crate::buffer::raster::blend_pixel;
+use crate::ops::Cap;
 use crate::ops::DrawPrimitiveOps;
 use crate::ops::FillCircle;
 use crate::ops::FillPolygon;
@@ -16,8 +17,10 @@ use smearor_commons_buffer::PixelFormat;
 use smearor_commons_buffer::Rgba;
 use smearor_commons_color::Alpha;
 use smearor_commons_color::Color;
+use smearor_commons_geometry::Circle;
 use smearor_commons_geometry::Pixels;
 use smearor_commons_geometry::Rect;
+use smearor_commons_geometry::Segment;
 use smearor_commons_geometry::Vec2;
 
 /// Blend `color` at `alpha` onto every pixel whose center lies in
@@ -133,6 +136,39 @@ impl DrawPrimitiveOps for BufferViewMut<'_, Rgba> {
         for segment in spec.polyline.segments() {
             let bounds = segment.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
             blend_scanned(self, bounds, spec.color, spec.alpha, |p| segment.distance(p).as_raw() <= half);
+        }
+        match spec.cap {
+            Cap::Butt => {}
+            // Semicircles of radius `half` on the open endpoints -
+            // overlapping the band like the segment joints do.
+            Cap::Round => {
+                for endpoint in [spec.polyline.points().first(), spec.polyline.points().last()].into_iter().flatten() {
+                    let bounds = Circle::new(*endpoint, half).bounding_box().to_i32_ceil();
+                    blend_scanned(self, bounds, spec.color, spec.alpha, |p| p.distance(endpoint).as_raw() <= half);
+                }
+            }
+            // The `half`-long band beyond each open end, scanned
+            // through the extension segment's interior distance -
+            // a perpendicular band that stops square at `half`.
+            Cap::Square => {
+                for (segment, flip) in spec
+                    .polyline
+                    .segments()
+                    .next()
+                    .map(|s| (s, false))
+                    .into_iter()
+                    .chain(spec.polyline.segments().last().map(|s| (s, true)))
+                {
+                    let axis = Vec2::<Pixels>::new(1.0, 0.0).rotated(segment.direction());
+                    let cap = if flip {
+                        Segment::new(segment.to, segment.to + axis * half)
+                    } else {
+                        Segment::new(segment.from - axis * half, segment.from)
+                    };
+                    let bounds = cap.bounding_box().outset(Pixels::new(half)).to_i32_ceil();
+                    blend_scanned(self, bounds, spec.color, spec.alpha, |p| cap.interior_distance(p).is_some_and(|d| d.as_raw() <= half));
+                }
+            }
         }
         Ok(())
     }

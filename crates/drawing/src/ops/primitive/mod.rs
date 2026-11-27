@@ -1,5 +1,6 @@
 //! The [`DrawPrimitiveOps`] capability trait and its draw specs.
 
+mod cap;
 mod fill_circle;
 mod fill_polygon;
 mod fill_rect;
@@ -10,6 +11,7 @@ mod stroke_polygon;
 mod stroke_polyline;
 mod stroke_rect;
 
+pub use cap::Cap;
 pub use fill_circle::FillCircle;
 pub use fill_polygon::FillPolygon;
 pub use fill_rect::FillRect;
