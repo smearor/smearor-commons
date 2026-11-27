@@ -1,3 +1,5 @@
+use crate::Fraction;
+use crate::OctagonWedges;
 use crate::Polygon;
 use crate::PolygonOrientation;
 use crate::Rect;
@@ -227,6 +229,35 @@ impl<U> Octagon<U, f64> {
     /// [`Octagon::side_length_for_inradius`].
     pub fn inradius_for_side_length(side: f64) -> f64 {
         side * COS_22_5 / (2.0 * SIN_22_5)
+    }
+
+    /// The trapezoidal wedge on the `edge`-th side: the outer side is
+    /// the `outer`-scaled edge `squeeze`-narrowed around its midpoint,
+    /// the inner side the parallel edge of the `inner`-scaled octagon.
+    /// `outer`/`inner` are fractions of the inradius: `Fraction::ONE`
+    /// on `outer` puts the outer side on the rim edge, `Fraction::ZERO`
+    /// on `inner` reaches the center, `squeeze = Fraction::ONE` keeps
+    /// the outer side's full edge length.
+    pub fn wedge(&self, edge: usize, outer: Fraction, inner: Fraction, squeeze: Fraction) -> Polygon<U> {
+        let vertices = self.vertices();
+        let scaled = |index: usize, fraction: Fraction| self.center + (vertices[index % 8] - self.center) * fraction.as_f64();
+        let (outer_a, outer_b) = (scaled(edge, outer), scaled(edge + 1, outer));
+        let mid = (outer_a + outer_b) * 0.5;
+        let squeezed = |point: Vec2<U>| mid + (point - mid) * squeeze.as_f64();
+        Polygon::new(vec![squeezed(outer_a), scaled(edge, inner), scaled(edge + 1, inner), squeezed(outer_b)])
+    }
+
+    /// The octagon's eight edge wedges, one trapezoid per side - see
+    /// [`Octagon::wedge`].
+    ///
+    /// ```
+    /// use smearor_commons_geometry::{Fraction, Octagon, PolygonOrientation, Vec2};
+    /// let octagon = Octagon::<()>::flat_top(Vec2::new(0.0, 0.0), 100.0);
+    /// let wedges: Vec<_> = octagon.wedges(Fraction::new(0.97), Fraction::new(0.66), Fraction::new(0.7)).collect();
+    /// assert_eq!(wedges.len(), 8);
+    /// ```
+    pub fn wedges(&self, outer: Fraction, inner: Fraction, squeeze: Fraction) -> OctagonWedges<U> {
+        OctagonWedges::new(*self, outer, inner, squeeze)
     }
 
     /// The inradius of the octagon whose bounding square has
