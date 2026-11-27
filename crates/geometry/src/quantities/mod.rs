@@ -15,6 +15,7 @@ mod rotation;
 mod rotation_direction;
 mod rotation_rad;
 mod scale_factor;
+mod sixth_turn;
 mod smoothing_alpha;
 
 pub use aspect_ratio::AspectRatio;
@@ -25,4 +26,5 @@ pub use rotation::Rotation;
 pub use rotation_direction::RotationDirection;
 pub use rotation_rad::RotationRad;
 pub use scale_factor::ScaleFactor;
+pub use sixth_turn::SixthTurn;
 pub use smoothing_alpha::SmoothingAlpha;

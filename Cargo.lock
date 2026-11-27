@@ -2300,7 +2300,7 @@ dependencies = [
 [[package]]
 name = "smearor-commons-color"
 version = "0.1.0"
-source = "git+https://github.com/smearor/smearor-commons.git#dc851db0af8ccca3bdde3629434c72189cab890f"
+source = "git+https://github.com/smearor/smearor-commons.git#e3a1d9af766981551c90047a9725df79fa9f2ecd"
 dependencies = [
  "serde",
  "thiserror 2.0.21",
