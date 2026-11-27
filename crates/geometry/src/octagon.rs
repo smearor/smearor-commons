@@ -168,6 +168,30 @@ impl<U> Octagon<U, f64> {
         Rect::new(self.center - Vec2::new(half, half), Vec2::new(half * 2.0, half * 2.0))
     }
 
+    /// Side of the largest centered axis-aligned square inscribed
+    /// in the octagon, expressed in the inradius.
+    ///
+    /// `FlatTop` keeps a square's corners on the four diagonal
+    /// edges (`side = inradius * sqrt(2)`); `PointyTop` puts the
+    /// corners against the 22.5-degree-slanted edges and fits the
+    /// larger `2 * inradius / (cos(22.5deg) + sin(22.5deg))`.
+    pub fn inscribed_square_side(&self) -> f64 {
+        match self.orientation {
+            PolygonOrientation::FlatTop => self.inradius() * SQRT_2,
+            PolygonOrientation::PointyTop => 2.0 * self.inradius() / (COS_22_5 + SIN_22_5),
+        }
+    }
+
+    /// The octagon whose inscribed square has `side` - the exact
+    /// inverse of [`Octagon::inscribed_square_side`].
+    pub fn with_inscribed_square(center: Vec2<U>, side: f64, orientation: PolygonOrientation) -> Self {
+        let inradius = match orientation {
+            PolygonOrientation::FlatTop => side / SQRT_2,
+            PolygonOrientation::PointyTop => side * (COS_22_5 + SIN_22_5) / 2.0,
+        };
+        Self::with_inradius(center, inradius, orientation)
+    }
+
     /// How far the outline extends along `direction` measured from
     /// `center` - the exact support function of the convex octagon:
     /// the largest projection of any vertex.
@@ -261,5 +285,19 @@ mod tests {
         let polygon = octagon.to_polygon();
         assert_eq!(polygon.0.len(), 8);
         assert_eq!(polygon.0[0], octagon.vertices()[0]);
+    }
+
+    /// FlatTop and PointyTop inscribed squares both rest their
+    /// corners on the outline and invert via `with_inscribed_square`.
+    #[test]
+    fn inscribed_square_roundtrips() {
+        for orientation in [PolygonOrientation::FlatTop, PolygonOrientation::PointyTop] {
+            let octagon = Octagon::with_inradius(Vec2::<()>::new(0.0, 0.0), 50.0, orientation);
+            let side = octagon.inscribed_square_side();
+            let back = Octagon::with_inscribed_square(Vec2::<()>::new(0.0, 0.0), side, orientation);
+            assert!((back.inradius() - 50.0).abs() < 1e-9, "{orientation:?}");
+            let half = side / 2.0;
+            assert!(octagon.contains(&Vec2::new(half - 1e-9, half - 1e-9)), "{orientation:?}");
+        }
     }
 }

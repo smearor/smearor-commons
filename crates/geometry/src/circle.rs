@@ -3,6 +3,7 @@ use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 use std::f64::consts::PI;
+use std::f64::consts::SQRT_2;
 use std::hash::Hash;
 use std::hash::Hasher;
 
@@ -112,6 +113,20 @@ impl<U> Circle<U, f64> {
     /// [`Circle::diameter_f64`].
     pub fn circumference_f64(&self) -> f64 {
         2.0 * PI * self.radius
+    }
+
+    /// Side of the largest axis-aligned square inscribed in the
+    /// circle: its four corners rest on the outline, so
+    /// `side = radius * sqrt(2)`.
+    pub fn inscribed_square_side(&self) -> f64 {
+        self.radius * SQRT_2
+    }
+
+    /// The circle circumscribing a centered axis-aligned square of
+    /// `side` - the exact inverse of
+    /// [`Circle::inscribed_square_side`].
+    pub fn with_inscribed_square(center: Vec2<U>, side: f64) -> Self {
+        Self::new(center, side / SQRT_2)
     }
 
     /// Rasterizes the disk into 1-px-high integer rectangles - one
@@ -258,5 +273,16 @@ mod tests {
         assert_eq!(circle.circumference(), Pixels::new(4.0 * PI));
         let area = circle.area::<SquareMillimeters>();
         assert!((area.as_f64() - 4.0 * PI).abs() < 1e-9);
+    }
+
+    /// The inscribed square's corners rest on the circle.
+    #[test]
+    fn inscribed_square_corners_touch_the_circle() {
+        let circle = Circle::<()>::new(Vec2::new(0.0, 0.0), 10.0);
+        let side = circle.inscribed_square_side();
+        // Corner distance: sqrt(2) * side/2 = radius.
+        assert!((side * std::f64::consts::FRAC_1_SQRT_2 - 10.0).abs() < 1e-9);
+        let back = Circle::<()>::with_inscribed_square(Vec2::new(0.0, 0.0), side);
+        assert!((back.radius - 10.0).abs() < 1e-9);
     }
 }

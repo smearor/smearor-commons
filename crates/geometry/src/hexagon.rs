@@ -155,6 +155,21 @@ impl<U> Hexagon<U, f64> {
         Rect::new(self.center - Vec2::new(half_width, half_height), Vec2::new(half_width * 2.0, half_height * 2.0))
     }
 
+    /// Side of the largest centered axis-aligned square inscribed
+    /// in the hexagon: `(3 - sqrt(3)) * circumradius`, its corners
+    /// resting on the four slanted edges. The factor is the same
+    /// for both orientations - a square turned a quarter turn is a
+    /// square.
+    pub fn inscribed_square_side(&self) -> f64 {
+        self.circumradius * (3.0 - 2.0 * SIN_60)
+    }
+
+    /// The hexagon whose inscribed square has `side` - the exact
+    /// inverse of [`Hexagon::inscribed_square_side`].
+    pub fn with_inscribed_square(center: Vec2<U>, side: f64, orientation: PolygonOrientation) -> Self {
+        Self::new(center, side / (3.0 - 2.0 * SIN_60), orientation)
+    }
+
     /// How far the outline extends along `direction` measured from
     /// `center` - the exact support function of the convex hexagon:
     /// the largest projection of any vertex.
@@ -259,5 +274,19 @@ mod tests {
         let polygon = hex.to_polygon();
         assert_eq!(polygon.0.len(), 6);
         assert!(polygon.contains(&Vec2::new(0.0, 0.0)));
+    }
+
+    /// The flat-top inscribed square: `(3 - sqrt(3)) * R`, and its
+    /// inverse constructor agrees.
+    #[test]
+    fn inscribed_square_roundtrips() {
+        let hexagon = Hexagon::flat_top(Vec2::<()>::new(0.0, 0.0), 100.0);
+        let side = hexagon.inscribed_square_side();
+        assert!((side - 100.0 * (3.0 - 3.0_f64.sqrt())).abs() < 1e-9);
+        let back = Hexagon::with_inscribed_square(Vec2::<()>::new(0.0, 0.0), side, PolygonOrientation::FlatTop);
+        assert!((back.circumradius - 100.0).abs() < 1e-9);
+        // The square's corners rest on the slanted edges.
+        let half = side / 2.0;
+        assert!(hexagon.contains(&Vec2::new(half - 1e-9, half - 1e-9)));
     }
 }
