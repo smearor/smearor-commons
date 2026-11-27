@@ -63,6 +63,26 @@ impl Arc {
         self.at(Fraction::HALF)
     }
 
+    /// The `count` equal arcs partitioning this arc, each shrunk
+    /// symmetrically by `gap` around every boundary - `gap / 2` on
+    /// both sides of each segment, so `count` spokes of `gap` width
+    /// stay open in a pie layout (`gap = ZERO` tiles seamlessly).
+    ///
+    /// ```
+    /// # use smearor_commons_geometry::*;
+    /// let arcs = Arc::FULL.segments(4, RotationRad::ZERO);
+    /// assert_eq!(arcs.len(), 4);
+    /// ```
+    pub fn segments(&self, count: usize, gap: RotationRad) -> Vec<Arc> {
+        if count == 0 {
+            return Vec::new();
+        }
+        let step = self.width * (1.0 / count as f64);
+        (0..count)
+            .map(|index| Arc::new(self.start + step * index as f64 + gap * 0.5, step - gap))
+            .collect()
+    }
+
     /// The arcs between consecutive directions of a sorted set,
     /// including the wrap-around arc from the last back to the first.
     ///
