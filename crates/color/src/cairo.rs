@@ -12,6 +12,12 @@ impl Color<f64> {
         ctx.set_source_rgb(self.r, self.g, self.b);
     }
 
+    /// Sets this color as the cairo source including its own alpha
+    /// channel.
+    pub fn apply_rgba(&self, ctx: &Context) {
+        ctx.set_source_rgba(self.r, self.g, self.b, self.a);
+    }
+
     /// Sets this color as the cairo source, overriding the alpha.
     pub fn apply_alpha(&self, ctx: &Context, alpha: impl Into<Alpha>) {
         ctx.set_source_rgba(self.r, self.g, self.b, alpha.into().as_f64());
@@ -24,6 +30,12 @@ impl Color<f32> {
         ctx.set_source_rgb(self.r as f64, self.g as f64, self.b as f64);
     }
 
+    /// Sets this color as the cairo source including its own alpha
+    /// channel.
+    pub fn apply_rgba(&self, ctx: &Context) {
+        ctx.set_source_rgba(self.r as f64, self.g as f64, self.b as f64, self.a as f64);
+    }
+
     /// Sets this color as the cairo source, overriding the alpha.
     pub fn apply_alpha(&self, ctx: &Context, alpha: impl Into<Alpha>) {
         ctx.set_source_rgba(self.r as f64, self.g as f64, self.b as f64, alpha.into().as_f64());
@@ -34,6 +46,12 @@ impl Color<u8> {
     /// Sets this color as the cairo source (alpha channel ignored).
     pub fn apply(&self, ctx: &Context) {
         Color::<f64>::from(*self).apply(ctx);
+    }
+
+    /// Sets this color as the cairo source including its own alpha
+    /// channel.
+    pub fn apply_rgba(&self, ctx: &Context) {
+        Color::<f64>::from(*self).apply_rgba(ctx);
     }
 
     /// Sets this color as the cairo source, overriding the alpha.
