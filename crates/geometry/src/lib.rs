@@ -41,6 +41,7 @@ mod rect;
 mod rectangle;
 mod scanline;
 mod segment;
+mod semicircle;
 mod size;
 mod sphere;
 mod transforms;
@@ -83,6 +84,7 @@ pub use rect::Rect;
 pub use rectangle::Rectangle;
 pub use scanline::Scanline;
 pub use segment::Segment;
+pub use semicircle::Semicircle;
 pub use size::Size;
 #[cfg(feature = "gtk4")]
 pub use size::WidgetSizeExt;
