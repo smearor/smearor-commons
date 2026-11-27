@@ -34,6 +34,26 @@ position — ties resolve to `Bottom` first, in `ALL` order.
 `anchor_weights()` translates a side into the matching
 `AnchorWeights` corner for flow-style anchoring.
 
+## `SideSet` — several sides at once
+
+A non-empty bitmask set of `TableSide`s — `EdgeStripLayout` takes its
+edge selection as a `SideSet` so "at least one side" is a type-level
+invariant, not a convention:
+
+```rust
+use smearor_commons_layout::{SideSet, TableSide};
+
+let sides = SideSet::try_from_sides([TableSide::Bottom, TableSide::Left])?;
+sides.contains(TableSide::Left);   // true
+sides.len();                       // 2 — always 1..=4
+SideSet::ALL;                      // all four
+```
+
+Membership and `iter()` follow the clockwise `TableSide::ALL` order,
+so iteration is deterministic regardless of construction order; serde
+is a list of side names (`["bottom","left"]`). An empty selection
+reports `LayoutError::EmptySides`.
+
 ## `Seat` — side plus optional edge offset
 
 ```rust
@@ -69,6 +89,10 @@ seat.fanned_placement(bounds, footprint, margin, &taken, gap)
 // reuses gaps in the edge lane, may land a row behind when the
 // lane is full
 ```
+
+`margin`/`gap` take `impl Into<Distance<U>>` — a bare `f64` reads as
+the `bounds` coordinate space, a `Distance<Millimeters>` carries its
+unit into the call.
 
 ## `SeatPose` — a seat with a face
 

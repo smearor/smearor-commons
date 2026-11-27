@@ -33,6 +33,30 @@ The newtypes wrap plain scalars (`serde(transparent)` on the wire) and
 carry `as_raw`/`as_f64`/`as_f32` bridges plus `min`/`max`/`clamp`/
 `abs` helpers where useful.
 
+## `Distance<U>` — the scalar `Vec2`
+
+`Distance<U>` is the one-dimensional counterpart of `Vec2<U>` — a bare
+`f64` tagged with the coordinate space, for APIs that want the unit on
+a lone scalar: gaps, radii, margins. `Distance<Pixels>` cannot be
+passed where `Distance<Millimeters>` is expected; `Distance<()>` keeps
+unit-free math available, like `Vec2<()>`.
+
+```rust
+use smearor_commons_geometry::{Distance, Pixels};
+
+let gap = Distance::<Pixels>::new(24.0);
+gap.as_f64();                          // 24.0 — the erased scalar
+gap * 2.0 + Distance::<Pixels>::new(4.0); // arithmetic keeps the unit
+```
+
+The unit marker carries no value — equality, ordering and serde see
+only the scalar (the wire form is the bare number). `From<f64>` makes
+a plain number read as whatever `U` the context expects — the same
+escape hatch `Vec2::new` offers — so `f64` call sites keep compiling
+against `Distance`-typed parameters. The layout crate uses it for
+`FlowLayout::gap`, `SeatLayout::edge_margin`, `EdgeStripLayout::gap`
+and `OrbitLayout::radius`.
+
 ## Bridging spaces: PixelsPerMm & UnitsPerMm
 
 `PixelsPerMm(pub f64)` is the scale between the physical surface and

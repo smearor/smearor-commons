@@ -166,3 +166,39 @@ Rendered frames (all deterministic for a fixed seed/progress) come
 from `cargo run -p smearor-commons-fx --features gtk4 --example dump_frame -- <effect> <progress> <direction>`:
 
 <img src="fx/img/matrix.png" alt="matrix at progress 0.6" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/fire.png" alt="fire at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixel_wheel.png" alt="pixel-wheel at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/mushroom.png" alt="mushroom at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/portal.png" alt="portal at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/doom.png" alt="doom at progress 0.35, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/hexagon.png" alt="hexagon at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/pixelate.png" alt="pixelate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/incinerate.png" alt="incinerate at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wisps.png" alt="wisps at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/team-rocket.png" alt="team-rocket at progress 0.6, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/trex.png" alt="trex at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/snap.png" alt="snap at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/paint-brush.png" alt="paint-brush at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/broken-glass.png" alt="broken-glass at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/aperture-panels.png" alt="aperture-panels at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/morph.png" alt="morph at progress 0.5, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/wormhole.png" alt="wormhole at progress 0.55, closing" style="width: 32%; image-rendering: pixelated;"> <img src="fx/img/focus.png" alt="focus at progress 0.7, opening" style="width: 32%; image-rendering: pixelated;">
+
+## Parallel rows and schema export (phase 6)
+
+`fill` fans out over disjoint row bands (`render.rs`), so every
+`apply` is multicore - sequential is the byte-identical reference
+(`parallel_output_is_byte_identical`, `rayon_output_is_byte_identical`).
+Two backends behind one abstraction: `std::thread::scope` (default,
+zero dependencies) or rayon's work-stealing pool behind
+`--features rayon`. Measured (`fx_bench`, release, 400x300): the
+parallelization itself buys `focus` 106 -> 27 ms (3.9x), `fire` 18 ->
+4.9 ms (3.7x), `crossfade` 2.5 -> 0.9 ms (2.8x) on 4 cores; rayon adds
+only variance reduction and pool reuse at high core counts - worth it
+as an *optional* backend for uneven row costs (wormhole's bisection),
+not a dependency for the headless default. `FX_THREADS` overrides the
+worker count, `FX_BACKEND=scoped` forces the std path inside a
+rayon-enabled build:
+
+```sh
+FX_THREADS=1 cargo run --release -p smearor-commons-fx --example fx_bench
+cargo run --release -p smearor-commons-fx --features rayon --example fx_bench
+```
+
+`--features schemars` adds `JsonSchema` to the whole effect model
+(`EffectSpec`, the 33 effect structs, `ParamSpec`, `ParamKind`,
+`ParamValue`, `Direction`, `Layers`, `Layer`; the geometry/color
+newtypes carry their own derives). The exporter writes a validating
+JSON Schema - `effect` is a `const` per variant, params land in
+`$defs`:
+
+```sh
+cargo run -p smearor-commons-fx --features schemars \
+    --example fx_schema > effect.schema.json
+```
+
+`schema_covers_all` pins that every shipped nick appears in the
+document.

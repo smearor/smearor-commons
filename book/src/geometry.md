@@ -41,16 +41,19 @@ flowchart LR
 ## What's inside
 
 - **[Shapes](geometry/shapes.md)**: `Line`, `Segment`, `Circle`,
-  `Annulus`, `Arc`, `Polyline`, `Polygon`, `Sphere` — `Circle` e.g.
-  rasterizes itself into 1-px `Rect<U, i32>` strips (`region_rects`) or
-  a cairo `Region` behind the `cairo` feature.
+  `Annulus`, `Arc`, `Polyline`, `Polygon`, `Hexagon`, `Octagon`,
+  `Semicircle`, `Sphere` — `Circle` e.g. rasterizes itself into 1-px
+  `Rect<U, i32>` strips (`region_rects`) or a cairo `Region` behind
+  the `cairo` feature.
 - **[Quantities](geometry/quantities.md)**: `RotationRad`, `Rotation`,
-  `QuarterTurn`, `RotationDirection`, `Fraction`, `AspectRatio`,
-  `ScaleFactor`, `SmoothingAlpha` — strict newtypes with
-  `FromStr`/`Display` where it fits.
+  `QuarterTurn`, `SixthTurn`, `EighthTurn`, `RotationDirection`,
+  `Fraction`, `AspectRatio`, `ScaleFactor`, `Factor`,
+  `SmoothingAlpha` — strict newtypes with `FromStr`/`Display` where it
+  fits.
 - **[Units](geometry/units.md)**: `Millimeters`, `Pixels`,
   `SquareMillimeters`, `PixelsPerMm`, `UnitsPerMm`, `Degrees`,
-  `DegreesPerPixel`, `Radians`.
+  `DegreesPerPixel`, `Radians`, plus `Distance<U>` — the unit-tagged
+  scalar counterpart of `Vec2<U>`.
 - **[Grid](geometry/grid.md)**: `Grid` with `Cell`/`Col`/`Row` for
   cell-addressed partitions.
 - **[Transforms](geometry/transforms.md)**: `RigidTransform`,

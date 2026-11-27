@@ -12,7 +12,8 @@ unit-generic over the `U` marker of `Vec2`/`Rect`.
 - [Items & Placements](./layout/items.md) — `LayoutItem`,
   `Placement`, `footprint_for` axis swaps
 - [Strategies](./layout/strategies.md) — `LayoutStrategy`,
-  `FlowLayout`, `SeatLayout`, `AnchorWeights`, `DoesNotFit`
+  `FlowLayout`, `SeatLayout`, `EdgeStripLayout`, `OrbitLayout`,
+  `AnchorWeights`, `DoesNotFit`
 - [Workspace & View](./layout/view.md) — `WorkspaceSize`, the `View`
   camera, `physical_zoom`
 
@@ -61,6 +62,10 @@ flowchart LR
 - **`SeatLayout`** — explicit seats win;
   `SeatAssignment::RoundRobin` distributes the rest over
   `TableSide::ALL`.
+- **`EdgeStripLayout`** — items as a strip *outside* the host bounds,
+  docked to a `SideSet` of edges (`Sequential` or `Balanced`).
+- **`OrbitLayout`** — items on an arc around the host center; anchored
+  `OrbitItem`s pin their direction, flexible ones fill the gaps.
 
 Overflow yields `LayoutError::DoesNotFit` — the consumer decides whether
 to retry, shrink or leave items unarranged. `footprint_for` computes a

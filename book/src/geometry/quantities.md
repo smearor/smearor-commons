@@ -80,10 +80,35 @@ since only exact multiples of 90° qualify.
 `bounds` — the coordinate math every tabletop needs when content is
 re-oriented for another seat.
 
+## SixthTurn & EighthTurn — finer snaps
+
+`SixthTurn` (`Deg0`…`Deg300` in 60° steps) and `EighthTurn`
+(`Deg0`…`Deg315` in 45° steps) are the snapped orientations of regular
+hexagons and octagons — every sixth turn maps a `Hexagon` onto itself,
+every eighth turn an `Octagon`. They mirror the `QuarterTurn` API:
+
+```rust
+use smearor_commons_geometry::{EighthTurn, RotationDirection, RotationRad, SixthTurn};
+
+SixthTurn::Deg60.clockwise();                          // Deg120
+SixthTurn::Deg60.inverse();                            // Deg240
+EighthTurn::snap_zone(RotationRad::from_degrees(100.0)); // Deg90
+SixthTurn::snap_target(angle, RotationDirection::Clockwise); // next step along the drag
+SixthTurn::ALL;                                        // all six, clockwise
+```
+
+`snap_zone(angle)` returns the nearest step (zones reach 30° resp.
+22.5° to either side of each turn's angle), `snap_target(angle,
+direction)` the next step *along* a drag direction — the same
+mechanics [RotationSnap](../animation/rotation-snap.md) drives for
+quarter turns. `from_degrees`/`from_rotation_rad` return `Option`
+since only exact multiples qualify.
+
 ## Rotation — snapped *or* free
 
-`Rotation` is the union enum for values that are *usually* a quarter
-turn but sometimes continuous — e.g. a card mid-spin:
+`Rotation` is the union enum for values that are *usually* a snapped
+turn but sometimes continuous — e.g. a card mid-spin. Four variants:
+`QuarterTurn`, `SixthTurn`, `EighthTurn` and `Free(RotationRad)`.
 
 ```rust
 use smearor_commons_geometry::{QuarterTurn, Rotation, RotationRad};
@@ -93,9 +118,14 @@ let f = Rotation::from_degrees(45.0);  // Rotation::Free(RotationRad) — contin
 let q = Rotation::quantized(RotationRad::from_degrees(179.9)); // nearest snap
 
 r.quarter_turn();   // Some(Deg90)
-f.quarter_turn();   // None
-r.is_snapped();     // true
+r.sixth_turn();     // None
+f.is_snapped();     // false — is_snapped covers all three snapped forms
 ```
+
+`degrees()`/`to_rotation_rad()` normalize any variant to a continuous
+angle. `from_degrees`/`quantized` snap only to `QuarterTurn` — the
+finer turns are opt-in via `SixthTurn::from_degrees` /
+`EighthTurn::from_degrees` or the variant constructors directly.
 
 ## RotationDirection
 
@@ -104,13 +134,17 @@ r.is_snapped();     // true
 direction (`None` for zero) and `step(turn)` advancing a `QuarterTurn`
 one step along it.
 
-## AspectRatio, ScaleFactor, SmoothingAlpha
+## AspectRatio, ScaleFactor, Factor, SmoothingAlpha
 
 - `AspectRatio` — width/height ratio; `new` rejects non-positive input
   with `Option`, and consts cover the usual suspects (`SIXTEEN_NINE`,
   `FOUR_THREE`, `ISO_PAPER`, `GOLDEN`, …). `Vec2::aspect()` derives one.
 - `ScaleFactor(pub f64)` — a zoom factor; `Camera` uses it for
   screen-pixels-per-world-unit.
+- `Factor(pub f64)` — a signed, unitless multiplier (`0.0` neutral,
+  negative inverts) — the general-purpose sibling of `ScaleFactor`
+  for coefficients like tilt, squish or drift speed that are no size
+  relation.
 - `SmoothingAlpha` — the EMA weight; `is_effective()` tells whether it
   actually smooths, `complement()` is `1-α`, and
   `from_frame_time(frame_time, tau)` derives the per-frame alpha from a

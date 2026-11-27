@@ -5,7 +5,7 @@ all generic over the coordinate-space unit `U` (and mostly over the
 component type `T`, defaulting to `f64`):
 
 <figure class="diagram">
-  <img src="img/shapes-overview.svg" alt="The geometric primitives: Line, Segment, Polyline, Polygon, Circle, Annulus, Arc, Sphere">
+  <img src="img/shapes-overview.svg" alt="The geometric primitives: Line, Segment, Polyline, Polygon, Circle, Annulus, Arc, Sphere, Hexagon, Octagon, Semicircle">
   <figcaption>the shape zoo — all generic over the unit U</figcaption>
 </figure>
 
@@ -96,7 +96,9 @@ if table_zone.contains(&Vec2::new(150.0, 90.0)) {
 `diameter`, `circumference`) and `f64` bridges (`diameter_f64`,
 `circumference_f64`) — so the same type serves mm-precise surface math
 and framework float APIs. `area::<P>()` is generic over the return
-type.
+type. `inscribed_square_side()` / `with_inscribed_square(center, side)`
+convert between the circle and the largest centered axis-aligned square
+inside it — a vocabulary `Hexagon`, `Octagon` and `Semicircle` share.
 
 `Annulus<U, T>` is a ring: `center`, `inner`, `outer` radii. `width`
 (ring thickness), `mid_radius`, `contains` (inside the outer, outside
@@ -123,7 +125,57 @@ wedge.at(smearor_commons_geometry::Fraction::HALF); // parameter → direction
 `Arc::spanning(from, to)` computes the interval between two
 directions; `Arc::gaps_between(&[RotationRad])` returns the angular
 holes between sorted directions — used e.g. to find free angular slots
-around a dial.
+around a dial (and by `OrbitLayout` in the layout crate to place items
+between anchor directions).
+
+## Regular polygons — Hexagon & Octagon
+
+`Hexagon<U, T>` and `Octagon<U, T>` model the regular n-gons a
+hexagonal grid, a pie-menu ring or a compass dial is built from. Both
+store `center` + `circumradius` (center to vertex) plus a
+`PolygonOrientation` — `FlatTop` (a horizontal top edge) or
+`PointyTop` (a vertex on top).
+
+```rust
+use smearor_commons_geometry::{Hexagon, Octagon, PolygonOrientation, Vec2};
+
+let tile = Hexagon::flat_top(Vec2::new(100.0, 80.0), 40.0);
+let cell = Hexagon::with_inradius(Vec2::new(0.0, 0.0), 17.3, PolygonOrientation::PointyTop);
+let dial = Octagon::with_side_length(Vec2::new(50.0, 50.0), 24.0, PolygonOrientation::FlatTop);
+```
+
+Every extent works in both directions — `with_side_length`/
+`side_length`, `with_inradius`/`inradius` (the apothem, `R·sin(60°)`
+for the hexagon, `R·cos(22.5°)` for the octagon; the hexagon's side
+length *is* its circumradius). Common queries:
+
+- `vertices()` — the corners in counter-clockwise order;
+  `to_polygon()` is the bridge into generic `Polygon` algorithms
+- `contains(p)`, `bounding_box()`, `support(direction)` — the exact
+  convex support function (largest vertex projection)
+- `inscribed_square_side()` / `with_inscribed_square(center, side,
+  orientation)` — the largest centered axis-aligned square inside,
+  and its exact inverse
+
+`PolygonOrientation` is a two-variant enum with `Display`/`FromStr`
+(`flat-top` / `pointy-top`) — and the symmetry vocabulary the snapped
+rotations quantize into: `SixthTurn` maps a hexagon onto itself,
+`EighthTurn` an octagon.
+
+## Semicircle
+
+`Semicircle<U, T>` is a half-disk — a dome standing on its diameter
+edge through `center`, extending toward smaller `y` in the usual
+screen convention:
+
+- `contains(p)` — inside the virtual circle *and* on the dome side of
+  the flat edge
+- `bounding_box()` — `2r` wide, `r` tall, the flat edge at the bottom
+- `support(direction)` — `r` into the dome half, `r·|cos|` along the
+  flat edge
+- `inscribed_square_side()` / `with_inscribed_square(center, side)` —
+  the largest square standing on the diameter edge (`2r/√5`), and its
+  inverse
 
 ## Sphere & friends
 

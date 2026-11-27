@@ -21,8 +21,9 @@ let item = LayoutItem::new(
 ```
 
 - `size: Vec2` — the item's footprint **as currently rotated**
-- `rotation: Rotation` — `QuarterTurn(_)` or `Free(_)`; strategies may
-  preserve it (Flow) or override it (Seat)
+- `rotation: Rotation` — a snapped `QuarterTurn(_)`/`SixthTurn(_)`/
+  `EighthTurn(_)` or `Free(_)`; strategies may preserve it (Flow) or
+  override it (Seat, EdgeStrip)
 - `seat: Option<Seat>` — explicit seat request; `None` leaves the
   decision to the strategy
 
@@ -54,3 +55,21 @@ approximated as the unrotated extent. Strategies use this when an item
 changes orientation on the way to its placement — a `SeatLayout`
 placing an upright `60×40` item at the `Left` seat knows it occupies
 `40×60` along the edge.
+
+## `OrbitItem` — `OrbitLayout`'s request
+
+`OrbitLayout` takes `OrbitItem`s instead of `LayoutItem`s — same
+footprint and rotation, plus an optional anchor direction on the
+orbit circle:
+
+```rust
+use smearor_commons_geometry::{Rotation, RotationRad, Vec2};
+use smearor_commons_layout::OrbitItem;
+
+let flexible = OrbitItem::new(Vec2::new(20.0, 20.0), Rotation::ZERO);
+let pinned = flexible.with_anchor(RotationRad::QUARTER_TURN);
+```
+
+`anchor: Some(dir)` pins the item to that absolute direction;
+`None` leaves it flexible — the strategy distributes flexible items
+into the free angular space between anchors.

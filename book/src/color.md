@@ -63,4 +63,8 @@ classDiagram
 
 Feature gates: `cairo` and `gtk4` bridge `Color` into cairo source
 calls and `gdk::RGBA`; `schemars`/`async-graphql`/`zbus` add schema
-derives where they fit. See the crate's rustdoc for the full API.
+derives where they fit. On `cairo`, all three channel types
+(`u8`/`f32`/`f64`) share the same source-setting vocabulary:
+`apply(ctx)` sets the RGB source, `apply_rgba(ctx)` includes the
+color's own alpha channel, `apply_alpha(ctx, alpha)` overrides it.
+See the crate's rustdoc for the full API.

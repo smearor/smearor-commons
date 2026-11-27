@@ -39,6 +39,10 @@ owned by `RenderContext` like any other target.
 - cairo-only extras: `draw_rotated_text`, `draw_halo_text`
 - **path helpers** (free functions): `polyline_path`, `smooth_path`,
   `wavy_path`, `band_path`, `rounded_rect_path`, `tile_fill`
+- every spec is a **self-contained primitive**: `fill_circle`,
+  `fill_sector` & co. start on a fresh path (`new_path`), so a stale
+  current point can't chain a stray chord into the next shape — the
+  same contract the software-raster backend gives
 - `status()` surfaces cairo's sticky deferred error — `DrawTarget`'s
   end-of-pass check
 
@@ -50,6 +54,10 @@ use smearor_commons_drawing::{image_surface_from_buffer, pixel_buffer_from_surfa
 let surface = image_surface_from_buffer(&buffer)?;   // PixelBuffer<F> → ImageSurface
 let back = pixel_buffer_from_surface(&mut surface)?; // → PixelBuffer<BgraPremultiplied>
 ```
+
+The `cairo` feature also enables cairo-rs' `png` support —
+`ImageSurface::create_from_png`/`write_to_png` are available for PNG
+fixtures and frame dumps without an extra dependency.
 
 ## `DrawingError`
 
