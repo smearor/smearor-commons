@@ -2,6 +2,7 @@ use crate::Polygon;
 use crate::PolygonOrientation;
 use crate::Rect;
 use crate::RotationRad;
+use crate::Size;
 use crate::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
@@ -161,13 +162,50 @@ impl<U> Hexagon<U, f64> {
     /// for both orientations - a square turned a quarter turn is a
     /// square.
     pub fn inscribed_square_side(&self) -> f64 {
-        self.circumradius * (3.0 - 2.0 * SIN_60)
+        Self::inscribed_square_side_for_circumradius(self.circumradius)
+    }
+
+    /// Side of the largest centered axis-aligned square inscribed
+    /// in a hexagon of `circumradius` -
+    /// [`Hexagon::inscribed_square_side`] without constructing the
+    /// hexagon.
+    pub fn inscribed_square_side_for_circumradius(circumradius: f64) -> f64 {
+        circumradius * (3.0 - 2.0 * SIN_60)
     }
 
     /// The hexagon whose inscribed square has `side` - the exact
     /// inverse of [`Hexagon::inscribed_square_side`].
     pub fn with_inscribed_square(center: Vec2<U>, side: f64, orientation: PolygonOrientation) -> Self {
-        Self::new(center, side / (3.0 - 2.0 * SIN_60), orientation)
+        Self::new(center, Self::circumradius_for_inscribed_square(side), orientation)
+    }
+
+    /// The circumradius of the hexagon whose inscribed square has
+    /// `side` - [`Hexagon::with_inscribed_square`] without
+    /// constructing the hexagon.
+    pub fn circumradius_for_inscribed_square(side: f64) -> f64 {
+        side / (3.0 - 2.0 * SIN_60)
+    }
+
+    /// The axis-aligned bounding size of the hexagon of
+    /// `circumradius`: `2R x sqrt(3) * R` for `FlatTop`, transposed
+    /// for `PointyTop`.
+    pub fn bounding_size_for_circumradius(circumradius: f64, orientation: PolygonOrientation) -> Size<f64> {
+        let (width, height) = match orientation {
+            PolygonOrientation::FlatTop => (2.0 * circumradius, 2.0 * circumradius * SIN_60),
+            PolygonOrientation::PointyTop => (2.0 * circumradius * SIN_60, 2.0 * circumradius),
+        };
+        Size::new(width, height)
+    }
+
+    /// The circumradius of the hexagon whose axis-aligned bounding
+    /// size fits `size` - the exact inverse of
+    /// [`Hexagon::bounding_size_for_circumradius`]. A `0.0`
+    /// component leaves that axis unconstrained.
+    pub fn circumradius_for_bounding_size(size: Size<f64>, orientation: PolygonOrientation) -> f64 {
+        match orientation {
+            PolygonOrientation::FlatTop => (size.x / 2.0).max(size.y / (2.0 * SIN_60)),
+            PolygonOrientation::PointyTop => (size.x / (2.0 * SIN_60)).max(size.y / 2.0),
+        }
     }
 
     /// How far the outline extends along `direction` measured from

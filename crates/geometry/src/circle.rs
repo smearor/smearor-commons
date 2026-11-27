@@ -119,14 +119,29 @@ impl<U> Circle<U, f64> {
     /// circle: its four corners rest on the outline, so
     /// `side = radius * sqrt(2)`.
     pub fn inscribed_square_side(&self) -> f64 {
-        self.radius * SQRT_2
+        Self::inscribed_square_side_for_radius(self.radius)
+    }
+
+    /// Side of the largest axis-aligned square inscribed in a
+    /// circle of `radius` - [`Circle::inscribed_square_side`]
+    /// without constructing the circle.
+    pub fn inscribed_square_side_for_radius(radius: f64) -> f64 {
+        radius * SQRT_2
+    }
+
+    /// The radius of the circle circumscribing a centered
+    /// axis-aligned square of `side` -
+    /// [`Circle::with_inscribed_square`] without constructing the
+    /// circle.
+    pub fn radius_for_inscribed_square(side: f64) -> f64 {
+        side / SQRT_2
     }
 
     /// The circle circumscribing a centered axis-aligned square of
     /// `side` - the exact inverse of
     /// [`Circle::inscribed_square_side`].
     pub fn with_inscribed_square(center: Vec2<U>, side: f64) -> Self {
-        Self::new(center, side / SQRT_2)
+        Self::new(center, Self::radius_for_inscribed_square(side))
     }
 
     /// Rasterizes the disk into 1-px-high integer rectangles - one

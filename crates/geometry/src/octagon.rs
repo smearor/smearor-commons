@@ -161,10 +161,7 @@ impl<U> Octagon<U, f64> {
     /// The axis-aligned bounding box: a square `2*inradius x
     /// 2*inradius` for `FlatTop`, `2R x 2R` for `PointyTop`.
     pub fn bounding_box(&self) -> Rect<U, f64> {
-        let half = match self.orientation {
-            PolygonOrientation::FlatTop => self.inradius(),
-            PolygonOrientation::PointyTop => self.circumradius,
-        };
+        let half = Self::bounding_side_for_inradius(self.inradius(), self.orientation) / 2.0;
         Rect::new(self.center - Vec2::new(half, half), Vec2::new(half * 2.0, half * 2.0))
     }
 
@@ -176,20 +173,54 @@ impl<U> Octagon<U, f64> {
     /// corners against the 22.5-degree-slanted edges and fits the
     /// larger `2 * inradius / (cos(22.5deg) + sin(22.5deg))`.
     pub fn inscribed_square_side(&self) -> f64 {
-        match self.orientation {
-            PolygonOrientation::FlatTop => self.inradius() * SQRT_2,
-            PolygonOrientation::PointyTop => 2.0 * self.inradius() / (COS_22_5 + SIN_22_5),
+        Self::inscribed_square_side_for_inradius(self.inradius(), self.orientation)
+    }
+
+    /// Side of the largest centered axis-aligned square inscribed
+    /// in an octagon of `inradius` -
+    /// [`Octagon::inscribed_square_side`] without constructing the
+    /// octagon.
+    pub fn inscribed_square_side_for_inradius(inradius: f64, orientation: PolygonOrientation) -> f64 {
+        match orientation {
+            PolygonOrientation::FlatTop => inradius * SQRT_2,
+            PolygonOrientation::PointyTop => 2.0 * inradius / (COS_22_5 + SIN_22_5),
         }
     }
 
     /// The octagon whose inscribed square has `side` - the exact
     /// inverse of [`Octagon::inscribed_square_side`].
     pub fn with_inscribed_square(center: Vec2<U>, side: f64, orientation: PolygonOrientation) -> Self {
-        let inradius = match orientation {
+        Self::with_inradius(center, Self::inradius_for_inscribed_square(side, orientation), orientation)
+    }
+
+    /// The inradius of the octagon whose inscribed square has
+    /// `side` - [`Octagon::with_inscribed_square`] without
+    /// constructing the octagon.
+    pub fn inradius_for_inscribed_square(side: f64, orientation: PolygonOrientation) -> f64 {
+        match orientation {
             PolygonOrientation::FlatTop => side / SQRT_2,
             PolygonOrientation::PointyTop => side * (COS_22_5 + SIN_22_5) / 2.0,
-        };
-        Self::with_inradius(center, inradius, orientation)
+        }
+    }
+
+    /// Side of the bounding square of the octagon of `inradius`:
+    /// `2 * inradius` for `FlatTop`, `2 * inradius / cos(22.5deg)`
+    /// for `PointyTop`.
+    pub fn bounding_side_for_inradius(inradius: f64, orientation: PolygonOrientation) -> f64 {
+        match orientation {
+            PolygonOrientation::FlatTop => 2.0 * inradius,
+            PolygonOrientation::PointyTop => 2.0 * inradius / COS_22_5,
+        }
+    }
+
+    /// The inradius of the octagon whose bounding square has
+    /// `side` - the exact inverse of
+    /// [`Octagon::bounding_side_for_inradius`].
+    pub fn inradius_for_bounding_side(side: f64, orientation: PolygonOrientation) -> f64 {
+        match orientation {
+            PolygonOrientation::FlatTop => side / 2.0,
+            PolygonOrientation::PointyTop => side * COS_22_5 / 2.0,
+        }
     }
 
     /// How far the outline extends along `direction` measured from
