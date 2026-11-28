@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "../searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -227,6 +227,7 @@ unit-free math available, like <code>Vec2&lt;()&gt;</code>.</p>
 let gap = Distance::&lt;Pixels&gt;::new(24.0);
 gap.as_f64();                          // 24.0 — the erased scalar
 gap * 2.0 + Distance::&lt;Pixels&gt;::new(4.0); // arithmetic keeps the unit
+gap.min(Distance::&lt;Pixels&gt;::new(12.0));   // min/max see only the scalar
 <span class="boring">}</span></code></pre>
 <p>The unit marker carries no value — equality, ordering and serde see
 only the scalar (the wire form is the bare number). <code>From&lt;f64&gt;</code> makes

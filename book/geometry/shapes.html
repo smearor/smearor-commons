@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "../searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -272,11 +272,18 @@ if table_zone.contains(&amp;Vec2::new(150.0, 90.0)) {
 and framework float APIs. <code>area::&lt;P&gt;()</code> is generic over the return
 type. <code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code>
 convert between the circle and the largest centered axis-aligned square
-inside it — a vocabulary <code>Hexagon</code>, <code>Octagon</code> and <code>Semicircle</code> share.</p>
+inside it — a vocabulary <code>Hexagon</code>, <code>Octagon</code> and <code>Semicircle</code> share
+(the <code>*_for_radius</code> / <code>radius_for_inscribed_square</code> statics run the
+same math without constructing a circle). <code>Circle::inscribed_in(bounds)</code>
+is the largest circle centered in a rect — radius half the shorter
+side; inset the bounds beforehand where a margin applies.</p>
 <p><code>Annulus&lt;U, T&gt;</code> is a ring: <code>center</code>, <code>inner</code>, <code>outer</code> radii. <code>width</code>
 (ring thickness), <code>mid_radius</code>, <code>contains</code> (inside the outer, outside
 the inner), and <code>inner_circle</code>/<code>outer_circle</code> views. A radial gauge
-track or a ring-shaped touch zone is an <code>Annulus</code>.</p>
+track or a ring-shaped touch zone is an <code>Annulus</code>.
+<code>Annulus::inscribed_in(bounds, hole)</code> wraps <code>Circle::inscribed_in</code>
+with <code>inner</code> as the <code>hole: Fraction</code> share of the disc (<code>ZERO</code>
+degenerates to the inscribed disk).</p>
 <p>Both rasterize — see <a href="rasterization.html">Rasterization</a>.</p>
 <h2 id="arc"><a class="header" href="#arc">Arc</a></h2>
 <p><code>Arc</code> is an <em>angular</em> interval, not a spatial one — it is not generic
@@ -295,7 +302,11 @@ wedge.at(smearor_commons_geometry::Fraction::HALF); // parameter → direction
 directions; <code>Arc::gaps_between(&amp;[RotationRad])</code> returns the angular
 holes between sorted directions — used e.g. to find free angular slots
 around a dial (and by <code>OrbitLayout</code> in the layout crate to place items
-between anchor directions).</p>
+between anchor directions). <code>Arc::segments(count, gap)</code> partitions the
+interval into <code>count</code> equal arcs, each shrunk symmetrically by <code>gap</code>
+around every boundary — <code>count</code> spokes of <code>gap</code> width stay open in a
+pie layout (<code>RotationRad::ZERO</code> tiles seamlessly). The drawing crate’s
+<code>FillSectors</code> spec rides on it.</p>
 <h2 id="regular-polygons--hexagon--octagon"><a class="header" href="#regular-polygons--hexagon--octagon">Regular polygons — Hexagon &amp; Octagon</a></h2>
 <p><code>Hexagon&lt;U, T&gt;</code> and <code>Octagon&lt;U, T&gt;</code> model the regular n-gons a
 hexagonal grid, a pie-menu ring or a compass dial is built from. Both
@@ -321,7 +332,22 @@ length <em>is</em> its circumradius). Common queries:</p>
 convex support function (largest vertex projection)</li>
 <li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side, orientation)</code> — the largest centered axis-aligned square inside,
 and its exact inverse</li>
+<li><code>inscribed_in(bounds, orientation)</code> — the largest n-gon centered in
+a rect, bounding box touching the tighter side. The pair behind it:
+<code>circumradius_covering(size)</code> is the smallest radius whose box
+<em>covers</em> a content size, <code>circumradius_bounded_by(size)</code> the largest
+whose box <em>stays inside</em> (the octagon spells the same pair over its
+square bounding side)</li>
+<li><code>wedges(outer, inner, squeeze)</code> (octagon only) — an <code>OctagonWedges</code>
+iterator yielding the eight trapezoidal edge inserts as <code>Polygon</code>s:
+the outer side <code>outer</code>-scaled off the inradius and <code>squeeze</code>-narrowed
+around its midpoint, the inner side on the <code>inner</code>-scaled octagon —
+chip inserts, rim marks, border studs</li>
 </ul>
+<p>Static <code>*_for_*</code> companions (<code>inscribed_square_side_for_inradius</code>,
+<code>inradius_for_side_length</code>, <code>bounding_size_for_circumradius</code>, …) run
+every conversion without constructing the shape — handy when only a
+radius or a size travels through the API.</p>
 <p><code>PolygonOrientation</code> is a two-variant enum with <code>Display</code>/<code>FromStr</code>
 (<code>flat-top</code> / <code>pointy-top</code>) — and the symmetry vocabulary the snapped
 rotations quantize into: <code>SixthTurn</code> maps a hexagon onto itself,
@@ -339,6 +365,8 @@ flat edge</li>
 <li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code> —
 the largest square standing on the diameter edge (<code>2r/√5</code>), and its
 inverse</li>
+<li><code>inscribed_in(bounds)</code> — the largest dome centered on the rect’s
+bottom edge, <code>r = min(width/2, height)</code></li>
 </ul>
 <h2 id="sphere--friends"><a class="header" href="#sphere--friends">Sphere &amp; friends</a></h2>
 <ul>

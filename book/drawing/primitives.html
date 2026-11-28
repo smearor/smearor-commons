@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "../searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -183,7 +183,7 @@
 each method takes a plain <strong>spec struct</strong>: geometry + <code>Color&lt;f64&gt;</code> +
 <code>Alpha</code>.</p>
 <figure class="diagram">
-  <img src="img/primitives.svg" alt="Gallery of the seven primitive operations: fill_background, fill_rect, stroke_rect, fill_circle, fill_polygon, stroke_polyline, fill_sector">
+  <img src="img/primitives.svg" alt="Gallery of the primitive operations: fill_background, fill_rect, stroke_rect, fill_circle, fill_polygon, stroke_polyline, fill_sector, stroke_circle, stroke_arc, stroke_polygon, stroke_sector, fill_sectors">
   <figcaption>every spec = geometry + color + alpha — no builder, no state</figcaption>
 </figure>
 <h2 id="the-vocabulary"><a class="header" href="#the-vocabulary">The vocabulary</a></h2>
@@ -205,18 +205,26 @@ target.fill_circle(FillCircle::new(circle, Color::new_rgba(0.86, 0.0, 0.45, 1.0)
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Spec</th><th>Geometry</th><th>Extra field</th></tr>
+<tr><th>Spec</th><th>Geometry</th><th>Extra fields</th></tr>
 </thead>
 <tbody>
 <tr><td><code>FillRect</code></td><td><code>Rect&lt;Pixels&gt;</code></td><td>—</td></tr>
 <tr><td><code>StrokeRect</code></td><td><code>Rect&lt;Pixels&gt;</code></td><td><code>line_width</code> — centered on the edge</td></tr>
 <tr><td><code>FillCircle</code></td><td><code>Circle&lt;Pixels&gt;</code></td><td>—</td></tr>
+<tr><td><code>StrokeCircle</code></td><td><code>Circle&lt;Pixels&gt;</code></td><td><code>line_width</code> — centered on the radius</td></tr>
+<tr><td><code>StrokeArc</code></td><td><code>Circle&lt;Pixels&gt;</code> + <code>Arc</code></td><td><code>line_width</code>, <code>cap</code> — the rim interval (level bars, progress rings)</td></tr>
 <tr><td><code>FillPolygon</code></td><td><code>Polygon&lt;Pixels&gt;</code></td><td>even-odd fill</td></tr>
-<tr><td><code>StrokePolyline</code></td><td><code>Polyline&lt;Pixels&gt;</code></td><td><code>line_width</code>; the path stays <strong>open</strong></td></tr>
+<tr><td><code>StrokePolygon</code></td><td><code>Polygon&lt;Pixels&gt;</code></td><td><code>line_width</code>; closed ring with a joined seam</td></tr>
+<tr><td><code>StrokePolyline</code></td><td><code>Polyline&lt;Pixels&gt;</code></td><td><code>line_width</code>, <code>cap</code>; the path stays <strong>open</strong></td></tr>
 <tr><td><code>FillSector</code></td><td><code>Annulus&lt;Pixels&gt;</code> + <code>Arc</code></td><td>pie-ring wedges</td></tr>
+<tr><td><code>StrokeSector</code></td><td><code>Annulus&lt;Pixels&gt;</code> + <code>Arc</code></td><td><code>line_width</code>; the closed sector boundary</td></tr>
+<tr><td><code>FillSectors</code></td><td><code>Annulus&lt;Pixels&gt;</code> + <code>Arc</code></td><td><code>count</code> + <code>gap</code> partition via <code>Arc::segments</code>, <code>colors</code> cycled per sector</td></tr>
 </tbody>
 </table>
 </div>
+<p>Open strokes end with a <code>Cap</code> — <code>Butt</code> (default, cut at the
+endpoint), <code>Round</code> (a semicircle past it — the progress-bar look) or
+<code>Square</code> — styled via <code>spec.with_cap(...)</code>.</p>
 <h2 id="blending-policy"><a class="header" href="#blending-policy">Blending policy</a></h2>
 <p>All primitives <strong>source-over blend</strong> onto existing pixels — matching
 what a cairo backend produces with <code>set_source_rgba</code> + <code>fill</code>. The

@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "../searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -206,11 +206,17 @@ let view = surface.into_view();                // hand the view back
 <p><code>CairoTarget::new(ctx, size)</code> clones a <code>Context</code> handle (a refcount
 bump) plus a <strong>declared</strong> extent — deliberately a value type, so it can
 be constructed inside GTK <code>snapshot</code>/<code>set_draw_func</code> callbacks and
-owned by <code>RenderContext</code> like any other target.</p>
+owned by <code>RenderContext</code> like any other target. <code>size</code> takes
+<code>impl Into&lt;Size&lt;u32&gt;&gt;</code> — a <code>Size&lt;f64&gt;</code> (GTK’s allocated extent)
+converts component-wise, truncating and saturating.</p>
 <ul>
 <li><code>context()</code> — the escape hatch for anything outside the shared
 vocabulary: <code>save</code>/<code>restore</code>, transforms, patterns, sources</li>
-<li>cairo-only extras: <code>draw_rotated_text</code>, <code>draw_halo_text</code></li>
+<li>cairo-only extras: <code>draw_rotated_text</code>, <code>draw_halo_text</code>, and
+<code>show_rotated_text</code> — the spec-driven variant taking a <code>Text</code>
+(<code>text</code> + <code>ToyFont</code> + <code>at</code> + <code>angle</code> + <code>color</code> + <code>alpha</code>), where
+<code>ToyFont</code> bundles the toy-API selection (<code>face</code>, <code>size</code>, <code>slant</code>,
+<code>weight</code>) as a value</li>
 <li><strong>path helpers</strong> (free functions): <code>polyline_path</code>, <code>smooth_path</code>,
 <code>wavy_path</code>, <code>band_path</code>, <code>rounded_rect_path</code>, <code>tile_fill</code></li>
 <li>every spec is a <strong>self-contained primitive</strong>: <code>fill_circle</code>,
@@ -246,7 +252,23 @@ fixtures and frame dumps without an extra dependency.</p>
 </div>
 <p>The <code>gtk4</code> feature stacks on <code>cairo</code> — <code>ViewSurface</code> +
 <code>smearor-commons-buffer</code>’s <code>to_memory_texture()</code> covers the
-render→display path for GTK consumers.</p>
+render→display path for GTK consumers, and two <code>DrawingArea</code>
+factories wire the target straight into a widget:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_drawing::gtk::{drawing_area, drawing_target};
+use smearor_commons_geometry::Size;
+
+// draw func receives (&amp;Context, allocated Size&lt;f64&gt;)
+let area = drawing_area(Some(Size::new(96, 96)), |ctx, extent| { /* raw cairo */ });
+
+// draw func receives a ready CairoTarget — the shared vocabulary directly
+let area = drawing_target(Some(Size::new(96, 96)), |target| {
+    target.fill_circle(spec);
+});
+<span class="boring">}</span></code></pre>
+<p><code>size</code> is the content request in integer pixels; <code>None</code> leaves GTK’s
+natural sizing.</p>
 
                     </main>
 

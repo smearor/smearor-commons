@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -189,7 +189,10 @@ numeric component type <code>T</code> (default <code>f64</code>). <code>Vec2&lt;
 tagged domain point; <code>Vec2&lt;(), i32&gt;</code> is the <em>unit-erased</em> boundary form
 that converts into whatever a framework expects. <code>Position</code>, <code>Size</code> and
 <code>Rectangle</code> are readable aliases for the erased forms — the same type,
-not parallel representations.</p>
+not parallel representations. Component-wise <code>From</code> conversions bridge
+the component types (<code>f64</code> → <code>f32</code>, <code>f64</code> → <code>u32</code> truncating and
+saturating, <code>u32</code> → <code>i32</code>), and <code>Rect::from_size(size)</code> anchors a rect
+of <code>size</code> at the origin.</p>
 <pre class="mermaid">flowchart LR
     subgraph tagged["Unit-tagged (domain math)"]
         mm["Vec2&amp;lt;Millimeters&amp;gt;"]

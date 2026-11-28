@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "../searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -191,6 +191,7 @@ progress fractions, angles, ratios, smoothing factors. All are
 let t = Fraction::new(0.5);       // Fraction::HALF
 t.clamped();                      // squeeze into 0.0..=1.0
 t.inverse();                      // 1 - t
+t.min(other);                     // f64::min/max semantics
 <span class="boring">}</span></code></pre>
 <p>Animations may extrapolate past <code>1.0</code> (an overshoot easing); each
 consumer decides what out-of-range values mean. <code>clamped()</code> is the

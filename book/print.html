@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -408,7 +408,10 @@ numeric component type <code>T</code> (default <code>f64</code>). <code>Vec2&lt;
 tagged domain point; <code>Vec2&lt;(), i32&gt;</code> is the <em>unit-erased</em> boundary form
 that converts into whatever a framework expects. <code>Position</code>, <code>Size</code> and
 <code>Rectangle</code> are readable aliases for the erased forms — the same type,
-not parallel representations.</p>
+not parallel representations. Component-wise <code>From</code> conversions bridge
+the component types (<code>f64</code> → <code>f32</code>, <code>f64</code> → <code>u32</code> truncating and
+saturating, <code>u32</code> → <code>i32</code>), and <code>Rect::from_size(size)</code> anchors a rect
+of <code>size</code> at the origin.</p>
 <pre class="mermaid">flowchart LR
     subgraph tagged["Unit-tagged (domain math)"]
         mm["Vec2&amp;lt;Millimeters&amp;gt;"]
@@ -555,11 +558,18 @@ if table_zone.contains(&amp;Vec2::new(150.0, 90.0)) {
 and framework float APIs. <code>area::&lt;P&gt;()</code> is generic over the return
 type. <code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code>
 convert between the circle and the largest centered axis-aligned square
-inside it — a vocabulary <code>Hexagon</code>, <code>Octagon</code> and <code>Semicircle</code> share.</p>
+inside it — a vocabulary <code>Hexagon</code>, <code>Octagon</code> and <code>Semicircle</code> share
+(the <code>*_for_radius</code> / <code>radius_for_inscribed_square</code> statics run the
+same math without constructing a circle). <code>Circle::inscribed_in(bounds)</code>
+is the largest circle centered in a rect — radius half the shorter
+side; inset the bounds beforehand where a margin applies.</p>
 <p><code>Annulus&lt;U, T&gt;</code> is a ring: <code>center</code>, <code>inner</code>, <code>outer</code> radii. <code>width</code>
 (ring thickness), <code>mid_radius</code>, <code>contains</code> (inside the outer, outside
 the inner), and <code>inner_circle</code>/<code>outer_circle</code> views. A radial gauge
-track or a ring-shaped touch zone is an <code>Annulus</code>.</p>
+track or a ring-shaped touch zone is an <code>Annulus</code>.
+<code>Annulus::inscribed_in(bounds, hole)</code> wraps <code>Circle::inscribed_in</code>
+with <code>inner</code> as the <code>hole: Fraction</code> share of the disc (<code>ZERO</code>
+degenerates to the inscribed disk).</p>
 <p>Both rasterize — see <a href="#rasterization">Rasterization</a>.</p>
 <h2 id="arc"><a class="header" href="#arc">Arc</a></h2>
 <p><code>Arc</code> is an <em>angular</em> interval, not a spatial one — it is not generic
@@ -578,7 +588,11 @@ wedge.at(smearor_commons_geometry::Fraction::HALF); // parameter → direction
 directions; <code>Arc::gaps_between(&amp;[RotationRad])</code> returns the angular
 holes between sorted directions — used e.g. to find free angular slots
 around a dial (and by <code>OrbitLayout</code> in the layout crate to place items
-between anchor directions).</p>
+between anchor directions). <code>Arc::segments(count, gap)</code> partitions the
+interval into <code>count</code> equal arcs, each shrunk symmetrically by <code>gap</code>
+around every boundary — <code>count</code> spokes of <code>gap</code> width stay open in a
+pie layout (<code>RotationRad::ZERO</code> tiles seamlessly). The drawing crate’s
+<code>FillSectors</code> spec rides on it.</p>
 <h2 id="regular-polygons--hexagon--octagon"><a class="header" href="#regular-polygons--hexagon--octagon">Regular polygons — Hexagon &amp; Octagon</a></h2>
 <p><code>Hexagon&lt;U, T&gt;</code> and <code>Octagon&lt;U, T&gt;</code> model the regular n-gons a
 hexagonal grid, a pie-menu ring or a compass dial is built from. Both
@@ -604,7 +618,22 @@ length <em>is</em> its circumradius). Common queries:</p>
 convex support function (largest vertex projection)</li>
 <li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side, orientation)</code> — the largest centered axis-aligned square inside,
 and its exact inverse</li>
+<li><code>inscribed_in(bounds, orientation)</code> — the largest n-gon centered in
+a rect, bounding box touching the tighter side. The pair behind it:
+<code>circumradius_covering(size)</code> is the smallest radius whose box
+<em>covers</em> a content size, <code>circumradius_bounded_by(size)</code> the largest
+whose box <em>stays inside</em> (the octagon spells the same pair over its
+square bounding side)</li>
+<li><code>wedges(outer, inner, squeeze)</code> (octagon only) — an <code>OctagonWedges</code>
+iterator yielding the eight trapezoidal edge inserts as <code>Polygon</code>s:
+the outer side <code>outer</code>-scaled off the inradius and <code>squeeze</code>-narrowed
+around its midpoint, the inner side on the <code>inner</code>-scaled octagon —
+chip inserts, rim marks, border studs</li>
 </ul>
+<p>Static <code>*_for_*</code> companions (<code>inscribed_square_side_for_inradius</code>,
+<code>inradius_for_side_length</code>, <code>bounding_size_for_circumradius</code>, …) run
+every conversion without constructing the shape — handy when only a
+radius or a size travels through the API.</p>
 <p><code>PolygonOrientation</code> is a two-variant enum with <code>Display</code>/<code>FromStr</code>
 (<code>flat-top</code> / <code>pointy-top</code>) — and the symmetry vocabulary the snapped
 rotations quantize into: <code>SixthTurn</code> maps a hexagon onto itself,
@@ -622,6 +651,8 @@ flat edge</li>
 <li><code>inscribed_square_side()</code> / <code>with_inscribed_square(center, side)</code> —
 the largest square standing on the diameter edge (<code>2r/√5</code>), and its
 inverse</li>
+<li><code>inscribed_in(bounds)</code> — the largest dome centered on the rect’s
+bottom edge, <code>r = min(width/2, height)</code></li>
 </ul>
 <h2 id="sphere--friends"><a class="header" href="#sphere--friends">Sphere &amp; friends</a></h2>
 <ul>
@@ -646,6 +677,7 @@ progress fractions, angles, ratios, smoothing factors. All are
 let t = Fraction::new(0.5);       // Fraction::HALF
 t.clamped();                      // squeeze into 0.0..=1.0
 t.inverse();                      // 1 - t
+t.min(other);                     // f64::min/max semantics
 <span class="boring">}</span></code></pre>
 <p>Animations may extrapolate past <code>1.0</code> (an overshoot easing); each
 consumer decides what out-of-range values mean. <code>clamped()</code> is the
@@ -812,6 +844,7 @@ unit-free math available, like <code>Vec2&lt;()&gt;</code>.</p>
 let gap = Distance::&lt;Pixels&gt;::new(24.0);
 gap.as_f64();                          // 24.0 — the erased scalar
 gap * 2.0 + Distance::&lt;Pixels&gt;::new(4.0); // arithmetic keeps the unit
+gap.min(Distance::&lt;Pixels&gt;::new(12.0));   // min/max see only the scalar
 <span class="boring">}</span></code></pre>
 <p>The unit marker carries no value — equality, ordering and serde see
 only the scalar (the wire form is the bare number). <code>From&lt;f64&gt;</code> makes
@@ -2488,7 +2521,7 @@ the spec structs at once — the intended consumer import.</p>
 each method takes a plain <strong>spec struct</strong>: geometry + <code>Color&lt;f64&gt;</code> +
 <code>Alpha</code>.</p>
 <figure class="diagram">
-  <img src="drawing/img/primitives.svg" alt="Gallery of the seven primitive operations: fill_background, fill_rect, stroke_rect, fill_circle, fill_polygon, stroke_polyline, fill_sector">
+  <img src="drawing/img/primitives.svg" alt="Gallery of the primitive operations: fill_background, fill_rect, stroke_rect, fill_circle, fill_polygon, stroke_polyline, fill_sector, stroke_circle, stroke_arc, stroke_polygon, stroke_sector, fill_sectors">
   <figcaption>every spec = geometry + color + alpha — no builder, no state</figcaption>
 </figure>
 <h2 id="the-vocabulary"><a class="header" href="#the-vocabulary">The vocabulary</a></h2>
@@ -2510,18 +2543,26 @@ target.fill_circle(FillCircle::new(circle, Color::new_rgba(0.86, 0.0, 0.45, 1.0)
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Spec</th><th>Geometry</th><th>Extra field</th></tr>
+<tr><th>Spec</th><th>Geometry</th><th>Extra fields</th></tr>
 </thead>
 <tbody>
 <tr><td><code>FillRect</code></td><td><code>Rect&lt;Pixels&gt;</code></td><td>—</td></tr>
 <tr><td><code>StrokeRect</code></td><td><code>Rect&lt;Pixels&gt;</code></td><td><code>line_width</code> — centered on the edge</td></tr>
 <tr><td><code>FillCircle</code></td><td><code>Circle&lt;Pixels&gt;</code></td><td>—</td></tr>
+<tr><td><code>StrokeCircle</code></td><td><code>Circle&lt;Pixels&gt;</code></td><td><code>line_width</code> — centered on the radius</td></tr>
+<tr><td><code>StrokeArc</code></td><td><code>Circle&lt;Pixels&gt;</code> + <code>Arc</code></td><td><code>line_width</code>, <code>cap</code> — the rim interval (level bars, progress rings)</td></tr>
 <tr><td><code>FillPolygon</code></td><td><code>Polygon&lt;Pixels&gt;</code></td><td>even-odd fill</td></tr>
-<tr><td><code>StrokePolyline</code></td><td><code>Polyline&lt;Pixels&gt;</code></td><td><code>line_width</code>; the path stays <strong>open</strong></td></tr>
+<tr><td><code>StrokePolygon</code></td><td><code>Polygon&lt;Pixels&gt;</code></td><td><code>line_width</code>; closed ring with a joined seam</td></tr>
+<tr><td><code>StrokePolyline</code></td><td><code>Polyline&lt;Pixels&gt;</code></td><td><code>line_width</code>, <code>cap</code>; the path stays <strong>open</strong></td></tr>
 <tr><td><code>FillSector</code></td><td><code>Annulus&lt;Pixels&gt;</code> + <code>Arc</code></td><td>pie-ring wedges</td></tr>
+<tr><td><code>StrokeSector</code></td><td><code>Annulus&lt;Pixels&gt;</code> + <code>Arc</code></td><td><code>line_width</code>; the closed sector boundary</td></tr>
+<tr><td><code>FillSectors</code></td><td><code>Annulus&lt;Pixels&gt;</code> + <code>Arc</code></td><td><code>count</code> + <code>gap</code> partition via <code>Arc::segments</code>, <code>colors</code> cycled per sector</td></tr>
 </tbody>
 </table>
 </div>
+<p>Open strokes end with a <code>Cap</code> — <code>Butt</code> (default, cut at the
+endpoint), <code>Round</code> (a semicircle past it — the progress-bar look) or
+<code>Square</code> — styled via <code>spec.with_cap(...)</code>.</p>
 <h2 id="blending-policy"><a class="header" href="#blending-policy">Blending policy</a></h2>
 <p>All primitives <strong>source-over blend</strong> onto existing pixels — matching
 what a cairo backend produces with <code>set_source_rgba</code> + <code>fill</code>. The
@@ -2583,9 +2624,13 @@ the same size probes the glyph outline once.</p>
 labels, positioned text, and the two indicator shapes.</p>
 <h2 id="text"><a class="header" href="#text">Text</a></h2>
 <p>All three methods take the font as <code>Option&lt;&amp;FontVec&gt;</code>; a <code>None</code> font
-falls back to the raster backend’s <strong>built-in bitmap renderer</strong> (cairo
-uses its toy text API with system <code>Sans</code>). Text rendering never
-hard-fails on a missing font.</p>
+falls back on the raster backend to its <strong>built-in bitmap renderer</strong>.
+Cairo deliberately has no bitmap fallback (fixed raster glyphs would
+contradict the vector pipeline): <code>draw_label</code>/<code>draw_text_centered</code>
+become no-ops with a <code>debug!</code> note, while <code>draw_text</code> still draws via
+the toy text API with system <code>Sans</code> — free text is exactly where the
+toy path has a consumer. Text rendering never hard-fails on a missing
+font.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use smearor_commons_geometry::{Pixels, Vec2};
@@ -2713,11 +2758,17 @@ let view = surface.into_view();                // hand the view back
 <p><code>CairoTarget::new(ctx, size)</code> clones a <code>Context</code> handle (a refcount
 bump) plus a <strong>declared</strong> extent — deliberately a value type, so it can
 be constructed inside GTK <code>snapshot</code>/<code>set_draw_func</code> callbacks and
-owned by <code>RenderContext</code> like any other target.</p>
+owned by <code>RenderContext</code> like any other target. <code>size</code> takes
+<code>impl Into&lt;Size&lt;u32&gt;&gt;</code> — a <code>Size&lt;f64&gt;</code> (GTK’s allocated extent)
+converts component-wise, truncating and saturating.</p>
 <ul>
 <li><code>context()</code> — the escape hatch for anything outside the shared
 vocabulary: <code>save</code>/<code>restore</code>, transforms, patterns, sources</li>
-<li>cairo-only extras: <code>draw_rotated_text</code>, <code>draw_halo_text</code></li>
+<li>cairo-only extras: <code>draw_rotated_text</code>, <code>draw_halo_text</code>, and
+<code>show_rotated_text</code> — the spec-driven variant taking a <code>Text</code>
+(<code>text</code> + <code>ToyFont</code> + <code>at</code> + <code>angle</code> + <code>color</code> + <code>alpha</code>), where
+<code>ToyFont</code> bundles the toy-API selection (<code>face</code>, <code>size</code>, <code>slant</code>,
+<code>weight</code>) as a value</li>
 <li><strong>path helpers</strong> (free functions): <code>polyline_path</code>, <code>smooth_path</code>,
 <code>wavy_path</code>, <code>band_path</code>, <code>rounded_rect_path</code>, <code>tile_fill</code></li>
 <li>every spec is a <strong>self-contained primitive</strong>: <code>fill_circle</code>,
@@ -2753,7 +2804,23 @@ fixtures and frame dumps without an extra dependency.</p>
 </div>
 <p>The <code>gtk4</code> feature stacks on <code>cairo</code> — <code>ViewSurface</code> +
 <code>smearor-commons-buffer</code>’s <code>to_memory_texture()</code> covers the
-render→display path for GTK consumers.</p>
+render→display path for GTK consumers, and two <code>DrawingArea</code>
+factories wire the target straight into a widget:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use smearor_commons_drawing::gtk::{drawing_area, drawing_target};
+use smearor_commons_geometry::Size;
+
+// draw func receives (&amp;Context, allocated Size&lt;f64&gt;)
+let area = drawing_area(Some(Size::new(96, 96)), |ctx, extent| { /* raw cairo */ });
+
+// draw func receives a ready CairoTarget — the shared vocabulary directly
+let area = drawing_target(Some(Size::new(96, 96)), |target| {
+    target.fill_circle(spec);
+});
+<span class="boring">}</span></code></pre>
+<p><code>size</code> is the content request in integer pixels; <code>None</code> leaves GTK’s
+natural sizing.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="smearor-commons-animation"><a class="header" href="#smearor-commons-animation">smearor-commons-animation</a></h1>
 <p>Timed animations, pure <code>std</code>: a <code>TimedAnimation</code> pairs a <code>Trajectory</code> —
@@ -3843,6 +3910,10 @@ widgets - the same frame pipeline the experimenter uses:</p>
 straight-alpha <code>PixelBuffer&lt;Rgba&gt;</code> at <code>allocation * scale_factor</code>
 (<code>WidgetPaintable</code> -&gt; render node -&gt; cairo <code>ARgb32</code> -&gt; buffer).
 Called once per animation; live widget content is a non-goal.</li>
+<li><strong><code>gtk::snapshot_to_png(&amp;widget, path)</code></strong> - <code>snapshot</code> plus the
+PNG write in one call - the probe “render once, dump, quit” idiom.
+Past the snapshot step failures surface as <code>FxError::PngDump</code>
+(buffer-to-surface conversion or the file write).</li>
 <li><strong><code>gtk::FxPlayer</code></strong> - a <code>DrawingArea</code> subclass owning the clock and
 frame buffers. <code>set_effect(spec, input)</code> + <code>play(FxPlayOptions)</code>
 runs a <code>TimedAnimation</code> on the widget’s frame clock and paints the

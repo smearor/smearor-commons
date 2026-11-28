@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "../searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-011bf558.js"></script>
@@ -183,9 +183,13 @@
 labels, positioned text, and the two indicator shapes.</p>
 <h2 id="text"><a class="header" href="#text">Text</a></h2>
 <p>All three methods take the font as <code>Option&lt;&amp;FontVec&gt;</code>; a <code>None</code> font
-falls back to the raster backend’s <strong>built-in bitmap renderer</strong> (cairo
-uses its toy text API with system <code>Sans</code>). Text rendering never
-hard-fails on a missing font.</p>
+falls back on the raster backend to its <strong>built-in bitmap renderer</strong>.
+Cairo deliberately has no bitmap fallback (fixed raster glyphs would
+contradict the vector pipeline): <code>draw_label</code>/<code>draw_text_centered</code>
+become no-ops with a <code>debug!</code> note, while <code>draw_text</code> still draws via
+the toy text API with system <code>Sans</code> — free text is exactly where the
+toy path has a consumer. Text rendering never hard-fails on a missing
+font.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use smearor_commons_geometry::{Pixels, Vec2};

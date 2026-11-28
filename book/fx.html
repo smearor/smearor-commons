@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-f5c53e79.js";
+            window.path_to_searchindex_js = "searchindex-5ae46136.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-011bf558.js"></script>
@@ -273,6 +273,10 @@ widgets - the same frame pipeline the experimenter uses:</p>
 straight-alpha <code>PixelBuffer&lt;Rgba&gt;</code> at <code>allocation * scale_factor</code>
 (<code>WidgetPaintable</code> -&gt; render node -&gt; cairo <code>ARgb32</code> -&gt; buffer).
 Called once per animation; live widget content is a non-goal.</li>
+<li><strong><code>gtk::snapshot_to_png(&amp;widget, path)</code></strong> - <code>snapshot</code> plus the
+PNG write in one call - the probe “render once, dump, quit” idiom.
+Past the snapshot step failures surface as <code>FxError::PngDump</code>
+(buffer-to-surface conversion or the file write).</li>
 <li><strong><code>gtk::FxPlayer</code></strong> - a <code>DrawingArea</code> subclass owning the clock and
 frame buffers. <code>set_effect(spec, input)</code> + <code>play(FxPlayOptions)</code>
 runs a <code>TimedAnimation</code> on the widget’s frame clock and paints the
