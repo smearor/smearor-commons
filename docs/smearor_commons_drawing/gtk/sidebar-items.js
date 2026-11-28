@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["drawing_area","drawing_target"]};

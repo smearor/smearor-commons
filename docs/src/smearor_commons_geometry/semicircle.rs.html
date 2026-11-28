@@ -65,81 +65,89 @@
 <a href=#65 id=65 data-nosnippet>65</a>    }
 <a href=#66 id=66 data-nosnippet>66</a>
 <a href=#67 id=67 data-nosnippet>67</a>    <span class="doccomment">/// The axis-aligned bounding box: `2r` wide and `r` tall, the
-<a href=#68 id=68 data-nosnippet>68</a>    /// diameter edge as its bottom side.
-<a href=#69 id=69 data-nosnippet>69</a>    </span><span class="kw">pub fn </span>bounding_box(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rect&lt;U, f64&gt; {
-<a href=#70 id=70 data-nosnippet>70</a>        Rect::new(<span class="self">self</span>.center - Vec2::new(<span class="self">self</span>.radius, <span class="self">self</span>.radius), Vec2::new(<span class="self">self</span>.radius * <span class="number">2.0</span>, <span class="self">self</span>.radius))
-<a href=#71 id=71 data-nosnippet>71</a>    }
-<a href=#72 id=72 data-nosnippet>72</a>
-<a href=#73 id=73 data-nosnippet>73</a>    <span class="doccomment">/// How far the outline extends along `direction` measured from
-<a href=#74 id=74 data-nosnippet>74</a>    /// `center` - the support function of the half-disk: `r` for any
-<a href=#75 id=75 data-nosnippet>75</a>    /// direction into the dome half (the arc is part of the full
-<a href=#76 id=76 data-nosnippet>76</a>    /// circle), `r * |cos|` along the flat edge and below it (only
-<a href=#77 id=77 data-nosnippet>77</a>    /// the diameter endpoints bound those directions).
-<a href=#78 id=78 data-nosnippet>78</a>    </span><span class="kw">pub fn </span>support(<span class="kw-2">&amp;</span><span class="self">self</span>, direction: RotationRad) -&gt; f64 {
-<a href=#79 id=79 data-nosnippet>79</a>        <span class="kw">let </span>(sin, cos) = direction.sin_cos();
-<a href=#80 id=80 data-nosnippet>80</a>        <span class="kw">if </span>sin &lt; <span class="number">0.0 </span>{ <span class="self">self</span>.radius } <span class="kw">else </span>{ <span class="self">self</span>.radius * cos.abs() }
-<a href=#81 id=81 data-nosnippet>81</a>    }
-<a href=#82 id=82 data-nosnippet>82</a>
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="doccomment">/// Side of the largest axis-aligned square standing on the
-<a href=#84 id=84 data-nosnippet>84</a>    /// diameter edge with both top corners on the arc: `2r / sqrt(5)`.
-<a href=#85 id=85 data-nosnippet>85</a>    </span><span class="kw">pub fn </span>inscribed_square_side(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
-<a href=#86 id=86 data-nosnippet>86</a>        <span class="self">self</span>.radius * <span class="number">2.0 </span>/ <span class="number">5.0_f64</span>.sqrt()
-<a href=#87 id=87 data-nosnippet>87</a>    }
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="doccomment">/// The dome whose inscribed square stands on the diameter edge
-<a href=#90 id=90 data-nosnippet>90</a>    /// through `center` with `side` - the exact inverse of
-<a href=#91 id=91 data-nosnippet>91</a>    /// [`Semicircle::inscribed_square_side`].
-<a href=#92 id=92 data-nosnippet>92</a>    </span><span class="kw">pub fn </span>with_inscribed_square(center: Vec2&lt;U&gt;, side: f64) -&gt; <span class="self">Self </span>{
-<a href=#93 id=93 data-nosnippet>93</a>        <span class="self">Self</span>::new(center, side * <span class="number">5.0_f64</span>.sqrt() / <span class="number">2.0</span>)
-<a href=#94 id=94 data-nosnippet>94</a>    }
-<a href=#95 id=95 data-nosnippet>95</a>}
+<a href=#68 id=68 data-nosnippet>68</a>    /// The largest dome centered on the bottom edge of `bounds` -
+<a href=#69 id=69 data-nosnippet>69</a>    /// its radius is `min(width / 2, height)`: half the width or
+<a href=#70 id=70 data-nosnippet>70</a>    /// the full height, whichever is tighter. Inset the bound
+<a href=#71 id=71 data-nosnippet>71</a>    /// beforehand where a margin applies (`bounds.inset(...)`).
+<a href=#72 id=72 data-nosnippet>72</a>    </span><span class="kw">pub fn </span>inscribed_in(bounds: <span class="kw-2">&amp;</span>Rect&lt;U, f64&gt;) -&gt; <span class="self">Self </span>{
+<a href=#73 id=73 data-nosnippet>73</a>        <span class="self">Self</span>::new(Vec2::new(bounds.center().x, bounds.min.y + bounds.height()), (bounds.width() / <span class="number">2.0</span>).min(bounds.height()))
+<a href=#74 id=74 data-nosnippet>74</a>    }
+<a href=#75 id=75 data-nosnippet>75</a>
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="doccomment">/// diameter edge as its bottom side.
+<a href=#77 id=77 data-nosnippet>77</a>    </span><span class="kw">pub fn </span>bounding_box(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rect&lt;U, f64&gt; {
+<a href=#78 id=78 data-nosnippet>78</a>        Rect::new(<span class="self">self</span>.center - Vec2::new(<span class="self">self</span>.radius, <span class="self">self</span>.radius), Vec2::new(<span class="self">self</span>.radius * <span class="number">2.0</span>, <span class="self">self</span>.radius))
+<a href=#79 id=79 data-nosnippet>79</a>    }
+<a href=#80 id=80 data-nosnippet>80</a>
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="doccomment">/// How far the outline extends along `direction` measured from
+<a href=#82 id=82 data-nosnippet>82</a>    /// `center` - the support function of the half-disk: `r` for any
+<a href=#83 id=83 data-nosnippet>83</a>    /// direction into the dome half (the arc is part of the full
+<a href=#84 id=84 data-nosnippet>84</a>    /// circle), `r * |cos|` along the flat edge and below it (only
+<a href=#85 id=85 data-nosnippet>85</a>    /// the diameter endpoints bound those directions).
+<a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">pub fn </span>support(<span class="kw-2">&amp;</span><span class="self">self</span>, direction: RotationRad) -&gt; f64 {
+<a href=#87 id=87 data-nosnippet>87</a>        <span class="kw">let </span>(sin, cos) = direction.sin_cos();
+<a href=#88 id=88 data-nosnippet>88</a>        <span class="kw">if </span>sin &lt; <span class="number">0.0 </span>{ <span class="self">self</span>.radius } <span class="kw">else </span>{ <span class="self">self</span>.radius * cos.abs() }
+<a href=#89 id=89 data-nosnippet>89</a>    }
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="doccomment">/// Side of the largest axis-aligned square standing on the
+<a href=#92 id=92 data-nosnippet>92</a>    /// diameter edge with both top corners on the arc: `2r / sqrt(5)`.
+<a href=#93 id=93 data-nosnippet>93</a>    </span><span class="kw">pub fn </span>inscribed_square_side(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+<a href=#94 id=94 data-nosnippet>94</a>        <span class="self">self</span>.radius * <span class="number">2.0 </span>/ <span class="number">5.0_f64</span>.sqrt()
+<a href=#95 id=95 data-nosnippet>95</a>    }
 <a href=#96 id=96 data-nosnippet>96</a>
-<a href=#97 id=97 data-nosnippet>97</a><span class="attr">#[cfg(test)]
-<a href=#98 id=98 data-nosnippet>98</a></span><span class="kw">mod </span>tests {
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="kw">use </span><span class="kw">super</span>::Semicircle;
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="kw">use </span><span class="kw">crate</span>::Pixels;
-<a href=#101 id=101 data-nosnippet>101</a>    <span class="kw">use </span><span class="kw">crate</span>::RotationRad;
-<a href=#102 id=102 data-nosnippet>102</a>    <span class="kw">use </span><span class="kw">crate</span>::Vec2;
-<a href=#103 id=103 data-nosnippet>103</a>
-<a href=#104 id=104 data-nosnippet>104</a>    <span class="doccomment">/// Points inside the dome, past the flat edge and off the sides.
-<a href=#105 id=105 data-nosnippet>105</a>    </span><span class="attr">#[test]
-<a href=#106 id=106 data-nosnippet>106</a>    </span><span class="kw">fn </span>contains_uses_the_diameter_edge() {
-<a href=#107 id=107 data-nosnippet>107</a>        <span class="kw">let </span>dome = Semicircle::&lt;Pixels&gt;::new(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), <span class="number">10.0</span>);
-<a href=#108 id=108 data-nosnippet>108</a>        <span class="macro">assert!</span>(dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>)));
-<a href=#109 id=109 data-nosnippet>109</a>        <span class="macro">assert!</span>(dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">0.0</span>, -<span class="number">10.0</span>)));
-<a href=#110 id=110 data-nosnippet>110</a>        <span class="macro">assert!</span>(dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">9.9</span>, -<span class="number">0.5</span>)));
-<a href=#111 id=111 data-nosnippet>111</a>        <span class="macro">assert!</span>(!dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">0.0</span>, <span class="number">1.0</span>)));
-<a href=#112 id=112 data-nosnippet>112</a>        <span class="macro">assert!</span>(!dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">11.0</span>, -<span class="number">0.5</span>)));
-<a href=#113 id=113 data-nosnippet>113</a>    }
-<a href=#114 id=114 data-nosnippet>114</a>
-<a href=#115 id=115 data-nosnippet>115</a>    <span class="doccomment">/// The bounding box is `2r x r` with the flat edge at the bottom.
-<a href=#116 id=116 data-nosnippet>116</a>    </span><span class="attr">#[test]
-<a href=#117 id=117 data-nosnippet>117</a>    </span><span class="kw">fn </span>bounding_box_is_wide_and_half_tall() {
-<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">let </span>dome = Semicircle::&lt;()&gt;::new(Vec2::new(<span class="number">50.0</span>, <span class="number">60.0</span>), <span class="number">20.0</span>);
-<a href=#119 id=119 data-nosnippet>119</a>        <span class="kw">let </span>bounds = dome.bounding_box();
-<a href=#120 id=120 data-nosnippet>120</a>        <span class="macro">assert_eq!</span>(bounds.width(), <span class="number">40.0</span>);
-<a href=#121 id=121 data-nosnippet>121</a>        <span class="macro">assert_eq!</span>(bounds.height(), <span class="number">20.0</span>);
-<a href=#122 id=122 data-nosnippet>122</a>        <span class="macro">assert_eq!</span>(bounds.bottom(), <span class="number">60.0</span>);
-<a href=#123 id=123 data-nosnippet>123</a>    }
-<a href=#124 id=124 data-nosnippet>124</a>
-<a href=#125 id=125 data-nosnippet>125</a>    <span class="doccomment">/// The inscribed square and its inverse agree.
-<a href=#126 id=126 data-nosnippet>126</a>    </span><span class="attr">#[test]
-<a href=#127 id=127 data-nosnippet>127</a>    </span><span class="kw">fn </span>inscribed_square_roundtrips() {
-<a href=#128 id=128 data-nosnippet>128</a>        <span class="kw">let </span>dome = Semicircle::&lt;()&gt;::new(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), <span class="number">10.0</span>);
-<a href=#129 id=129 data-nosnippet>129</a>        <span class="kw">let </span>side = dome.inscribed_square_side();
-<a href=#130 id=130 data-nosnippet>130</a>        <span class="comment">// Top corners rest on the arc: (s/2)^2 + s^2 = r^2.
-<a href=#131 id=131 data-nosnippet>131</a>        </span><span class="macro">assert!</span>((side.powi(<span class="number">2</span>) / <span class="number">4.0 </span>+ side.powi(<span class="number">2</span>) - <span class="number">100.0</span>).abs() &lt; <span class="number">1e-9</span>);
-<a href=#132 id=132 data-nosnippet>132</a>        <span class="kw">let </span>back = Semicircle::&lt;()&gt;::with_inscribed_square(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), side);
-<a href=#133 id=133 data-nosnippet>133</a>        <span class="macro">assert!</span>((back.radius - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-9</span>);
-<a href=#134 id=134 data-nosnippet>134</a>    }
-<a href=#135 id=135 data-nosnippet>135</a>
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="doccomment">/// Support reaches `r` upward and `r|cos|` along the flat edge.
-<a href=#137 id=137 data-nosnippet>137</a>    </span><span class="attr">#[test]
-<a href=#138 id=138 data-nosnippet>138</a>    </span><span class="kw">fn </span>support_follows_the_dome_side() {
-<a href=#139 id=139 data-nosnippet>139</a>        <span class="kw">let </span>dome = Semicircle::&lt;()&gt;::new(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), <span class="number">10.0</span>);
-<a href=#140 id=140 data-nosnippet>140</a>        <span class="macro">assert!</span>((dome.support(RotationRad::new(-std::f64::consts::FRAC_PI_2)) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-9</span>);
-<a href=#141 id=141 data-nosnippet>141</a>        <span class="macro">assert!</span>((dome.support(RotationRad::ZERO) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-9</span>);
-<a href=#142 id=142 data-nosnippet>142</a>        <span class="macro">assert!</span>(dome.support(RotationRad::QUARTER_TURN).abs() &lt; <span class="number">1e-9</span>);
-<a href=#143 id=143 data-nosnippet>143</a>    }
-<a href=#144 id=144 data-nosnippet>144</a>}
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="doccomment">/// The dome whose inscribed square stands on the diameter edge
+<a href=#98 id=98 data-nosnippet>98</a>    /// through `center` with `side` - the exact inverse of
+<a href=#99 id=99 data-nosnippet>99</a>    /// [`Semicircle::inscribed_square_side`].
+<a href=#100 id=100 data-nosnippet>100</a>    </span><span class="kw">pub fn </span>with_inscribed_square(center: Vec2&lt;U&gt;, side: f64) -&gt; <span class="self">Self </span>{
+<a href=#101 id=101 data-nosnippet>101</a>        <span class="self">Self</span>::new(center, side * <span class="number">5.0_f64</span>.sqrt() / <span class="number">2.0</span>)
+<a href=#102 id=102 data-nosnippet>102</a>    }
+<a href=#103 id=103 data-nosnippet>103</a>}
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a><span class="attr">#[cfg(test)]
+<a href=#106 id=106 data-nosnippet>106</a></span><span class="kw">mod </span>tests {
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">use </span><span class="kw">super</span>::Semicircle;
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">use </span><span class="kw">crate</span>::Pixels;
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="kw">use </span><span class="kw">crate</span>::RotationRad;
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">use </span><span class="kw">crate</span>::Vec2;
+<a href=#111 id=111 data-nosnippet>111</a>
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="doccomment">/// Points inside the dome, past the flat edge and off the sides.
+<a href=#113 id=113 data-nosnippet>113</a>    </span><span class="attr">#[test]
+<a href=#114 id=114 data-nosnippet>114</a>    </span><span class="kw">fn </span>contains_uses_the_diameter_edge() {
+<a href=#115 id=115 data-nosnippet>115</a>        <span class="kw">let </span>dome = Semicircle::&lt;Pixels&gt;::new(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), <span class="number">10.0</span>);
+<a href=#116 id=116 data-nosnippet>116</a>        <span class="macro">assert!</span>(dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>)));
+<a href=#117 id=117 data-nosnippet>117</a>        <span class="macro">assert!</span>(dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">0.0</span>, -<span class="number">10.0</span>)));
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="macro">assert!</span>(dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">9.9</span>, -<span class="number">0.5</span>)));
+<a href=#119 id=119 data-nosnippet>119</a>        <span class="macro">assert!</span>(!dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">0.0</span>, <span class="number">1.0</span>)));
+<a href=#120 id=120 data-nosnippet>120</a>        <span class="macro">assert!</span>(!dome.contains(<span class="kw-2">&amp;</span>Vec2::new(<span class="number">11.0</span>, -<span class="number">0.5</span>)));
+<a href=#121 id=121 data-nosnippet>121</a>    }
+<a href=#122 id=122 data-nosnippet>122</a>
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="doccomment">/// The bounding box is `2r x r` with the flat edge at the bottom.
+<a href=#124 id=124 data-nosnippet>124</a>    </span><span class="attr">#[test]
+<a href=#125 id=125 data-nosnippet>125</a>    </span><span class="kw">fn </span>bounding_box_is_wide_and_half_tall() {
+<a href=#126 id=126 data-nosnippet>126</a>        <span class="kw">let </span>dome = Semicircle::&lt;()&gt;::new(Vec2::new(<span class="number">50.0</span>, <span class="number">60.0</span>), <span class="number">20.0</span>);
+<a href=#127 id=127 data-nosnippet>127</a>        <span class="kw">let </span>bounds = dome.bounding_box();
+<a href=#128 id=128 data-nosnippet>128</a>        <span class="macro">assert_eq!</span>(bounds.width(), <span class="number">40.0</span>);
+<a href=#129 id=129 data-nosnippet>129</a>        <span class="macro">assert_eq!</span>(bounds.height(), <span class="number">20.0</span>);
+<a href=#130 id=130 data-nosnippet>130</a>        <span class="macro">assert_eq!</span>(bounds.bottom(), <span class="number">60.0</span>);
+<a href=#131 id=131 data-nosnippet>131</a>    }
+<a href=#132 id=132 data-nosnippet>132</a>
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="doccomment">/// The inscribed square and its inverse agree.
+<a href=#134 id=134 data-nosnippet>134</a>    </span><span class="attr">#[test]
+<a href=#135 id=135 data-nosnippet>135</a>    </span><span class="kw">fn </span>inscribed_square_roundtrips() {
+<a href=#136 id=136 data-nosnippet>136</a>        <span class="kw">let </span>dome = Semicircle::&lt;()&gt;::new(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), <span class="number">10.0</span>);
+<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">let </span>side = dome.inscribed_square_side();
+<a href=#138 id=138 data-nosnippet>138</a>        <span class="comment">// Top corners rest on the arc: (s/2)^2 + s^2 = r^2.
+<a href=#139 id=139 data-nosnippet>139</a>        </span><span class="macro">assert!</span>((side.powi(<span class="number">2</span>) / <span class="number">4.0 </span>+ side.powi(<span class="number">2</span>) - <span class="number">100.0</span>).abs() &lt; <span class="number">1e-9</span>);
+<a href=#140 id=140 data-nosnippet>140</a>        <span class="kw">let </span>back = Semicircle::&lt;()&gt;::with_inscribed_square(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), side);
+<a href=#141 id=141 data-nosnippet>141</a>        <span class="macro">assert!</span>((back.radius - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-9</span>);
+<a href=#142 id=142 data-nosnippet>142</a>    }
+<a href=#143 id=143 data-nosnippet>143</a>
+<a href=#144 id=144 data-nosnippet>144</a>    <span class="doccomment">/// Support reaches `r` upward and `r|cos|` along the flat edge.
+<a href=#145 id=145 data-nosnippet>145</a>    </span><span class="attr">#[test]
+<a href=#146 id=146 data-nosnippet>146</a>    </span><span class="kw">fn </span>support_follows_the_dome_side() {
+<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw">let </span>dome = Semicircle::&lt;()&gt;::new(Vec2::new(<span class="number">0.0</span>, <span class="number">0.0</span>), <span class="number">10.0</span>);
+<a href=#148 id=148 data-nosnippet>148</a>        <span class="macro">assert!</span>((dome.support(RotationRad::new(-std::f64::consts::FRAC_PI_2)) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-9</span>);
+<a href=#149 id=149 data-nosnippet>149</a>        <span class="macro">assert!</span>((dome.support(RotationRad::ZERO) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-9</span>);
+<a href=#150 id=150 data-nosnippet>150</a>        <span class="macro">assert!</span>(dome.support(RotationRad::QUARTER_TURN).abs() &lt; <span class="number">1e-9</span>);
+<a href=#151 id=151 data-nosnippet>151</a>    }
+<a href=#152 id=152 data-nosnippet>152</a>}
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["snapshot"],"struct":["FxPlayOptions","FxPlayer"],"type":["SurfaceProvider"]};
+window.SIDEBAR_ITEMS = {"fn":["snapshot","snapshot_to_png"],"struct":["FxPlayOptions","FxPlayer"],"type":["SurfaceProvider"]};
