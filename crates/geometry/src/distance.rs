@@ -45,6 +45,16 @@ impl<U> Distance<U> {
     pub const fn as_f64(self) -> f64 {
         self.value
     }
+
+    /// The smaller of `self` and `other` (`f64::min` semantics).
+    pub fn min(self, other: Self) -> Self {
+        Self::new(self.value.min(other.value))
+    }
+
+    /// The larger of `self` and `other` (`f64::max` semantics).
+    pub fn max(self, other: Self) -> Self {
+        Self::new(self.value.max(other.value))
+    }
 }
 
 /// `f64` becomes a `Distance` of whatever unit the context expects -
