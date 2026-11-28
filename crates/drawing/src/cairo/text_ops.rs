@@ -18,6 +18,7 @@
 //! beforehand, exactly like the consumer originals did.
 
 use crate::cairo::CairoTarget;
+use crate::cairo::Text;
 use crate::cairo::glyph_path::fill_glyph;
 use crate::ops::DrawTarget;
 use crate::ops::DrawTextOps;
@@ -174,6 +175,18 @@ impl CairoTarget {
         let result = self.ctx.show_text(text);
         self.ctx.restore()?;
         result
+    }
+
+    /// Draws `spec`'s label rotated: configures the toy font from
+    /// `spec.font` and the source from `spec.color`/`spec.alpha`,
+    /// then emits centered+rotated via [`draw_rotated_text`].
+    ///
+    /// [`draw_rotated_text`]: Self::draw_rotated_text
+    pub fn show_rotated_text(&mut self, spec: Text) -> Result<(), cairo::Error> {
+        self.ctx.select_font_face(&spec.font.face, spec.font.slant, spec.font.weight);
+        self.ctx.set_font_size(f64::from(spec.font.size.as_raw()));
+        spec.color.apply_alpha(&self.ctx, spec.alpha);
+        self.draw_rotated_text(&spec.text, spec.at, spec.angle)
     }
 
     /// Draws `text` centered at `at`, rotated by `angle`, tracing the

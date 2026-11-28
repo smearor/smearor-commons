@@ -26,7 +26,9 @@ mod primitive_ops;
 mod progress_ops;
 mod surface;
 mod target;
+mod text;
 mod text_ops;
+mod toy_font;
 
 use crate::ops::DrawTarget;
 use smearor_commons_geometry::Size;
@@ -36,6 +38,8 @@ pub use surface::ViewSurface;
 pub use surface::image_surface_from_buffer;
 pub use surface::pixel_buffer_from_surface;
 pub use target::CairoTarget;
+pub use text::Text;
+pub use toy_font::ToyFont;
 
 impl DrawTarget for CairoTarget {
     fn size(&self) -> Size<u32> {

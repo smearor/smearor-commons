@@ -42,6 +42,10 @@ mod tech;
 #[cfg(feature = "cairo")]
 pub use cairo::CairoTarget;
 #[cfg(feature = "cairo")]
+pub use cairo::Text;
+#[cfg(feature = "cairo")]
+pub use cairo::ToyFont;
+#[cfg(feature = "cairo")]
 pub use cairo::DrawingError;
 #[cfg(feature = "cairo")]
 pub use cairo::ViewSurface;
