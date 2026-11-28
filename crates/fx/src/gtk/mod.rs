@@ -22,4 +22,5 @@ mod surface;
 pub use player::FxPlayOptions;
 pub use player::FxPlayer;
 pub use snapshot::snapshot;
+pub use snapshot::snapshot_to_png;
 pub use surface::SurfaceProvider;

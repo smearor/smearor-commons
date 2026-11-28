@@ -28,4 +28,11 @@ pub enum FxError {
     #[cfg(feature = "cairo")]
     #[error("cairo error: {0}")]
     Cairo(String),
+
+    /// [`crate::gtk::snapshot_to_png`] failed past the snapshot step -
+    /// buffer-to-surface conversion or the PNG file write, carried as
+    /// text like [`Self::Cairo`].
+    #[cfg(feature = "gtk4")]
+    #[error("png dump failed: {0}")]
+    PngDump(String),
 }
