@@ -97,6 +97,10 @@ widgets - the same frame pipeline the experimenter uses:
   straight-alpha `PixelBuffer<Rgba>` at `allocation * scale_factor`
   (`WidgetPaintable` -> render node -> cairo `ARgb32` -> buffer).
   Called once per animation; live widget content is a non-goal.
+- **`gtk::snapshot_to_png(&widget, path)`** - `snapshot` plus the
+  PNG write in one call - the probe "render once, dump, quit" idiom.
+  Past the snapshot step failures surface as `FxError::PngDump`
+  (buffer-to-surface conversion or the file write).
 - **`gtk::FxPlayer`** - a `DrawingArea` subclass owning the clock and
   frame buffers. `set_effect(spec, input)` + `play(FxPlayOptions)`
   runs a `TimedAnimation` on the widget's frame clock and paints the

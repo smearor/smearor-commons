@@ -47,6 +47,7 @@ use smearor_commons_geometry::{Distance, Pixels};
 let gap = Distance::<Pixels>::new(24.0);
 gap.as_f64();                          // 24.0 — the erased scalar
 gap * 2.0 + Distance::<Pixels>::new(4.0); // arithmetic keeps the unit
+gap.min(Distance::<Pixels>::new(12.0));   // min/max see only the scalar
 ```
 
 The unit marker carries no value — equality, ordering and serde see

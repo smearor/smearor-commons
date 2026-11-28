@@ -98,12 +98,19 @@ if table_zone.contains(&Vec2::new(150.0, 90.0)) {
 and framework float APIs. `area::<P>()` is generic over the return
 type. `inscribed_square_side()` / `with_inscribed_square(center, side)`
 convert between the circle and the largest centered axis-aligned square
-inside it — a vocabulary `Hexagon`, `Octagon` and `Semicircle` share.
+inside it — a vocabulary `Hexagon`, `Octagon` and `Semicircle` share
+(the `*_for_radius` / `radius_for_inscribed_square` statics run the
+same math without constructing a circle). `Circle::inscribed_in(bounds)`
+is the largest circle centered in a rect — radius half the shorter
+side; inset the bounds beforehand where a margin applies.
 
 `Annulus<U, T>` is a ring: `center`, `inner`, `outer` radii. `width`
 (ring thickness), `mid_radius`, `contains` (inside the outer, outside
 the inner), and `inner_circle`/`outer_circle` views. A radial gauge
 track or a ring-shaped touch zone is an `Annulus`.
+`Annulus::inscribed_in(bounds, hole)` wraps `Circle::inscribed_in`
+with `inner` as the `hole: Fraction` share of the disc (`ZERO`
+degenerates to the inscribed disk).
 
 Both rasterize — see [Rasterization](rasterization.md).
 
@@ -126,7 +133,11 @@ wedge.at(smearor_commons_geometry::Fraction::HALF); // parameter → direction
 directions; `Arc::gaps_between(&[RotationRad])` returns the angular
 holes between sorted directions — used e.g. to find free angular slots
 around a dial (and by `OrbitLayout` in the layout crate to place items
-between anchor directions).
+between anchor directions). `Arc::segments(count, gap)` partitions the
+interval into `count` equal arcs, each shrunk symmetrically by `gap`
+around every boundary — `count` spokes of `gap` width stay open in a
+pie layout (`RotationRad::ZERO` tiles seamlessly). The drawing crate's
+`FillSectors` spec rides on it.
 
 ## Regular polygons — Hexagon & Octagon
 
@@ -156,6 +167,22 @@ length *is* its circumradius). Common queries:
 - `inscribed_square_side()` / `with_inscribed_square(center, side,
   orientation)` — the largest centered axis-aligned square inside,
   and its exact inverse
+- `inscribed_in(bounds, orientation)` — the largest n-gon centered in
+  a rect, bounding box touching the tighter side. The pair behind it:
+  `circumradius_covering(size)` is the smallest radius whose box
+  *covers* a content size, `circumradius_bounded_by(size)` the largest
+  whose box *stays inside* (the octagon spells the same pair over its
+  square bounding side)
+- `wedges(outer, inner, squeeze)` (octagon only) — an `OctagonWedges`
+  iterator yielding the eight trapezoidal edge inserts as `Polygon`s:
+  the outer side `outer`-scaled off the inradius and `squeeze`-narrowed
+  around its midpoint, the inner side on the `inner`-scaled octagon —
+  chip inserts, rim marks, border studs
+
+Static `*_for_*` companions (`inscribed_square_side_for_inradius`,
+`inradius_for_side_length`, `bounding_size_for_circumradius`, …) run
+every conversion without constructing the shape — handy when only a
+radius or a size travels through the API.
 
 `PolygonOrientation` is a two-variant enum with `Display`/`FromStr`
 (`flat-top` / `pointy-top`) — and the symmetry vocabulary the snapped
@@ -176,6 +203,8 @@ screen convention:
 - `inscribed_square_side()` / `with_inscribed_square(center, side)` —
   the largest square standing on the diameter edge (`2r/√5`), and its
   inverse
+- `inscribed_in(bounds)` — the largest dome centered on the rect's
+  bottom edge, `r = min(width/2, height)`
 
 ## Sphere & friends
 

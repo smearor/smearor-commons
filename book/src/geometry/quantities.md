@@ -14,6 +14,7 @@ use smearor_commons_geometry::Fraction;
 let t = Fraction::new(0.5);       // Fraction::HALF
 t.clamped();                      // squeeze into 0.0..=1.0
 t.inverse();                      // 1 - t
+t.min(other);                     // f64::min/max semantics
 ```
 
 Animations may extrapolate past `1.0` (an overshoot easing); each

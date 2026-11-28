@@ -32,11 +32,17 @@ let view = surface.into_view();                // hand the view back
 `CairoTarget::new(ctx, size)` clones a `Context` handle (a refcount
 bump) plus a **declared** extent — deliberately a value type, so it can
 be constructed inside GTK `snapshot`/`set_draw_func` callbacks and
-owned by `RenderContext` like any other target.
+owned by `RenderContext` like any other target. `size` takes
+`impl Into<Size<u32>>` — a `Size<f64>` (GTK's allocated extent)
+converts component-wise, truncating and saturating.
 
 - `context()` — the escape hatch for anything outside the shared
   vocabulary: `save`/`restore`, transforms, patterns, sources
-- cairo-only extras: `draw_rotated_text`, `draw_halo_text`
+- cairo-only extras: `draw_rotated_text`, `draw_halo_text`, and
+  `show_rotated_text` — the spec-driven variant taking a `Text`
+  (`text` + `ToyFont` + `at` + `angle` + `color` + `alpha`), where
+  `ToyFont` bundles the toy-API selection (`face`, `size`, `slant`,
+  `weight`) as a value
 - **path helpers** (free functions): `polyline_path`, `smooth_path`,
   `wavy_path`, `band_path`, `rounded_rect_path`, `tile_fill`
 - every spec is a **self-contained primitive**: `fill_circle`,
@@ -69,4 +75,21 @@ fixtures and frame dumps without an extra dependency.
 
 The `gtk4` feature stacks on `cairo` — `ViewSurface` +
 `smearor-commons-buffer`'s `to_memory_texture()` covers the
-render→display path for GTK consumers.
+render→display path for GTK consumers, and two `DrawingArea`
+factories wire the target straight into a widget:
+
+```rust
+use smearor_commons_drawing::gtk::{drawing_area, drawing_target};
+use smearor_commons_geometry::Size;
+
+// draw func receives (&Context, allocated Size<f64>)
+let area = drawing_area(Some(Size::new(96, 96)), |ctx, extent| { /* raw cairo */ });
+
+// draw func receives a ready CairoTarget — the shared vocabulary directly
+let area = drawing_target(Some(Size::new(96, 96)), |target| {
+    target.fill_circle(spec);
+});
+```
+
+`size` is the content request in integer pixels; `None` leaves GTK's
+natural sizing.

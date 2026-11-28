@@ -12,7 +12,10 @@ numeric component type `T` (default `f64`). `Vec2<Millimeters>` is a
 tagged domain point; `Vec2<(), i32>` is the *unit-erased* boundary form
 that converts into whatever a framework expects. `Position`, `Size` and
 `Rectangle` are readable aliases for the erased forms — the same type,
-not parallel representations.
+not parallel representations. Component-wise `From` conversions bridge
+the component types (`f64` → `f32`, `f64` → `u32` truncating and
+saturating, `u32` → `i32`), and `Rect::from_size(size)` anchors a rect
+of `size` at the origin.
 
 ```mermaid
 flowchart LR

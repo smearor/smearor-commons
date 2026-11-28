@@ -6,9 +6,13 @@ labels, positioned text, and the two indicator shapes.
 ## Text
 
 All three methods take the font as `Option<&FontVec>`; a `None` font
-falls back to the raster backend's **built-in bitmap renderer** (cairo
-uses its toy text API with system `Sans`). Text rendering never
-hard-fails on a missing font.
+falls back on the raster backend to its **built-in bitmap renderer**.
+Cairo deliberately has no bitmap fallback (fixed raster glyphs would
+contradict the vector pipeline): `draw_label`/`draw_text_centered`
+become no-ops with a `debug!` note, while `draw_text` still draws via
+the toy text API with system `Sans` — free text is exactly where the
+toy path has a consumer. Text rendering never hard-fails on a missing
+font.
 
 ```rust
 use smearor_commons_geometry::{Pixels, Vec2};
